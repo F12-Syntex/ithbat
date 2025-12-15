@@ -77,15 +77,45 @@ function parsePlanningResponse(response: string): PlanningDecision {
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
 
-      if (parsed.steps && Array.isArray(parsed.steps)) {
-        return parsed;
+      if (
+        parsed.steps &&
+        Array.isArray(parsed.steps) &&
+        parsed.steps.length >= 3
+      ) {
+        // Validate that we have the required step IDs
+        const hasSearching = parsed.steps.some(
+          (s: PlannedStep) => s.id === "searching" || s.id.includes("search"),
+        );
+        const hasExploring = parsed.steps.some(
+          (s: PlannedStep) => s.id === "exploring" || s.id.includes("explor"),
+        );
+        const hasSynthesizing = parsed.steps.some(
+          (s: PlannedStep) =>
+            s.id === "synthesizing" || s.id.includes("synthes"),
+        );
+
+        if (hasSearching && hasExploring && hasSynthesizing) {
+          // Normalize the step IDs to ensure consistency
+          return {
+            steps: parsed.steps.map((s: PlannedStep) => ({
+              id: s.id.includes("search")
+                ? "searching"
+                : s.id.includes("explor")
+                  ? "exploring"
+                  : s.id.includes("synthes")
+                    ? "synthesizing"
+                    : s.id,
+              title: s.title,
+            })),
+          };
+        }
       }
     }
   } catch {
     // If parsing fails, return default steps
   }
 
-  // Default fallback steps
+  // Default fallback steps - only used if AI response is malformed
   return {
     steps: [
       { id: "searching", title: "Searching Islamic sources" },

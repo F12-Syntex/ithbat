@@ -55,7 +55,7 @@ Question: {query}
 
 Respond in 2-3 sentences.`;
 
-export const PLANNING_PROMPT = `Based on your analysis of this Islamic question, plan the research steps needed.
+export const PLANNING_PROMPT = `Based on your analysis of this Islamic question, create CUSTOM step titles for the research.
 
 ## QUESTION:
 {query}
@@ -64,33 +64,44 @@ export const PLANNING_PROMPT = `Based on your analysis of this Islamic question,
 {understanding}
 
 ## TASK:
-Create a research plan with specific steps.
+Create descriptive step titles that match this specific question.
 
 ## RULES:
-1. DO NOT include "understanding" - it's already done
-2. Last step must be "synthesizing"
-3. Keep titles SHORT (2-4 words max!)
+1. You MUST use these exact step IDs: "searching", "exploring", "synthesizing"
+2. Create CUSTOM titles that fit the question (e.g., "Finding marriage rulings" instead of generic "Searching sources")
+3. Titles should be 2-4 words and specific to the topic
 
-## EXAMPLE TITLES (follow this style):
-- "Searching hadith"
-- "Finding Quran verses"
-- "Exploring fatwas"
-- "Verifying sources"
-- "Preparing answer"
+## EXAMPLE FOR "Is music haram?":
+{
+  "steps": [
+    {"id": "searching", "title": "Finding music rulings"},
+    {"id": "exploring", "title": "Checking scholar views"},
+    {"id": "synthesizing", "title": "Compiling verdict"}
+  ]
+}
+
+## EXAMPLE FOR "How to pray Isha?":
+{
+  "steps": [
+    {"id": "searching", "title": "Finding Isha details"},
+    {"id": "exploring", "title": "Checking prayer guides"},
+    {"id": "synthesizing", "title": "Writing instructions"}
+  ]
+}
 
 ## RESPOND IN THIS EXACT JSON FORMAT:
 {
   "steps": [
-    {"id": "searching", "title": "Searching sources"},
-    {"id": "exploring", "title": "Exploring links"},
-    {"id": "synthesizing", "title": "Preparing answer"}
+    {"id": "searching", "title": "YOUR_CUSTOM_TITLE"},
+    {"id": "exploring", "title": "YOUR_CUSTOM_TITLE"},
+    {"id": "synthesizing", "title": "YOUR_CUSTOM_TITLE"}
   ]
 }
 
 IMPORTANT:
 - Return ONLY valid JSON
-- 2-4 steps total
-- Titles must be 2-4 words ONLY - no long descriptions!`;
+- MUST have exactly 3 steps with IDs: searching, exploring, synthesizing
+- Make titles SPECIFIC to the question, not generic!`;
 
 export const EXPLORATION_PROMPT = `You are analyzing crawled web content to answer an Islamic question. Decide if you have enough evidence or need more.
 

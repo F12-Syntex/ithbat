@@ -28,6 +28,7 @@ export function ResearchStep({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [elapsedTime, setElapsedTime] = useState(0);
   const contentRef = useRef<HTMLDivElement>(null);
+  const scrollableRef = useRef<HTMLDivElement>(null);
   const isActive = step.status === "in_progress";
   const isCompleted = step.status === "completed";
 
@@ -48,6 +49,13 @@ export function ResearchStep({
       setElapsedTime(step.endTime - step.startTime);
     }
   }, [isActive, isCompleted, step.startTime, step.endTime]);
+
+  // Auto-scroll to bottom when content updates and step is expanded
+  useEffect(() => {
+    if (isExpanded && scrollableRef.current && step.content) {
+      scrollableRef.current.scrollTop = scrollableRef.current.scrollHeight;
+    }
+  }, [isExpanded, step.content]);
 
   return (
     <motion.div
@@ -178,7 +186,10 @@ export function ResearchStep({
             }}
           >
             <div className="px-4 pb-4">
-              <div className="ml-11 max-h-56 overflow-y-auto no-scrollbar">
+              <div
+                ref={scrollableRef}
+                className="ml-11 max-h-56 overflow-y-auto no-scrollbar"
+              >
                 <StepTree
                   content={step.content}
                   isActive={isActive}
