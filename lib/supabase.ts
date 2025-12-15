@@ -17,8 +17,9 @@ export function createServerClient(): SupabaseClient | null {
 
   if (!supabaseUrl || !serviceRoleKey) {
     console.warn(
-      "Supabase not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY."
+      "Supabase not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.",
     );
+
     return null;
   }
 

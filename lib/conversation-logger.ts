@@ -1,5 +1,6 @@
-import { createServerClient } from "./supabase";
 import type { ResearchStep, Source } from "@/types/research";
+
+import { createServerClient } from "./supabase";
 
 export interface ConversationLog {
   id?: string;
@@ -27,15 +28,18 @@ const MAX_SESSIONS = 20;
 function parseDeviceType(userAgent?: string): string {
   if (!userAgent) return "unknown";
   const ua = userAgent.toLowerCase();
+
   if (ua.includes("mobile") || ua.includes("android") || ua.includes("iphone"))
     return "mobile";
   if (ua.includes("tablet") || ua.includes("ipad")) return "tablet";
+
   return "desktop";
 }
 
 async function cleanupOldSessions(): Promise<void> {
   try {
     const supabase = createServerClient();
+
     if (!supabase) return;
 
     const { data: sessions } = await supabase
@@ -47,6 +51,7 @@ async function cleanupOldSessions(): Promise<void> {
 
     const uniqueSessions: string[] = [];
     const seen = new Set<string>();
+
     for (const s of sessions) {
       if (!seen.has(s.session_id)) {
         seen.add(s.session_id);
@@ -78,12 +83,14 @@ export async function logConversation(
   steps: ResearchStep[],
   sources: Source[],
   isFollowUp: boolean = false,
-  deviceInfo?: DeviceInfo
+  deviceInfo?: DeviceInfo,
 ): Promise<void> {
   try {
     const supabase = createServerClient();
+
     if (!supabase) {
       console.warn("Supabase not configured, skipping conversation logging");
+
       return;
     }
 
@@ -113,9 +120,7 @@ export async function logConversation(
       console.error("Failed to log conversation:", error);
     }
 
-    cleanupOldSessions().catch((err) =>
-      console.error("Cleanup error:", err)
-    );
+    cleanupOldSessions().catch((err) => console.error("Cleanup error:", err));
   } catch (err) {
     console.error("Error logging conversation:", err);
   }
@@ -123,11 +128,13 @@ export async function logConversation(
 
 export async function getConversationLogs(
   limit: number = 50,
-  offset: number = 0
+  offset: number = 0,
 ): Promise<{ logs: ConversationLog[]; total: number }> {
   const supabase = createServerClient();
+
   if (!supabase) {
     console.warn("Supabase not configured");
+
     return { logs: [], total: 0 };
   }
 
@@ -143,6 +150,7 @@ export async function getConversationLogs(
 
   if (error) {
     console.error("Failed to fetch conversation logs:", error);
+
     return { logs: [], total: 0 };
   }
 
@@ -166,8 +174,10 @@ export async function getConversationLogs(
 
 export async function deleteSession(sessionId: string): Promise<boolean> {
   const supabase = createServerClient();
+
   if (!supabase) {
     console.warn("Supabase not configured");
+
     return false;
   }
 
@@ -178,6 +188,7 @@ export async function deleteSession(sessionId: string): Promise<boolean> {
 
   if (error) {
     console.error("Failed to delete session:", error);
+
     return false;
   }
 
@@ -186,8 +197,10 @@ export async function deleteSession(sessionId: string): Promise<boolean> {
 
 export async function deleteLog(logId: string): Promise<boolean> {
   const supabase = createServerClient();
+
   if (!supabase) {
     console.warn("Supabase not configured");
+
     return false;
   }
 
@@ -198,6 +211,7 @@ export async function deleteLog(logId: string): Promise<boolean> {
 
   if (error) {
     console.error("Failed to delete log:", error);
+
     return false;
   }
 
@@ -205,11 +219,13 @@ export async function deleteLog(logId: string): Promise<boolean> {
 }
 
 export async function getConversationsBySession(
-  sessionId: string
+  sessionId: string,
 ): Promise<ConversationLog[]> {
   const supabase = createServerClient();
+
   if (!supabase) {
     console.warn("Supabase not configured");
+
     return [];
   }
 
@@ -221,6 +237,7 @@ export async function getConversationsBySession(
 
   if (error) {
     console.error("Failed to fetch session conversations:", error);
+
     return [];
   }
 

@@ -8,7 +8,10 @@ import {
   EXPLORATION_PROMPT,
   SYNTHESIS_PROMPT,
   VERIFICATION_PROMPT,
+  DEEP_VERIFICATION_PROMPT,
   buildPrompt,
+  extractUrlsFromMarkdown,
+  extractQuranReferences,
 } from "@/lib/prompts";
 import {
   initialSearch,
@@ -210,6 +213,7 @@ export async function POST(request: NextRequest) {
         }
         if (event.type === "step_complete" && event.step) {
           const step = allSteps.find((s) => s.id === event.step);
+
           if (step) {
             step.status = "completed";
             step.endTime = Date.now();
@@ -681,15 +685,383 @@ export async function POST(request: NextRequest) {
         }
 
         // Clean up any nested/duplicate links that slipped through
-        const cleanedResponse = cleanupNestedLinks(verifiedResponse);
+        let cleanedResponse = cleanupNestedLinks(verifiedResponse);
 
         send({
           type: "step_content",
           step: synthesizeStep.id,
-          content: `✓ References verified\n`,
+          content: `✓ Initial verification complete\n`,
         });
 
         send({ type: "step_complete", step: synthesizeStep.id });
+
+        // Step 7: Deep Verification - Crawl referenced URLs and verify claims
+        send({
+          type: "step_start",
+          step: "verifying",
+          stepTitle: "Verifying citations",
+        });
+
+        send({
+          type: "step_content",
+          step: "verifying",
+          content: `Crawling cited sources...\n`,
+        });
+
+        // Extract URLs from the response
+        const citedUrls = extractUrlsFromMarkdown(cleanedResponse);
+
+        // Extract Quran references for tafsir fetching
+        const quranRefs = extractQuranReferences(cleanedResponse);
+
+        if (citedUrls.length > 0 || quranRefs.length > 0) {
+          const totalToVerify = citedUrls.length + quranRefs.length;
+
+          send({
+            type: "step_content",
+            step: "verifying",
+            content: `Found ${totalToVerify} citations to verify${quranRefs.length > 0 ? ` (including ${quranRefs.length} Quran verse${quranRefs.length > 1 ? "s" : ""})` : ""}\n\n`,
+          });
+
+          // Crawl the cited URLs (limit to 10 to avoid too much delay)
+          const urlsToCrawl = citedUrls.slice(0, 10);
+          const verificationPages: CrawledPage[] = [];
+          const fetchedUrls: string[] = [];
+          const failedUrls: string[] = [];
+
+          for (const url of urlsToCrawl) {
+            send({
+              type: "step_content",
+              step: "verifying",
+              content: `  → ${url.slice(0, 55)}...`,
+            });
+
+            try {
+              const pages = await crawlUrls([url]);
+
+              if (pages.length > 0) {
+                verificationPages.push(...pages);
+                fetchedUrls.push(url);
+                send({
+                  type: "step_content",
+                  step: "verifying",
+                  content: ` ✓\n`,
+                });
+              } else {
+                failedUrls.push(url);
+                send({
+                  type: "step_content",
+                  step: "verifying",
+                  content: ` ✗\n`,
+                });
+              }
+            } catch {
+              failedUrls.push(url);
+              send({
+                type: "step_content",
+                step: "verifying",
+                content: ` ✗\n`,
+              });
+            }
+          }
+
+          // Fetch tafsir for Quran verses (limit to 5 to avoid too much delay)
+          const tafsirPages: CrawledPage[] = [];
+
+          if (quranRefs.length > 0) {
+            send({
+              type: "step_content",
+              step: "verifying",
+              content: `\nFetching tafsir (Ibn Kathir) for ${quranRefs.length} verse${quranRefs.length > 1 ? "s" : ""}...\n`,
+            });
+
+            for (const ref of quranRefs.slice(0, 5)) {
+              send({
+                type: "step_content",
+                step: "verifying",
+                content: `  → Quran ${ref.surah}:${ref.ayah}...`,
+              });
+
+              try {
+                const pages = await crawlUrls([ref.tafsirUrl]);
+
+                if (pages.length > 0) {
+                  tafsirPages.push(...pages);
+                  send({
+                    type: "step_content",
+                    step: "verifying",
+                    content: ` ✓\n`,
+                  });
+                } else {
+                  send({
+                    type: "step_content",
+                    step: "verifying",
+                    content: ` ✗\n`,
+                  });
+                }
+              } catch {
+                send({
+                  type: "step_content",
+                  step: "verifying",
+                  content: ` ✗\n`,
+                });
+              }
+            }
+          }
+
+          // Combine all verification sources
+          const allVerificationPages = [...verificationPages, ...tafsirPages];
+
+          if (allVerificationPages.length > 0) {
+            send({
+              type: "step_content",
+              step: "verifying",
+              content: `\nCross-checking ${allVerificationPages.length} sources against claims...\n`,
+            });
+
+            // Format the crawled source content for verification
+            const sourceContent = allVerificationPages
+              .map(
+                (page) =>
+                  `\n--- SOURCE: ${page.url} ---\nTitle: ${page.title}\nContent:\n${page.content.slice(0, 3000)}\n`,
+              )
+              .join("\n");
+
+            // Format tafsir content separately for context enrichment
+            const tafsirContent =
+              tafsirPages.length > 0
+                ? `\n\n## TAFSIR (Ibn Kathir) CONTEXT:\n${tafsirPages
+                    .map(
+                      (page) =>
+                        `\n--- TAFSIR: ${page.url} ---\n${page.content.slice(0, 4000)}\n`,
+                    )
+                    .join("\n")}`
+                : "";
+
+            // Run deep verification (include tafsir content for context)
+            const deepVerificationPrompt = buildPrompt(
+              DEEP_VERIFICATION_PROMPT,
+              {
+                response: cleanedResponse,
+                sourceContent: sourceContent + tafsirContent,
+              },
+            );
+
+            let deepVerifiedResponse = "";
+
+            for await (const chunk of client.streamChat(
+              [
+                {
+                  role: "system",
+                  content:
+                    "You are a citation verification assistant. Silently remove any content that cannot be verified against the provided sources. Do not add notes about removed content.",
+                },
+                { role: "user", content: deepVerificationPrompt },
+              ],
+              "HIGH",
+            )) {
+              deepVerifiedResponse += chunk;
+            }
+
+            // Use the deep verified response if it's valid
+            if (deepVerifiedResponse.length > 100) {
+              const previousResponse = cleanedResponse;
+
+              cleanedResponse = cleanupNestedLinks(deepVerifiedResponse);
+
+              // Count citations before and after to show what was removed
+              const citationsBefore =
+                extractUrlsFromMarkdown(previousResponse).length;
+              const citationsAfter =
+                extractUrlsFromMarkdown(cleanedResponse).length;
+              const removed = citationsBefore - citationsAfter;
+
+              if (removed > 0) {
+                send({
+                  type: "step_content",
+                  step: "verifying",
+                  content: `\n✗ Removed ${removed} unverified citation${removed > 1 ? "s" : ""}\n`,
+                });
+              }
+              send({
+                type: "step_content",
+                step: "verifying",
+                content: `✓ ${citationsAfter} citation${citationsAfter !== 1 ? "s" : ""} verified\n`,
+              });
+
+              // Check if we need to re-research due to insufficient evidence
+              const removalRate =
+                citationsBefore > 0 ? removed / citationsBefore : 0;
+              const needsMoreResearch = citationsAfter < 2 || removalRate > 0.5;
+
+              if (needsMoreResearch && citationsBefore > 0) {
+                send({ type: "step_complete", step: "verifying" });
+
+                // Start re-research step
+                send({
+                  type: "step_start",
+                  step: "re-researching",
+                  stepTitle: "Finding more evidence",
+                });
+
+                send({
+                  type: "step_content",
+                  step: "re-researching",
+                  content: `Insufficient verified evidence (${citationsAfter} citations). Searching for more specific sources...\n\n`,
+                });
+
+                // Search with more specific queries
+                const specificQueries = [
+                  `${query} hadith evidence`,
+                  `${query} scholarly ruling fatwa`,
+                  `${query} islamqa`,
+                ];
+
+                const additionalPages: CrawledPage[] = [];
+
+                for (const specificQuery of specificQueries.slice(0, 2)) {
+                  send({
+                    type: "step_content",
+                    step: "re-researching",
+                    content: `→ Searching: "${specificQuery}"\n`,
+                  });
+
+                  const newPages = await searchQuery(
+                    specificQuery,
+                    (progress) => {
+                      if (progress.type === "found") {
+                        send({
+                          type: "step_content",
+                          step: "re-researching",
+                          content: `  ✓ ${progress.title?.slice(0, 50) || "Page"}\n`,
+                        });
+
+                        const source: Source = {
+                          id: sourceId++,
+                          title: progress.title || "Page",
+                          url: progress.url!,
+                          domain: new URL(progress.url!).hostname.replace(
+                            "www.",
+                            "",
+                          ),
+                          trusted: true,
+                        };
+
+                        send({ type: "source", source });
+                      }
+                    },
+                  );
+
+                  additionalPages.push(...newPages);
+                }
+
+                if (additionalPages.length > 0) {
+                  allCrawledPages.push(...additionalPages);
+
+                  send({
+                    type: "step_content",
+                    step: "re-researching",
+                    content: `\nFound ${additionalPages.length} additional sources. Re-synthesizing...\n`,
+                  });
+
+                  // Re-synthesize with all evidence
+                  const updatedCrawledContent =
+                    formatCrawlResultsForAI(allCrawledPages);
+                  const reSynthesisPrompt = buildPrompt(SYNTHESIS_PROMPT, {
+                    query:
+                      history.length > 0
+                        ? `[Follow-up Question] ${query}`
+                        : query,
+                    research: updatedCrawledContent + conversationContext,
+                  });
+
+                  let reSynthesisResponse = "";
+
+                  for await (const chunk of client.streamChat(
+                    [
+                      {
+                        role: "system",
+                        content: ISLAMIC_RESEARCH_SYSTEM_PROMPT,
+                      },
+                      { role: "user", content: reSynthesisPrompt },
+                    ],
+                    "HIGH",
+                  )) {
+                    reSynthesisResponse += chunk;
+                  }
+
+                  // Quick verification of the new response
+                  const reVerificationPrompt = buildPrompt(
+                    VERIFICATION_PROMPT,
+                    {
+                      response: reSynthesisResponse,
+                      research: updatedCrawledContent,
+                    },
+                  );
+
+                  let reVerifiedResponse = "";
+
+                  for await (const chunk of client.streamChat(
+                    [
+                      {
+                        role: "system",
+                        content:
+                          "You are a reference verification assistant. Return the complete verified response.",
+                      },
+                      { role: "user", content: reVerificationPrompt },
+                    ],
+                    "HIGH",
+                  )) {
+                    reVerifiedResponse += chunk;
+                  }
+
+                  if (reVerifiedResponse.length > 100) {
+                    cleanedResponse = cleanupNestedLinks(reVerifiedResponse);
+                    const newCitations =
+                      extractUrlsFromMarkdown(cleanedResponse).length;
+
+                    send({
+                      type: "step_content",
+                      step: "re-researching",
+                      content: `✓ Re-synthesis complete with ${newCitations} citations\n`,
+                    });
+                  }
+                } else {
+                  send({
+                    type: "step_content",
+                    step: "re-researching",
+                    content: `⚠ No additional sources found. Using best available evidence.\n`,
+                  });
+                }
+
+                send({ type: "step_complete", step: "re-researching" });
+              } else {
+                send({ type: "step_complete", step: "verifying" });
+              }
+            } else {
+              send({
+                type: "step_content",
+                step: "verifying",
+                content: `✓ Verification complete\n`,
+              });
+              send({ type: "step_complete", step: "verifying" });
+            }
+          } else {
+            send({
+              type: "step_content",
+              step: "verifying",
+              content: `⚠ Could not fetch sources for verification\n`,
+            });
+            send({ type: "step_complete", step: "verifying" });
+          }
+        } else {
+          send({
+            type: "step_content",
+            step: "verifying",
+            content: `No external citations to verify\n`,
+          });
+          send({ type: "step_complete", step: "verifying" });
+        }
 
         // Stream the cleaned response
         send({ type: "response_start" });
@@ -713,7 +1085,7 @@ export async function POST(request: NextRequest) {
           allSteps,
           allSources,
           isFollowUp,
-          { ip, userAgent }
+          { ip, userAgent },
         ).catch((err) => console.error("Failed to log conversation:", err));
 
         send({ type: "done" });

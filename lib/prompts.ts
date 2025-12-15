@@ -148,8 +148,12 @@ export const EXPLORATION_PROMPT = `You are analyzing crawled web content to answ
 ## WHAT TO LOOK FOR:
 1. **Hadith evidence** - Look for specific hadith with numbers (Bukhari 1234, Muslim 5678)
 2. **Quran verses** - Look for relevant ayat with surah:verse references
-3. **Scholarly opinions** - Look for what scholars (Ibn Baz, Ibn Uthaymeen, etc.) have said
-4. **Fatwa rulings** - Look for detailed rulings with explanations
+3. **Scholarly opinions with QUOTES** - Look for:
+   - Named scholars (Ibn Baz, Ibn Uthaymeen, al-Nawawi, Ibn Taymiyyah, etc.)
+   - Direct quotes from fatwa answers that explain the ruling
+   - Explanations of WHY something is halal/haram
+   - The reasoning and evidence scholars used
+4. **Fatwa rulings with explanations** - Not just the ruling, but the detailed explanation
 
 ## DECISION CRITERIA - When to STOP searching (hasEnoughInfo = true):
 
@@ -180,7 +184,8 @@ Set hasEnoughInfo = FALSE only if:
   "useGoogleSearch": true/false,
   "googleSearchQuery": "search terms if needed",
   "keyFindingsSoFar": "Summary of evidence found",
-  "scholarlyOpinionsFound": "List any scholar names/opinions found"
+  "scholarlyOpinionsFound": "List any scholar names/opinions found",
+  "quotableContent": "Any direct quotes from fatwas or scholars that should be included in the answer"
 }
 
 IMPORTANT:
@@ -216,13 +221,29 @@ Before including ANY hadith or Quran verse:
 
 If a hadith or verse doesn't pass these checks, DO NOT include it.
 
-## INCLUDE SCHOLARLY OPINIONS
+## INCLUDE SCHOLARLY OPINIONS - CRITICAL
 
-You MUST include what scholars have said when available:
-- Name the scholar: "Sheikh Ibn Baz stated..." or "Imam al-Nawawi mentioned..."
-- Cite the source: "...as found in [IslamQA 12345](url)"
-- Include their reasoning if provided
-- If multiple scholars are mentioned, include their views
+You MUST actively look for and QUOTE what scholars have said in the crawled data:
+
+**When you find a fatwa answer (IslamQA, etc.):**
+- Quote the answer directly: "The fatwa states: '**[exact quote from the answer]**'"
+- Attribute it: "According to the scholars at [IslamQA 12345](url)..."
+- If a specific scholar is named (Ibn Baz, Ibn Uthaymeen, etc.), mention them: "Sheikh Ibn Baz stated: '**[quote]**' as cited in [IslamQA 12345](url)"
+
+**How to identify quotable content:**
+- Look for explanatory paragraphs in fatwa answers
+- Look for direct rulings: "It is permissible...", "It is not allowed...", "The ruling is..."
+- Look for scholarly explanations of WHY something is halal/haram
+- Look for conditions and exceptions mentioned by scholars
+
+**Example of good scholarly quoting:**
+Instead of: "Playing chess is disputed among scholars"
+Write: "The scholars at [IslamQA 14095](url) state: '**Chess is haraam because it is a waste of time and energy, and it makes one neglect obligatory duties**'. However, they note that some scholars permitted it with conditions."
+
+**Include the scholar's reasoning:**
+- Don't just state the ruling, explain WHY according to the scholar
+- Quote their evidence and logic
+- Include any conditions or exceptions they mentioned
 
 ## LANGUAGE RULES - CRITICAL
 
@@ -269,6 +290,22 @@ Examples:
 
 IMPORTANT: When asked about Quran verses (scary, warning, etc.), you MUST cite ACTUAL Quran verses with quran.com links, not just hadith about verses!
 
+## TAFSIR (QURAN COMMENTARY) - IMPORTANT
+
+When citing a Quran verse, look for TAFSIR (scholarly commentary) in the crawled data to provide context:
+
+**What is Tafsir?**
+Tafsir is the scholarly explanation of Quran verses. Ibn Kathir's tafsir is one of the most respected.
+
+**When you find Tafsir content:**
+- Include the scholarly explanation to give context to the verse
+- Quote relevant parts: "Ibn Kathir explains that this verse refers to..."
+- This helps readers understand the verse beyond just the translation
+
+**Example with Tafsir:**
+Instead of just: "Allah says in [Quran 4:93](https://quran.com/4/93)..."
+Write: "Allah says in [Quran 4:93](https://quran.com/4/93): '**And whoever kills a believer intentionally...**' Ibn Kathir explains that this verse establishes the severe punishment for intentional murder, noting that the scholars differed on whether repentance is accepted for such a sin."
+
 ## HIGHLIGHTING KEY CONTENT
 
 Use **bold** to highlight key terms, rulings, and important phrases that the reader should focus on.
@@ -302,14 +339,24 @@ The full text or explanation of the evidence with the inline citation [Sahih Mus
 
 Another paragraph explaining this piece of evidence with its citation [Sahih Bukhari 1894](https://sunnah.com/bukhari:1894).
 
-Example evidence section:
-<u>The Prophet's Guidance on Fasting</u>
+## Scholarly Opinion
+**ALWAYS include this section** when you find fatwa explanations or scholarly quotes. Quote directly from the sources:
 
-The Prophet (ﷺ) said: "**Fasting is a shield**" [Sahih Bukhari 1894](https://sunnah.com/bukhari:1894). This hadith establishes the protective nature of fasting and its spiritual benefits for the believer.
+<u>Scholar or Fatwa Source Name</u>
 
-<u>Scholarly Consensus</u>
+The scholars at [IslamQA 12345](url) explain: "**[Direct quote from the fatwa explaining the ruling and reasoning]**"
 
-The scholars have unanimously agreed that this ruling applies to all Muslims who are capable, as established in [Sahih Muslim 1151](https://sunnah.com/muslim:1151).
+If a specific scholar is mentioned:
+Sheikh Ibn Uthaymeen stated: "**[The exact quote from the scholar]**" as cited in [IslamQA 12345](url). This ruling is based on [their reasoning].
+
+Example scholarly opinion section:
+<u>IslamQA Ruling</u>
+
+The scholars at [IslamQA 20953](https://islamqa.info/en/answers/20953) state: "**The basic principle is that it is permissible to eat seafood, based on the verse 'Lawful to you is the game from the sea and its food' [Quran 5:96]. The exception is anything that is harmful.**"
+
+<u>Sheikh Ibn Baz's View</u>
+
+Sheikh Ibn Baz explained: "**All types of food from the sea are halal, whether they are caught alive or found dead, because of the general meaning of the verse**" as cited in [Fatawa Ibn Baz](url).
 
 ## CITATION FORMATTING - CRITICAL:
 
@@ -404,6 +451,82 @@ IMPORTANT:
 - NEVER wrap a link inside another link
 - Remove any unsupported claims about "most scholars" or "there is no evidence"`;
 
+export const DEEP_VERIFICATION_PROMPT = `You are a citation verification assistant. Your task is to verify that EACH citation in the response actually matches the content from the crawled source AND is topically relevant to the claim.
+
+## GENERATED RESPONSE TO VERIFY:
+{response}
+
+## CRAWLED SOURCE CONTENT (these are the ACTUAL pages that were fetched):
+{sourceContent}
+
+## YOUR TASK - STRICT VERIFICATION:
+
+For EACH citation in the response (hadith, Quran verse, fatwa quote, scholarly opinion):
+
+1. **FIND THE MATCHING SOURCE** - Look for the URL in the crawled content above
+2. **VERIFY TOPICAL RELEVANCE** - Is the source about the SAME TOPIC as the claim?
+3. **VERIFY THE CLAIM** - Does the crawled content actually say what the response claims?
+4. **CHECK QUOTES** - If there's a direct quote, does it appear in the source content?
+5. **VERIFY NUMBERS** - Is the hadith number/Quran verse/fatwa ID correct?
+
+## CRITICAL - TOPICAL RELEVANCE CHECK:
+
+A citation must be about the SAME SUBJECT as the claim. Reject citations where:
+- A hadith about **killing/homicide** is used to support a claim about **rape**
+- A hadith about **business/trade** is used to support claims about **criminal compensation**
+- A hadith about **X topic** is used as "evidence by analogy" for **Y topic**
+- The source discusses a different situation and the response extrapolates/assumes it applies
+
+**EXAMPLE OF INVALID CITATION:**
+- Claim: "Rape victims receive diyah compensation"
+- Citation: Hadith about diyah for murder/killing
+- VERDICT: REMOVE - The hadith is about homicide, not rape. Different rulings may apply.
+
+**EXAMPLE OF VALID CITATION:**
+- Claim: "Rape victims receive mahr compensation"
+- Citation: Hadith specifically about rape or fornication compensation
+- VERDICT: KEEP - The source directly addresses the topic
+
+## VERIFICATION RULES:
+
+**KEEP the citation if:**
+- The URL was crawled AND the content is about the SAME TOPIC
+- The source DIRECTLY supports the claim (not by analogy)
+- The quote appears in the crawled source (even if slightly paraphrased)
+- The hadith/verse number matches what's in the source
+
+**REMOVE the citation if:**
+- The URL was NOT found in the crawled sources → Remove the ENTIRE paragraph/section
+- The source is about a DIFFERENT TOPIC than the claim → Remove the ENTIRE paragraph/section
+- The response makes an unsupported extrapolation/analogy → Remove the ENTIRE paragraph/section
+- The content does NOT directly support the claim → Remove the ENTIRE paragraph/section
+- The quote is fabricated/not in the source → Remove the ENTIRE paragraph/section
+- The hadith number is wrong and cannot be corrected → Remove the ENTIRE paragraph/section
+
+**IMPORTANT - SILENT REMOVAL:**
+- Do NOT add notes like "(citation removed)" or "(not verified)"
+- Do NOT leave placeholder text explaining what was removed
+- Simply DELETE the unverified content entirely as if it was never there
+- The response should read naturally without any indication of removed content
+
+**If authenticity grade differs:**
+- Correct it silently (e.g., change "sahih" to "da'if" if that's what the source says)
+
+## RESPONSE FORMAT:
+
+Return the COMPLETE cleaned response with:
+1. Verified citations kept as-is
+2. Unverified content silently removed (no trace)
+3. Response reads naturally as if unverified content was never there
+
+## CRITICAL:
+- Do NOT add new information not in the original response
+- Do NOT remove content that IS verified AND topically relevant
+- Do NOT add ANY verification notes or summaries
+- If unsure about topical relevance, REMOVE it (be strict)
+- Preserve all formatting (bold, headers, links)
+- The final response should contain ONLY verified, directly-relevant, sourced information`;
+
 export function buildPrompt(
   template: string,
   variables: Record<string, string>,
@@ -415,4 +538,101 @@ export function buildPrompt(
   }
 
   return result;
+}
+
+// Helper to extract markdown URLs from a response
+export function extractUrlsFromMarkdown(text: string): string[] {
+  const urlRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const urls: string[] = [];
+  let match;
+
+  while ((match = urlRegex.exec(text)) !== null) {
+    const url = match[2];
+
+    // Filter to only include our target sources
+    if (
+      url.includes("sunnah.com") ||
+      url.includes("islamqa.info") ||
+      url.includes("quran.com") ||
+      url.includes("daruliftaa.com") ||
+      url.includes("alim.org")
+    ) {
+      urls.push(url);
+    }
+  }
+
+  return [...new Set(urls)]; // Remove duplicates
+}
+
+// Helper to extract Quran verse references and generate tafsir URLs
+export interface QuranReference {
+  surah: number;
+  ayah: number;
+  text: string;
+  tafsirUrl: string;
+}
+
+export function extractQuranReferences(text: string): QuranReference[] {
+  const references: QuranReference[] = [];
+
+  // Match patterns like "Quran 4:93", "[Quran 4:93]", "Surah 4:93", "4:93", etc.
+  const patterns = [
+    /\[?(?:Quran|Qur'an|Surah|Al-)\s*(\d{1,3}):(\d{1,3})\]?/gi,
+    /\((\d{1,3}):(\d{1,3})\)/g, // Match (4:93) format
+    /quran\.com\/(\d{1,3})(?:\/|:)(\d{1,3})/gi, // Match quran.com URLs
+  ];
+
+  const seen = new Set<string>();
+
+  for (const pattern of patterns) {
+    let match;
+
+    while ((match = pattern.exec(text)) !== null) {
+      const surah = parseInt(match[1], 10);
+      const ayah = parseInt(match[2], 10);
+      const key = `${surah}:${ayah}`;
+
+      // Validate surah (1-114) and ayah (reasonable range)
+      if (
+        surah >= 1 &&
+        surah <= 114 &&
+        ayah >= 1 &&
+        ayah <= 300 &&
+        !seen.has(key)
+      ) {
+        seen.add(key);
+        references.push({
+          surah,
+          ayah,
+          text: match[0],
+          tafsirUrl: `https://quran.com/${surah}:${ayah}/tafsirs/en-tafisr-ibn-kathir`,
+        });
+      }
+    }
+  }
+
+  return references;
+}
+
+// Helper to extract ONLY external URLs (not quran.com verse URLs)
+export function extractExternalUrls(text: string): string[] {
+  const urlRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const urls: string[] = [];
+  let match;
+
+  while ((match = urlRegex.exec(text)) !== null) {
+    const url = match[2];
+
+    // Filter to only include our target sources (excluding quran.com verse pages)
+    if (
+      url.includes("sunnah.com") ||
+      url.includes("islamqa.info") ||
+      url.includes("daruliftaa.com") ||
+      url.includes("alim.org")
+    ) {
+      urls.push(url);
+    }
+  }
+
+  return [...new Set(urls)]; // Remove duplicates
 }

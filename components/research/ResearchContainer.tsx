@@ -69,6 +69,7 @@ const EXAMPLE_QUESTIONS = [
 
 function getRandomQuestions(count: number): string[] {
   const shuffled = [...EXAMPLE_QUESTIONS].sort(() => Math.random() - 0.5);
+
   return shuffled.slice(0, count);
 }
 
@@ -678,8 +679,8 @@ export function ResearchContainer() {
             </span>
             <span className="text-neutral-300 dark:text-neutral-700">·</span>
             <a
-              href="/logs"
               className="text-[10px] text-neutral-400 dark:text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors"
+              href="/logs"
             >
               Chats logged for analysis
             </a>

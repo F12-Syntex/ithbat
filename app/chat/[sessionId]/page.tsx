@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+
 import { ResearchResponse } from "@/components/research/ResearchResponse";
 
 const LOGS_PASSWORD = "ithbat2024";
@@ -48,6 +49,7 @@ export default function ChatPage({
   // Check if already authenticated
   useEffect(() => {
     const auth = sessionStorage.getItem(AUTH_KEY);
+
     if (auth === "true") {
       setIsAuthenticated(true);
     }
@@ -75,6 +77,7 @@ export default function ChatPage({
     setLoading(true);
     try {
       const res = await fetch(`/api/chat/${sessionId}`);
+
       if (!res.ok) {
         if (res.status === 404) {
           throw new Error("Chat not found");
@@ -82,6 +85,7 @@ export default function ChatPage({
         throw new Error("Failed to fetch chat");
       }
       const data = await res.json();
+
       setConversations(data.conversations);
       setError(null);
     } catch (err) {
@@ -93,6 +97,7 @@ export default function ChatPage({
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
+
     return date.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
@@ -104,6 +109,7 @@ export default function ChatPage({
 
   const handleShare = async () => {
     const url = window.location.href;
+
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
@@ -111,6 +117,7 @@ export default function ChatPage({
     } catch {
       // Fallback for browsers that don't support clipboard API
       const textArea = document.createElement("textarea");
+
       textArea.value = url;
       document.body.appendChild(textArea);
       textArea.select();
@@ -134,16 +141,18 @@ export default function ChatPage({
         steps: c.steps,
       })),
     };
+
     downloadFile(
       JSON.stringify(data, null, 2),
       `ithbat-chat-${sessionId.slice(0, 8)}.json`,
-      "application/json"
+      "application/json",
     );
     setShowExportMenu(false);
   };
 
   const exportAsMarkdown = () => {
     let md = `# Ithbat Research Chat\n\n`;
+
     md += `**Session:** ${sessionId}\n`;
     md += `**Exported:** ${new Date().toLocaleString()}\n\n`;
     md += `---\n\n`;
@@ -169,13 +178,14 @@ export default function ChatPage({
     downloadFile(
       md,
       `ithbat-chat-${sessionId.slice(0, 8)}.md`,
-      "text/markdown"
+      "text/markdown",
     );
     setShowExportMenu(false);
   };
 
   const exportAsText = () => {
     let text = `ITHBAT RESEARCH CHAT\n`;
+
     text += `${"=".repeat(50)}\n\n`;
     text += `Session: ${sessionId}\n`;
     text += `Exported: ${new Date().toLocaleString()}\n\n`;
@@ -203,7 +213,7 @@ export default function ChatPage({
     downloadFile(
       text,
       `ithbat-chat-${sessionId.slice(0, 8)}.txt`,
-      "text/plain"
+      "text/plain",
     );
     setShowExportMenu(false);
   };
@@ -212,6 +222,7 @@ export default function ChatPage({
     const blob = new Blob([content], { type });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
+
     a.href = url;
     a.download = filename;
     document.body.appendChild(a);
@@ -234,9 +245,9 @@ export default function ChatPage({
     return (
       <div className="min-h-screen bg-white dark:bg-neutral-950 flex items-center justify-center p-4">
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-[280px]"
+          initial={{ opacity: 0, y: 8 }}
         >
           <div className="text-center mb-5">
             <h1 className="text-base font-medium text-neutral-900 dark:text-neutral-100">
@@ -247,21 +258,21 @@ export default function ChatPage({
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-2.5">
+          <form className="space-y-2.5" onSubmit={handleLogin}>
             <input
+              autoFocus
+              className={`w-full px-3 py-2.5 text-sm bg-neutral-50 dark:bg-neutral-900 border rounded-lg focus:outline-none focus:ring-1 focus:ring-neutral-300 dark:focus:ring-neutral-700 transition-all placeholder:text-neutral-400 ${
+                authError
+                  ? "border-red-200 dark:border-red-900"
+                  : "border-neutral-200 dark:border-neutral-800"
+              }`}
+              placeholder="Password"
               type="password"
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
                 setAuthError(false);
               }}
-              placeholder="Password"
-              className={`w-full px-3 py-2.5 text-sm bg-neutral-50 dark:bg-neutral-900 border rounded-lg focus:outline-none focus:ring-1 focus:ring-neutral-300 dark:focus:ring-neutral-700 transition-all placeholder:text-neutral-400 ${
-                authError
-                  ? "border-red-200 dark:border-red-900"
-                  : "border-neutral-200 dark:border-neutral-800"
-              }`}
-              autoFocus
             />
 
             {authError && (
@@ -271,8 +282,8 @@ export default function ChatPage({
             )}
 
             <button
-              type="submit"
               className="w-full py-2.5 bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 text-sm font-medium rounded-lg hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors"
+              type="submit"
             >
               Continue
             </button>
@@ -280,8 +291,8 @@ export default function ChatPage({
 
           <div className="mt-5 text-center">
             <Link
-              href="/"
               className="text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+              href="/"
             >
               ← Back
             </Link>
@@ -298,8 +309,8 @@ export default function ChatPage({
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
-              href="/logs"
               className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+              href="/logs"
             >
               <svg
                 className="w-5 h-5"
@@ -328,8 +339,8 @@ export default function ChatPage({
           <div className="flex items-center gap-2">
             {/* Share Button */}
             <button
-              onClick={handleShare}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-neutral-100 dark:bg-neutral-800 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+              onClick={handleShare}
             >
               {copied ? (
                 <>
@@ -373,8 +384,8 @@ export default function ChatPage({
             {/* Export Button */}
             <div className="relative">
               <button
-                onClick={() => setShowExportMenu(!showExportMenu)}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-neutral-100 dark:bg-neutral-800 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                onClick={() => setShowExportMenu(!showExportMenu)}
               >
                 <svg
                   className="w-3.5 h-3.5"
@@ -408,22 +419,22 @@ export default function ChatPage({
               {showExportMenu && (
                 <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 shadow-lg overflow-hidden z-20">
                   <button
-                    onClick={exportAsMarkdown}
                     className="w-full px-3 py-2 text-xs text-left hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors flex items-center gap-2"
+                    onClick={exportAsMarkdown}
                   >
                     <span className="text-neutral-400">.md</span>
                     <span>Markdown</span>
                   </button>
                   <button
-                    onClick={exportAsJSON}
                     className="w-full px-3 py-2 text-xs text-left hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors flex items-center gap-2"
+                    onClick={exportAsJSON}
                   >
                     <span className="text-neutral-400">.json</span>
                     <span>JSON</span>
                   </button>
                   <button
-                    onClick={exportAsText}
                     className="w-full px-3 py-2 text-xs text-left hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors flex items-center gap-2"
+                    onClick={exportAsText}
                   >
                     <span className="text-neutral-400">.txt</span>
                     <span>Plain Text</span>
@@ -449,8 +460,8 @@ export default function ChatPage({
           <div className="text-center py-20">
             <p className="text-red-500 dark:text-red-400 mb-4">{error}</p>
             <Link
-              href="/logs"
               className="text-sm text-accent-500 hover:text-accent-600 transition-colors"
+              href="/logs"
             >
               Back to logs
             </Link>
@@ -460,8 +471,8 @@ export default function ChatPage({
             {conversations.map((conv, index) => (
               <motion.div
                 key={conv.id}
-                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, y: 20 }}
                 transition={{ delay: index * 0.1 }}
               >
                 {/* Query */}
@@ -495,10 +506,10 @@ export default function ChatPage({
                       {conv.sources.slice(0, 8).map((source, i) => (
                         <a
                           key={i}
-                          href={source.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
                           className="px-2 py-0.5 text-[10px] bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                          href={source.url}
+                          rel="noopener noreferrer"
+                          target="_blank"
                         >
                           {source.domain}
                         </a>
@@ -514,7 +525,10 @@ export default function ChatPage({
 
                 {/* Response */}
                 <div className="ml-9">
-                  <ResearchResponse content={conv.response} isStreaming={false} />
+                  <ResearchResponse
+                    content={conv.response}
+                    isStreaming={false}
+                  />
                 </div>
 
                 {/* Divider */}
@@ -532,8 +546,8 @@ export default function ChatPage({
       {/* Footer */}
       <footer className="py-4 text-center border-t border-neutral-200/50 dark:border-neutral-800/50 mt-8">
         <Link
-          href="/"
           className="text-[10px] text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+          href="/"
         >
           Start a new research on ithbat
         </Link>

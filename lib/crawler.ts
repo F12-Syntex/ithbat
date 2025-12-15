@@ -123,12 +123,25 @@ const ISLAMIC_SOURCES = {
       links: 'a[href*="seekersguidance.org/answers/"]',
     },
   },
+  alim: {
+    name: "Alim.org",
+    searchUrl: (q: string) =>
+      `https://www.alim.org/search-results/?s=${encodeURIComponent(q)}&page=1`,
+    baseUrl: "https://www.alim.org",
+    selectors: {
+      results: ".search-result, article, .post, .content-item",
+      title: "h1, h2, .entry-title, .post-title",
+      content: ".entry-content, .post-content, article p, .content, p",
+      links: 'a[href*="alim.org"]',
+    },
+  },
 };
 
 // Generic source config for unknown domains
 const GENERIC_SOURCE = {
   name: "Web",
-  searchUrl: (q: string) => `https://www.google.com/search?q=${encodeURIComponent(q)}`,
+  searchUrl: (q: string) =>
+    `https://www.google.com/search?q=${encodeURIComponent(q)}`,
   baseUrl: "",
   selectors: {
     results: "article, .post, .content, main, .entry",

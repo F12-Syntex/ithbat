@@ -11,6 +11,7 @@ export function IntroModal() {
   useEffect(() => {
     // Check if user has seen the intro
     const hasSeenIntro = localStorage.getItem(INTRO_SEEN_KEY);
+
     if (!hasSeenIntro) {
       setIsOpen(true);
     }
@@ -25,18 +26,18 @@ export function IntroModal() {
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          exit={{ opacity: 0 }}
+          initial={{ opacity: 0 }}
           onClick={handleClose}
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl overflow-hidden"
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -87,7 +88,8 @@ export function IntroModal() {
                     Research Islamic Knowledge
                   </h3>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                    Search Quran, Hadith, and scholarly sources for authentic rulings and guidance.
+                    Search Quran, Hadith, and scholarly sources for authentic
+                    rulings and guidance.
                   </p>
                 </div>
               </div>
@@ -113,7 +115,8 @@ export function IntroModal() {
                     Verified Sources
                   </h3>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                    Citations from sunnah.com, quran.com, islamqa.info, and other trusted Islamic resources.
+                    Citations from sunnah.com, quran.com, islamqa.info, and
+                    other trusted Islamic resources.
                   </p>
                 </div>
               </div>
@@ -139,7 +142,8 @@ export function IntroModal() {
                     For Educational Use
                   </h3>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                    This tool is for learning purposes. Always consult qualified scholars for personal rulings.
+                    This tool is for learning purposes. Always consult qualified
+                    scholars for personal rulings.
                   </p>
                 </div>
               </div>
@@ -161,9 +165,10 @@ export function IntroModal() {
                     />
                   </svg>
                   <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                    Conversations are logged anonymously for analysis and improvement.
-                    No personal data is collected. Please use this service responsibly
-                    and avoid harmful or inappropriate queries.
+                    Conversations are logged anonymously for analysis and
+                    improvement. No personal data is collected. Please use this
+                    service responsibly and avoid harmful or inappropriate
+                    queries.
                   </p>
                 </div>
               </div>
@@ -172,8 +177,8 @@ export function IntroModal() {
             {/* Footer */}
             <div className="px-6 pb-6">
               <button
-                onClick={handleClose}
                 className="w-full py-2.5 bg-accent-500 hover:bg-accent-600 text-white text-sm font-medium rounded-xl transition-colors"
+                onClick={handleClose}
               >
                 Get Started
               </button>
