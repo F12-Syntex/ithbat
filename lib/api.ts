@@ -1,15 +1,16 @@
-import type { ResearchStepEvent } from "@/types/research";
+import type { ResearchStepEvent, ResearchDepth } from "@/types/research";
 
 export async function* streamResearch(
   query: string,
-  signal?: AbortSignal
+  depth: ResearchDepth,
+  signal?: AbortSignal,
 ): AsyncGenerator<ResearchStepEvent> {
   const response = await fetch("/api/research", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query, depth }),
     signal,
   });
 
@@ -44,6 +45,7 @@ export async function* streamResearch(
           if (data) {
             try {
               const event: ResearchStepEvent = JSON.parse(data);
+
               yield event;
             } catch {
               // Skip malformed events

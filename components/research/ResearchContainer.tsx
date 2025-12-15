@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import { SearchInput } from "./SearchInput";
 import { ResearchStep } from "./ResearchStep";
+import { ResearchResponse } from "./ResearchResponse";
 
 import { useResearch } from "@/hooks/useResearch";
 
@@ -12,14 +13,17 @@ export function ResearchContainer() {
 
   const isResearching = state.status === "researching";
   const hasResults = state.steps.length > 0;
+  const isStreaming = isResearching && state.response.length > 0;
 
   return (
-    <div className="flex flex-col items-center w-full min-h-[80vh]">
+    <div className="flex flex-col items-center w-full min-h-[80vh] px-4">
       {/* Header */}
-      <div className="text-center mb-12 mt-8">
-        <h1 className="text-3xl font-light tracking-wide mb-2">ithbat</h1>
-        <p className="text-default-500 text-sm font-mono">
-          islamic knowledge research
+      <div className="text-center mb-10 mt-8">
+        <h1 className="text-4xl font-light tracking-wider mb-2 text-neutral-800 dark:text-neutral-100">
+          ithbat
+        </h1>
+        <p className="text-neutral-500 dark:text-neutral-400 text-sm">
+          Islamic Knowledge Research
         </p>
       </div>
 
@@ -35,14 +39,15 @@ export function ResearchContainer() {
             exit={{ opacity: 0 }}
             initial={{ opacity: 0, y: 10 }}
           >
-            {/* Query */}
-            <div className="flex items-center justify-between px-3 py-2 mb-4 bg-default-100 dark:bg-default-50/10 rounded font-mono text-sm">
-              <span className="text-default-500">
-                <span className="text-primary">$</span> {state.query}
+            {/* Query Header */}
+            <div className="flex items-center justify-between px-3 py-2.5 mb-4 bg-neutral-100 dark:bg-neutral-800/50 rounded-lg font-mono text-sm">
+              <span className="text-neutral-600 dark:text-neutral-300">
+                <span className="text-emerald-500 mr-2">$</span>
+                {state.query}
               </span>
               {state.status === "completed" && (
                 <button
-                  className="text-xs text-default-400 hover:text-foreground transition-colors"
+                  className="text-xs text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors"
                   onClick={reset}
                 >
                   clear
@@ -50,26 +55,36 @@ export function ResearchContainer() {
               )}
             </div>
 
-            {/* Steps */}
-            <div className="border border-default-200 dark:border-default-700 rounded-lg overflow-hidden divide-y divide-default-200 dark:divide-default-700">
-              {state.steps.map((step, index) => (
+            {/* Research Steps - Collapsed by default */}
+            <div className="bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden divide-y divide-neutral-200 dark:divide-neutral-800">
+              {state.steps.map((step) => (
                 <ResearchStep
                   key={step.id}
+                  defaultExpanded={false}
                   step={step}
-                  defaultExpanded={index === state.steps.length - 1}
                 />
               ))}
             </div>
+
+            {/* Response - Separate from steps */}
+            {(state.response || isStreaming) && (
+              <ResearchResponse
+                content={state.response}
+                isStreaming={isStreaming}
+              />
+            )}
 
             {/* Error */}
             {state.error && (
               <motion.div
                 animate={{ opacity: 1 }}
-                className="mt-4 px-4 py-3 bg-danger-50 dark:bg-danger-900/20 rounded border border-danger-200 dark:border-danger-800 font-mono text-sm"
+                className="mt-4 px-4 py-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800/50 font-mono text-sm"
                 initial={{ opacity: 0 }}
               >
-                <span className="text-danger">error:</span>{" "}
-                <span className="text-danger-600 dark:text-danger-400">
+                <span className="text-red-600 dark:text-red-400 font-medium">
+                  error:
+                </span>{" "}
+                <span className="text-red-600 dark:text-red-300">
                   {state.error}
                 </span>
               </motion.div>
@@ -79,11 +94,12 @@ export function ResearchContainer() {
             {state.status === "completed" && (
               <motion.p
                 animate={{ opacity: 1 }}
-                className="mt-6 text-center text-xs text-default-400"
+                className="mt-8 text-center text-xs text-neutral-400 dark:text-neutral-500"
                 initial={{ opacity: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                For personal religious rulings, consult a qualified scholar.
+                For personal religious rulings, please consult a qualified
+                scholar.
               </motion.p>
             )}
           </motion.div>
@@ -92,8 +108,23 @@ export function ResearchContainer() {
 
       {/* Empty State */}
       {!hasResults && !isResearching && (
-        <div className="mt-12 text-center text-default-400 text-sm font-mono">
-          <p>ask about islamic rulings, hadith, or quranic verses</p>
+        <div className="mt-16 text-center">
+          <p className="text-neutral-400 dark:text-neutral-500 text-sm">
+            Ask about Islamic rulings, hadith, or Quranic verses
+          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            {["Prayer times", "Zakat rules", "Fasting exemptions"].map(
+              (example) => (
+                <button
+                  key={example}
+                  className="px-3 py-1.5 text-xs text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                  onClick={() => startResearch(example)}
+                >
+                  {example}
+                </button>
+              ),
+            )}
+          </div>
         </div>
       )}
     </div>

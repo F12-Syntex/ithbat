@@ -7,12 +7,33 @@ import {
   SYNTHESIS_PROMPT,
   buildPrompt,
 } from "@/lib/prompts";
-import { searchWeb, fetchPageContent, isTrustedDomain } from "@/lib/web-search";
+import {
+  crawlIslamicSources,
+  formatCrawlResultsForAI,
+  type CrawledPage,
+} from "@/lib/crawler";
+import {
+  type ResearchDepth,
+  type Source,
+  type CrawledLink,
+  DEPTH_CONFIG,
+} from "@/types/research";
 
 interface ResearchStepEvent {
-  type: "step_start" | "step_content" | "step_complete" | "error" | "done";
+  type:
+    | "step_start"
+    | "step_content"
+    | "step_complete"
+    | "source"
+    | "crawl_link"
+    | "response_start"
+    | "response_content"
+    | "error"
+    | "done";
   step?: string;
   content?: string;
+  source?: Source;
+  crawlLink?: CrawledLink;
   error?: string;
 }
 
@@ -21,7 +42,7 @@ function encodeSSE(event: ResearchStepEvent): string {
 }
 
 export async function POST(request: NextRequest) {
-  const { query } = await request.json();
+  const { query, depth = "standard" } = await request.json();
 
   if (!query || typeof query !== "string") {
     return new Response(JSON.stringify({ error: "Query is required" }), {
@@ -29,6 +50,9 @@ export async function POST(request: NextRequest) {
       headers: { "Content-Type": "application/json" },
     });
   }
+
+  const depthConfig =
+    DEPTH_CONFIG[depth as ResearchDepth] || DEPTH_CONFIG.standard;
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -38,95 +62,184 @@ export async function POST(request: NextRequest) {
       };
 
       const client = getOpenRouterClient();
+      const sources: Source[] = [];
+      const crawledPages: CrawledPage[] = [];
 
       try {
         // Step 1: Understanding
         send({ type: "step_start", step: "understanding" });
 
-        let understanding = "";
-        const understandingPrompt = buildPrompt(UNDERSTANDING_PROMPT, { query });
+        const understandingPrompt = buildPrompt(UNDERSTANDING_PROMPT, {
+          query,
+        });
 
         for await (const chunk of client.streamChat(
           [
             { role: "system", content: ISLAMIC_RESEARCH_SYSTEM_PROMPT },
             { role: "user", content: understandingPrompt },
           ],
-          "QUICK"
+          "QUICK",
         )) {
-          understanding += chunk;
           send({ type: "step_content", step: "understanding", content: chunk });
         }
 
         send({ type: "step_complete", step: "understanding" });
 
-        // Step 2: Real Web Search
+        // Step 2: Web Crawling
         send({ type: "step_start", step: "searching" });
-
-        let searchResults = "";
+        send({
+          type: "step_content",
+          step: "searching",
+          content: `Starting web crawl for "${query}"...\n`,
+        });
+        send({
+          type: "step_content",
+          step: "searching",
+          content: `Depth: ${depthConfig.crawlDepth} levels, Max pages: ${depthConfig.maxPages}\n\n`,
+        });
 
         try {
-          send({ type: "step_content", step: "searching", content: `searching: "${query}"...\n` });
+          const crawler = crawlIslamicSources(
+            query,
+            depthConfig.crawlDepth,
+            depthConfig.maxPages,
+          );
 
-          const { results } = await searchWeb(query);
+          let sourceId = 1;
+          let result = await crawler.next();
 
-          if (results.length === 0) {
-            send({ type: "step_content", step: "searching", content: "no results found\n" });
-          } else {
-            send({ type: "step_content", step: "searching", content: `found ${results.length} results\n\n` });
+          while (!result.done) {
+            const progress = result.value;
 
-            // Fetch content from top trusted sources
-            const trustedResults = results.filter((r) => isTrustedDomain(r.domain));
-            const resultsToFetch = trustedResults.length > 0 ? trustedResults.slice(0, 3) : results.slice(0, 3);
-
-            for (const result of resultsToFetch) {
-              const trusted = isTrustedDomain(result.domain);
+            // Send crawl link event for UI tracking
+            if (progress.type === "visiting") {
+              send({
+                type: "crawl_link",
+                crawlLink: {
+                  url: progress.url!,
+                  depth: progress.depth!,
+                  status: "visiting",
+                },
+              });
               send({
                 type: "step_content",
                 step: "searching",
-                content: `[${result.domain}]${trusted ? " (trusted)" : ""}\n  ${result.title}\n  ${result.link}\n`,
+                content: `${"  ".repeat(progress.depth!)}→ ${progress.url}\n`,
+              });
+            } else if (progress.type === "found") {
+              send({
+                type: "crawl_link",
+                crawlLink: {
+                  url: progress.url!,
+                  title: progress.title,
+                  depth: progress.depth!,
+                  status: "found",
+                },
+              });
+              send({
+                type: "step_content",
+                step: "searching",
+                content: `${"  ".repeat(progress.depth!)}✓ Found: ${progress.title?.slice(0, 60) || "Page"}...\n`,
               });
 
-              // Fetch page content
-              const content = await fetchPageContent(result.link);
-              if (content) {
-                searchResults += `\n\n--- SOURCE: ${result.title} (${result.link}) ---\n${content}\n`;
-              }
+              // Create source for UI
+              const source: Source = {
+                id: sourceId++,
+                title: progress.title || "Page",
+                url: progress.url!,
+                domain: new URL(progress.url!).hostname.replace("www.", ""),
+                trusted: true,
+              };
+
+              sources.push(source);
+              send({ type: "source", source });
+            } else if (progress.type === "error") {
+              send({
+                type: "crawl_link",
+                crawlLink: {
+                  url: progress.url!,
+                  depth: progress.depth || 0,
+                  status: "error",
+                },
+              });
+              send({
+                type: "step_content",
+                step: "searching",
+                content: `✗ Failed: ${progress.url}\n`,
+              });
             }
 
-            send({ type: "step_content", step: "searching", content: "\nfetched content from sources\n" });
+            result = await crawler.next();
           }
-        } catch (searchError) {
-          const errorMsg = searchError instanceof Error ? searchError.message : "Search failed";
-          send({ type: "step_content", step: "searching", content: `search error: ${errorMsg}\n` });
-          // Continue without search results
-          searchResults = "No web search results available. Please provide answer based on your knowledge.";
+
+          // Get final crawl results
+          const crawlResult = result.value;
+
+          crawledPages.push(...crawlResult.pages);
+
+          send({
+            type: "step_content",
+            step: "searching",
+            content: `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`,
+          });
+          send({
+            type: "step_content",
+            step: "searching",
+            content: `Crawl complete: ${crawlResult.pages.length} pages, ${crawlResult.visitedUrls.length} URLs visited\n`,
+          });
+          send({
+            type: "step_content",
+            step: "searching",
+            content: `Time: ${(crawlResult.totalTime / 1000).toFixed(1)}s\n`,
+          });
+        } catch (crawlError) {
+          const errorMsg =
+            crawlError instanceof Error ? crawlError.message : "Crawl failed";
+
+          send({
+            type: "step_content",
+            step: "searching",
+            content: `\nCrawl error: ${errorMsg}\n`,
+          });
         }
 
         send({ type: "step_complete", step: "searching" });
 
-        // Step 3: Synthesizing with real search results
+        // Step 3: Synthesizing with crawled content only
         send({ type: "step_start", step: "synthesizing" });
+        send({
+          type: "step_content",
+          step: "synthesizing",
+          content: `Analyzing ${crawledPages.length} crawled sources...\n`,
+        });
+
+        const crawledContent = formatCrawlResultsForAI(crawledPages);
 
         const synthesisPrompt = buildPrompt(SYNTHESIS_PROMPT, {
           query,
-          research: searchResults || "No search results available.",
+          research: crawledContent,
         });
+
+        send({ type: "step_complete", step: "synthesizing" });
+
+        // Start streaming the response
+        send({ type: "response_start" });
 
         for await (const chunk of client.streamChat(
           [
             { role: "system", content: ISLAMIC_RESEARCH_SYSTEM_PROMPT },
             { role: "user", content: synthesisPrompt },
           ],
-          "HIGH"
+          "HIGH",
         )) {
-          send({ type: "step_content", step: "synthesizing", content: chunk });
+          send({ type: "response_content", content: chunk });
         }
 
-        send({ type: "step_complete", step: "synthesizing" });
         send({ type: "done" });
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Unknown error occurred";
+
         send({ type: "error", error: message });
       } finally {
         controller.close();

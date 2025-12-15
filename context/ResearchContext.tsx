@@ -5,6 +5,7 @@ import {
   useContext,
   useReducer,
   useRef,
+  useState,
   type ReactNode,
 } from "react";
 
@@ -13,11 +14,14 @@ import {
   type ResearchState,
   type ResearchStep,
   type ResearchStepType,
+  type ResearchDepth,
+  type Source,
+  type CrawledLink,
   createStep,
 } from "@/types/research";
 
 type ResearchAction =
-  | { type: "START_RESEARCH"; query: string }
+  | { type: "START_RESEARCH"; query: string; depth: ResearchDepth }
   | { type: "ADD_STEP"; stepType: ResearchStepType }
   | {
       type: "UPDATE_STEP_STATUS";
@@ -25,6 +29,10 @@ type ResearchAction =
       status: ResearchStep["status"];
     }
   | { type: "APPEND_STEP_CONTENT"; stepType: ResearchStepType; content: string }
+  | { type: "ADD_SOURCE"; source: Source }
+  | { type: "ADD_CRAWL_LINK"; crawlLink: CrawledLink }
+  | { type: "SET_RESPONSE"; content: string }
+  | { type: "APPEND_RESPONSE"; content: string }
   | { type: "SET_ERROR"; error: string }
   | { type: "COMPLETE" }
   | { type: "RESET" };
@@ -40,7 +48,11 @@ const initialState: ResearchState = {
   query: "",
   status: "idle",
   steps: [],
+  sources: [],
+  crawledLinks: [],
+  response: "",
   error: null,
+  depth: "deep",
 };
 
 function researchReducer(
@@ -53,6 +65,7 @@ function researchReducer(
         ...initialState,
         query: action.query,
         status: "researching",
+        depth: action.depth,
       };
 
     case "ADD_STEP":
@@ -85,6 +98,43 @@ function researchReducer(
         ),
       };
 
+    case "ADD_SOURCE":
+      return {
+        ...state,
+        sources: [...state.sources, action.source],
+      };
+
+    case "ADD_CRAWL_LINK":
+      // Update existing link or add new one
+      const existingIndex = state.crawledLinks.findIndex(
+        (l) => l.url === action.crawlLink.url,
+      );
+
+      if (existingIndex >= 0) {
+        const updated = [...state.crawledLinks];
+
+        updated[existingIndex] = action.crawlLink;
+
+        return { ...state, crawledLinks: updated };
+      }
+
+      return {
+        ...state,
+        crawledLinks: [...state.crawledLinks, action.crawlLink],
+      };
+
+    case "SET_RESPONSE":
+      return {
+        ...state,
+        response: action.content,
+      };
+
+    case "APPEND_RESPONSE":
+      return {
+        ...state,
+        response: state.response + action.content,
+      };
+
     case "SET_ERROR":
       return {
         ...state,
@@ -110,6 +160,7 @@ const ResearchContext = createContext<ResearchContextValue | null>(null);
 
 export function ResearchProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(researchReducer, initialState);
+  const [depth] = useState<ResearchDepth>("deep");
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const startResearch = async (query: string) => {
@@ -117,11 +168,12 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
 
-    dispatch({ type: "START_RESEARCH", query });
+    dispatch({ type: "START_RESEARCH", query, depth });
 
     try {
       for await (const event of streamResearch(
         query,
+        depth,
         abortControllerRef.current.signal,
       )) {
         switch (event.type) {
@@ -148,6 +200,28 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
                 stepType: event.step,
                 status: "completed",
               });
+            }
+            break;
+
+          case "source":
+            if (event.source) {
+              dispatch({ type: "ADD_SOURCE", source: event.source });
+            }
+            break;
+
+          case "crawl_link":
+            if (event.crawlLink) {
+              dispatch({ type: "ADD_CRAWL_LINK", crawlLink: event.crawlLink });
+            }
+            break;
+
+          case "response_start":
+            dispatch({ type: "SET_RESPONSE", content: "" });
+            break;
+
+          case "response_content":
+            if (event.content) {
+              dispatch({ type: "APPEND_RESPONSE", content: event.content });
             }
             break;
 
@@ -182,7 +256,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
 
   return (
     <ResearchContext.Provider
-      value={{ state, startResearch, cancelResearch, reset }}
+      value={{ state, depth, setDepth, startResearch, cancelResearch, reset }}
     >
       {children}
     </ResearchContext.Provider>

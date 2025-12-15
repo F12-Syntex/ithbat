@@ -21,7 +21,7 @@ export class OpenRouterClient {
   async *streamChat(
     messages: ChatMessage[],
     tier: ModelTier,
-    options: StreamOptions = {}
+    options: StreamOptions = {},
   ): AsyncGenerator<string> {
     const model = aiConfig.models[tier];
 
@@ -44,10 +44,12 @@ export class OpenRouterClient {
 
     if (!response.ok) {
       const error = await response.text();
+
       throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
     }
 
     const reader = response.body?.getReader();
+
     if (!reader) {
       throw new Error("No response body");
     }
@@ -58,20 +60,24 @@ export class OpenRouterClient {
     try {
       while (true) {
         const { done, value } = await reader.read();
+
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
+
         buffer = lines.pop() || "";
 
         for (const line of lines) {
           if (line.startsWith("data: ")) {
             const data = line.slice(6).trim();
+
             if (data === "[DONE]") return;
 
             try {
               const parsed = JSON.parse(data);
               const content = parsed.choices?.[0]?.delta?.content;
+
               if (content) {
                 yield content;
               }
@@ -92,10 +98,12 @@ let clientInstance: OpenRouterClient | null = null;
 export function getOpenRouterClient(): OpenRouterClient {
   if (!clientInstance) {
     const apiKey = process.env.OPENROUTER_API_KEY;
+
     if (!apiKey) {
       throw new Error("OPENROUTER_API_KEY environment variable is not set");
     }
     clientInstance = new OpenRouterClient(apiKey);
   }
+
   return clientInstance;
 }

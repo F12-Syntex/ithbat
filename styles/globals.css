@@ -1,3 +1,40 @@
 @import "tailwindcss";
 
-@config "../tailwind.config.js"
+@config "../tailwind.config.js";
+
+/* Base styles */
+html {
+  @apply antialiased;
+}
+
+body {
+  @apply bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100;
+  @apply transition-colors duration-200;
+}
+
+/* Custom scrollbar for dark mode */
+::-webkit-scrollbar {
+  @apply w-2 h-2;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-neutral-300 dark:bg-neutral-700 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-neutral-400 dark:bg-neutral-600;
+}
+
+/* Focus visible styles */
+:focus-visible {
+  @apply outline-none ring-2 ring-emerald-500/50 ring-offset-2 ring-offset-neutral-50 dark:ring-offset-neutral-950;
+}
+
+/* Selection styles */
+::selection {
+  @apply bg-emerald-500/20 text-emerald-900 dark:text-emerald-100;
+}

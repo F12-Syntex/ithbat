@@ -12,16 +12,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html suppressHydrationWarning lang="en">
       <head>
         <title>Ithbat - Islamic Knowledge Research</title>
         <meta
-          name="description"
           content="Search for authentic Islamic knowledge backed by Quran, Hadith, and scholarly sources"
+          name="description"
         />
       </head>
-      <body className="min-h-screen bg-background antialiased">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <body className="min-h-screen antialiased">
+        <ThemeProvider enableSystem attribute="class" defaultTheme="dark">
           <HeroUIProvider>
             <ResearchProvider>{children}</ResearchProvider>
           </HeroUIProvider>
