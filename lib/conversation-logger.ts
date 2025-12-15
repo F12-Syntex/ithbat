@@ -164,6 +164,46 @@ export async function getConversationLogs(
   return { logs, total: count || 0 };
 }
 
+export async function deleteSession(sessionId: string): Promise<boolean> {
+  const supabase = createServerClient();
+  if (!supabase) {
+    console.warn("Supabase not configured");
+    return false;
+  }
+
+  const { error } = await supabase
+    .from("conversation_logs")
+    .delete()
+    .eq("session_id", sessionId);
+
+  if (error) {
+    console.error("Failed to delete session:", error);
+    return false;
+  }
+
+  return true;
+}
+
+export async function deleteLog(logId: string): Promise<boolean> {
+  const supabase = createServerClient();
+  if (!supabase) {
+    console.warn("Supabase not configured");
+    return false;
+  }
+
+  const { error } = await supabase
+    .from("conversation_logs")
+    .delete()
+    .eq("id", logId);
+
+  if (error) {
+    console.error("Failed to delete log:", error);
+    return false;
+  }
+
+  return true;
+}
+
 export async function getConversationsBySession(
   sessionId: string
 ): Promise<ConversationLog[]> {
