@@ -1,8 +1,10 @@
+"use client";
+
 import { FC, useState, useEffect } from "react";
 import { VisuallyHidden } from "@react-aria/visually-hidden";
 import { SwitchProps, useSwitch } from "@heroui/switch";
 import clsx from "clsx";
-import { useTheme } from "@heroui/use-theme";
+import { useTheme } from "next-themes";
 
 import { SunFilledIcon, MoonFilledIcon } from "@/components/icons";
 
@@ -16,7 +18,6 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({
   classNames,
 }) => {
   const [isMounted, setIsMounted] = useState(false);
-
   const { theme, setTheme } = useTheme();
 
   const {
@@ -33,7 +34,7 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({
 
   useEffect(() => {
     setIsMounted(true);
-  }, [isMounted]);
+  }, []);
 
   // Prevent Hydration Mismatch
   if (!isMounted) return <div className="w-6 h-6" />;
@@ -45,7 +46,7 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({
         className: clsx(
           "px-px transition-opacity hover:opacity-80 cursor-pointer",
           className,
-          classNames?.base,
+          classNames?.base
         ),
       })}
     >
@@ -67,15 +68,11 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({
               "px-0",
               "mx-0",
             ],
-            classNames?.wrapper,
+            classNames?.wrapper
           ),
         })}
       >
-        {isSelected ? (
-          <MoonFilledIcon size={22} />
-        ) : (
-          <SunFilledIcon size={22} />
-        )}
+        {isSelected ? <MoonFilledIcon size={22} /> : <SunFilledIcon size={22} />}
       </div>
     </Component>
   );

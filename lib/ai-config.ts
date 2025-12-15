@@ -21,8 +21,7 @@ export const aiConfig: AIConfig = {
     QUICK: {
       id: "google/gemini-2.5-flash",
       name: "Gemini 2.5 Flash",
-      description:
-        "Fast responses for question understanding and quick lookups",
+      description: "Fast responses for question understanding and quick lookups",
       supportsStreaming: true,
       supportsWebSearch: false,
       maxTokens: 4096,
@@ -40,8 +39,7 @@ export const aiConfig: AIConfig = {
     REASONING: {
       id: "google/gemini-2.5-flash",
       name: "Gemini 2.5 Flash",
-      description:
-        "Deep research with built-in web search for comprehensive Islamic sources",
+      description: "Deep research with built-in web search for comprehensive Islamic sources",
       supportsStreaming: true,
       supportsWebSearch: true,
       maxTokens: 8192,

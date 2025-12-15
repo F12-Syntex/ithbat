@@ -1,3 +1,5 @@
+"use client";
+
 import {
   createContext,
   useContext,
@@ -6,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { streamResearch } from "@/services/api";
+import { streamResearch } from "@/lib/api";
 import {
   type ResearchState,
   type ResearchStep,

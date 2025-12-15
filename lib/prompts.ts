@@ -86,7 +86,7 @@ Format the response clearly with:
 
 export function buildPrompt(
   template: string,
-  variables: Record<string, string>,
+  variables: Record<string, string>
 ): string {
   let result = template;
 

@@ -5,63 +5,74 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ```bash
-yarn dev     # Start unified dev server (Express + Vite on port 3000)
-yarn build   # Type-check and build for production
-yarn lint    # Run ESLint with auto-fix
+yarn dev     # Start Next.js dev server (port 3000)
+yarn build   # Build for production
+yarn start   # Start production server
+yarn lint    # Run ESLint
 ```
 
 ## Architecture
 
-**Ithbat** is an Islamic knowledge research application with a secure backend that handles AI API calls.
+**Ithbat** is an Islamic knowledge research application built with Next.js 15 (App Router).
 
-### Unified Dev Server (server/dev.ts)
+### Project Structure
 
-Single entry point that runs Express with Vite as middleware - everything runs on port 3000 with one command.
+```
+app/
+├── layout.tsx          # Root layout with providers
+├── page.tsx            # Main search page
+└── api/
+    └── research/
+        └── route.ts    # SSE streaming research endpoint
 
-### Backend (server/)
+lib/
+├── ai-config.ts        # AI model configuration (tiers)
+├── openrouter.ts       # OpenRouter API client
+├── prompts.ts          # Islamic research prompts
+└── api.ts              # Frontend SSE client
 
-Express server that proxies OpenRouter API calls to keep the API key secure:
+components/
+├── research/           # Research UI components
+│   ├── SearchInput.tsx
+│   ├── ResearchStep.tsx
+│   └── ResearchContainer.tsx
+├── theme-switch.tsx    # Dark mode toggle
+└── icons.tsx           # SVG icons
 
-- `server/dev.ts` - Unified dev server (Express + Vite middleware + WebSocket HMR)
-- `server/config/ai.ts` - AI model configuration (tiers, trusted domains)
-- `server/routes/research.ts` - SSE streaming endpoint (`POST /api/research`)
-- `server/services/openrouter.ts` - OpenRouter API client with streaming
-- `server/services/prompts.ts` - Islamic research system prompts
+context/
+└── ResearchContext.tsx # Research state management
 
-**Model Tiers:**
-- QUICK: `anthropic/claude-3.5-haiku` - Fast question understanding
-- HIGH: `anthropic/claude-3.5-sonnet` - Quality synthesis
-- REASONING: `perplexity/sonar-reasoning` - Deep research with web search
+types/
+├── research.ts         # Research types
+└── sources.ts          # Islamic source types
+```
 
-### Frontend (src/)
+### API Route
 
-Vite + React + TypeScript with HeroUI v2 components.
+`POST /api/research` - Streams SSE events for the research pipeline:
+1. Understanding (QUICK model) - Parse question
+2. Searching (REASONING model) - Find Islamic sources
+3. Synthesizing (HIGH model) - Build final answer
 
-**Provider Stack** (src/main.tsx):
-`BrowserRouter` → `Provider` (HeroUIProvider + ResearchProvider) → `App`
+### Model Tiers (lib/ai-config.ts)
 
-**Research Flow:**
-1. User submits query via `SearchInput`
-2. Frontend calls `/api/research` endpoint
-3. Backend streams SSE events through research pipeline:
-   - Understanding (QUICK model)
-   - Searching (REASONING model with web search)
-   - Synthesizing (HIGH model)
-4. `ResearchContext` manages state, `ResearchStep` components render streaming content
+Configure AI models in `lib/ai-config.ts`. Currently using Gemini 2.5 Flash.
 
-**Key Files:**
-- `src/context/ResearchContext.tsx` - Research state management with useReducer
-- `src/services/api.ts` - SSE client for streaming responses
-- `src/components/research/` - UI components (SearchInput, ResearchStep, ResearchContainer)
+### Environment Variables
 
-### Configuration
-
-- **Path Alias**: `@/*` maps to `src/*`
-- **Environment**: `OPENROUTER_API_KEY` in `.env.local` (server-side only, no VITE_ prefix)
+Create `.env.local`:
+```
+OPENROUTER_API_KEY=your_key_here
+```
 
 ## Key Patterns
 
-- HeroUI components imported individually (`@heroui/button`, `@heroui/card`, etc.)
-- Dark mode is class-based (`darkMode: "class"`)
+- App Router with `"use client"` for interactive components
+- HeroUI components imported individually
+- next-themes for dark mode
 - Framer Motion for animations
-- SSE (Server-Sent Events) for streaming AI responses
+- SSE streaming for real-time AI responses
+
+
+
+DONT START THE PROGRAM YOURSELF, THE USER WILL RUN IT HIMSELF

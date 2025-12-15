@@ -10,7 +10,8 @@
       "Bash(yarn add:*)",
       "Bash(yarn lint)",
       "Bash(yarn remove:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(yarn dev)"
     ]
   }
 }
