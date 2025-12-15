@@ -223,8 +223,8 @@ export default function ChatPage({
   // Loading state while checking auth
   if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex items-center justify-center">
-        <div className="w-5 h-5 border-2 border-neutral-200 dark:border-neutral-800 border-t-neutral-400 dark:border-t-neutral-500 rounded-full animate-spin" />
+      <div className="min-h-screen bg-white dark:bg-neutral-950 flex items-center justify-center">
+        <div className="w-4 h-4 border-2 border-neutral-200 dark:border-neutral-800 border-t-neutral-500 rounded-full animate-spin" />
       </div>
     );
   }
@@ -232,22 +232,22 @@ export default function ChatPage({
   // Password prompt
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-white dark:bg-neutral-950 flex items-center justify-center p-4">
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-xs"
+          className="w-full max-w-[280px]"
         >
-          <div className="text-center mb-6">
-            <h1 className="text-lg font-medium text-neutral-800 dark:text-neutral-100">
+          <div className="text-center mb-5">
+            <h1 className="text-base font-medium text-neutral-900 dark:text-neutral-100">
               Chat Thread
             </h1>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-              Enter password to continue
+            <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">
+              Protected area
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-3">
+          <form onSubmit={handleLogin} className="space-y-2.5">
             <input
               type="password"
               value={password}
@@ -256,34 +256,34 @@ export default function ChatPage({
                 setAuthError(false);
               }}
               placeholder="Password"
-              className={`w-full px-4 py-3 text-base bg-white dark:bg-neutral-900 border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent-500/20 transition-all placeholder:text-neutral-400 ${
+              className={`w-full px-3 py-2.5 text-sm bg-neutral-50 dark:bg-neutral-900 border rounded-lg focus:outline-none focus:ring-1 focus:ring-neutral-300 dark:focus:ring-neutral-700 transition-all placeholder:text-neutral-400 ${
                 authError
-                  ? "border-red-300 dark:border-red-800"
-                  : "border-neutral-200 dark:border-neutral-800 focus:border-accent-400 dark:focus:border-accent-600"
+                  ? "border-red-200 dark:border-red-900"
+                  : "border-neutral-200 dark:border-neutral-800"
               }`}
               autoFocus
             />
 
             {authError && (
-              <p className="text-xs text-red-500 text-center">
-                Incorrect password
+              <p className="text-[11px] text-red-500 text-center">
+                Wrong password
               </p>
             )}
 
             <button
               type="submit"
-              className="w-full py-3 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-sm font-medium rounded-xl hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-colors"
+              className="w-full py-2.5 bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 text-sm font-medium rounded-lg hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors"
             >
               Continue
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-5 text-center">
             <Link
               href="/"
-              className="text-sm text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+              className="text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
             >
-              Back to search
+              ← Back
             </Link>
           </div>
         </motion.div>

@@ -163,6 +163,13 @@ interface ConversationTurn {
 }
 
 export async function POST(request: NextRequest) {
+  // Extract device info from headers
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown";
+  const userAgent = request.headers.get("user-agent") || undefined;
+
   const {
     query,
     depth = "deep",
@@ -705,7 +712,8 @@ export async function POST(request: NextRequest) {
           cleanedResponse,
           allSteps,
           allSources,
-          isFollowUp
+          isFollowUp,
+          { ip, userAgent }
         ).catch((err) => console.error("Failed to log conversation:", err));
 
         send({ type: "done" });

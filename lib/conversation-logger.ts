@@ -10,16 +10,34 @@ export interface ConversationLog {
   sources: Source[];
   is_follow_up: boolean;
   created_at?: string;
+  ip_address?: string;
+  user_agent?: string;
+  device_type?: string;
+}
+
+export interface DeviceInfo {
+  ip?: string;
+  userAgent?: string;
+  deviceType?: string;
 }
 
 const MAX_SESSIONS = 20;
+
+// Parse user agent to determine device type
+function parseDeviceType(userAgent?: string): string {
+  if (!userAgent) return "unknown";
+  const ua = userAgent.toLowerCase();
+  if (ua.includes("mobile") || ua.includes("android") || ua.includes("iphone"))
+    return "mobile";
+  if (ua.includes("tablet") || ua.includes("ipad")) return "tablet";
+  return "desktop";
+}
 
 async function cleanupOldSessions(): Promise<void> {
   try {
     const supabase = createServerClient();
     if (!supabase) return;
 
-    // Get all unique sessions ordered by most recent activity
     const { data: sessions } = await supabase
       .from("conversation_logs")
       .select("session_id, created_at")
@@ -27,7 +45,6 @@ async function cleanupOldSessions(): Promise<void> {
 
     if (!sessions || sessions.length === 0) return;
 
-    // Get unique session IDs in order of most recent
     const uniqueSessions: string[] = [];
     const seen = new Set<string>();
     for (const s of sessions) {
@@ -37,7 +54,6 @@ async function cleanupOldSessions(): Promise<void> {
       }
     }
 
-    // If we have more than MAX_SESSIONS, delete the oldest ones
     if (uniqueSessions.length > MAX_SESSIONS) {
       const sessionsToDelete = uniqueSessions.slice(MAX_SESSIONS);
 
@@ -61,7 +77,8 @@ export async function logConversation(
   response: string,
   steps: ResearchStep[],
   sources: Source[],
-  isFollowUp: boolean = false
+  isFollowUp: boolean = false,
+  deviceInfo?: DeviceInfo
 ): Promise<void> {
   try {
     const supabase = createServerClient();
@@ -70,20 +87,32 @@ export async function logConversation(
       return;
     }
 
-    const { error } = await supabase.from("conversation_logs").insert({
+    const insertData: Record<string, unknown> = {
       session_id: sessionId,
       query,
       response,
       steps: JSON.stringify(steps),
       sources: JSON.stringify(sources),
       is_follow_up: isFollowUp,
-    });
+    };
+
+    // Add device info if available
+    if (deviceInfo?.ip) {
+      insertData.ip_address = deviceInfo.ip;
+    }
+    if (deviceInfo?.userAgent) {
+      insertData.user_agent = deviceInfo.userAgent;
+      insertData.device_type = parseDeviceType(deviceInfo.userAgent);
+    }
+
+    const { error } = await supabase
+      .from("conversation_logs")
+      .insert(insertData);
 
     if (error) {
       console.error("Failed to log conversation:", error);
     }
 
-    // Cleanup old sessions (non-blocking)
     cleanupOldSessions().catch((err) =>
       console.error("Cleanup error:", err)
     );
@@ -102,12 +131,10 @@ export async function getConversationLogs(
     return { logs: [], total: 0 };
   }
 
-  // Get total count
   const { count } = await supabase
     .from("conversation_logs")
     .select("*", { count: "exact", head: true });
 
-  // Get paginated logs
   const { data, error } = await supabase
     .from("conversation_logs")
     .select("*")
@@ -129,6 +156,9 @@ export async function getConversationLogs(
       typeof row.sources === "string" ? JSON.parse(row.sources) : row.sources,
     is_follow_up: row.is_follow_up,
     created_at: row.created_at,
+    ip_address: row.ip_address,
+    user_agent: row.user_agent,
+    device_type: row.device_type,
   }));
 
   return { logs, total: count || 0 };
@@ -164,5 +194,8 @@ export async function getConversationsBySession(
       typeof row.sources === "string" ? JSON.parse(row.sources) : row.sources,
     is_follow_up: row.is_follow_up,
     created_at: row.created_at,
+    ip_address: row.ip_address,
+    user_agent: row.user_agent,
+    device_type: row.device_type,
   }));
 }
