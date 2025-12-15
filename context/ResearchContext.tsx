@@ -42,12 +42,16 @@ type ResearchAction =
   | { type: "APPEND_RESPONSE"; content: string }
   | { type: "SET_ERROR"; error: string }
   | { type: "COMPLETE" }
-  | { type: "RESET" };
+  | { type: "RESET" }
+  | { type: "START_ANALYZING" }
+  | { type: "APPEND_ANALYSIS"; content: string }
+  | { type: "FINISH_ANALYZING" };
 
 interface ResearchContextValue {
   state: ResearchState;
-  startResearch: (query: string) => Promise<void>;
-  askFollowUp: (question: string) => Promise<void>;
+  startResearch: (query: string, includeAISummary?: boolean) => Promise<void>;
+  askFollowUp: (question: string, includeAISummary?: boolean) => Promise<void>;
+  requestAIAnalysis: () => Promise<void>;
   cancelResearch: () => void;
   reset: () => void;
 }
@@ -190,6 +194,24 @@ function researchReducer(
     case "RESET":
       return initialState;
 
+    case "START_ANALYZING":
+      return {
+        ...state,
+        status: "researching",
+      };
+
+    case "APPEND_ANALYSIS":
+      return {
+        ...state,
+        response: state.response + action.content,
+      };
+
+    case "FINISH_ANALYZING":
+      return {
+        ...state,
+        status: "completed",
+      };
+
     default:
       return state;
   }
@@ -202,7 +224,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
   const [depth] = useState<ResearchDepth>("deep");
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const startResearch = async (query: string) => {
+  const startResearch = async (query: string, includeAISummary?: boolean) => {
     // Cancel any existing research
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
@@ -214,6 +236,8 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
         query,
         depth,
         abortControllerRef.current.signal,
+        undefined,
+        includeAISummary,
       )) {
         switch (event.type) {
           case "step_start":
@@ -297,7 +321,43 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "RESET" });
   };
 
-  const askFollowUp = async (question: string) => {
+  const requestAIAnalysis = async () => {
+    if (!state.query || !state.response || state.status !== "completed") {
+      return;
+    }
+
+    dispatch({ type: "START_ANALYZING" });
+
+    try {
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: state.query,
+          evidence: state.response,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get AI analysis");
+      }
+
+      const { analysis } = await response.json();
+
+      if (analysis) {
+        dispatch({ type: "APPEND_ANALYSIS", content: "\n\n" + analysis });
+      }
+
+      dispatch({ type: "FINISH_ANALYZING" });
+    } catch (error) {
+      dispatch({
+        type: "SET_ERROR",
+        error: error instanceof Error ? error.message : "Analysis failed",
+      });
+    }
+  };
+
+  const askFollowUp = async (question: string, includeAISummary?: boolean) => {
     // Cancel any existing research
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
@@ -325,6 +385,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
         depth,
         abortControllerRef.current.signal,
         conversationHistory,
+        includeAISummary,
       )) {
         switch (event.type) {
           case "step_start":
@@ -400,7 +461,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
 
   return (
     <ResearchContext.Provider
-      value={{ state, startResearch, askFollowUp, cancelResearch, reset }}
+      value={{ state, startResearch, askFollowUp, requestAIAnalysis, cancelResearch, reset }}
     >
       {children}
     </ResearchContext.Provider>

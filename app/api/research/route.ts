@@ -7,6 +7,7 @@ import {
   PLANNING_PROMPT,
   EXPLORATION_PROMPT,
   SYNTHESIS_PROMPT,
+  AI_SUMMARY_ADDENDUM,
   VERIFICATION_PROMPT,
   DEEP_VERIFICATION_PROMPT,
   buildPrompt,
@@ -178,10 +179,12 @@ export async function POST(request: NextRequest) {
     depth = "deep",
     conversationHistory = [],
     sessionId: providedSessionId,
+    includeAISummary = false,
   } = await request.json();
   const history = conversationHistory as ConversationTurn[];
   const sessionId = providedSessionId || crypto.randomUUID();
   const isFollowUp = history.length > 0;
+  const wantsAISummary = includeAISummary === true;
 
   if (!query || typeof query !== "string") {
     return new Response(JSON.stringify({ error: "Query is required" }), {
@@ -609,6 +612,49 @@ export async function POST(request: NextRequest) {
           content: `\n━━━ Exploration complete: ${allCrawledPages.length} total pages ━━━\n`,
         });
 
+        // Fetch tafsir for any Quran references in the query BEFORE synthesis
+        const queryQuranRefs = extractQuranReferences(query);
+
+        if (queryQuranRefs.length > 0) {
+          send({
+            type: "step_content",
+            step: exploreStep.id,
+            content: `\n📖 Fetching tafsir for ${queryQuranRefs.length} Quran reference${queryQuranRefs.length > 1 ? "s" : ""}...\n`,
+          });
+
+          for (const ref of queryQuranRefs.slice(0, 5)) {
+            try {
+              send({
+                type: "step_content",
+                step: exploreStep.id,
+                content: `  Fetching tafsir for ${ref.surah}:${ref.ayah}...\n`,
+              });
+
+              const tafsirPages = await crawlUrls([ref.tafsirUrl]);
+
+              if (tafsirPages.length > 0) {
+                // Add tafsir content to crawled pages with clear labeling
+                for (const page of tafsirPages) {
+                  page.title = `Tafsir Ibn Kathir - Quran ${ref.surah}:${ref.ayah}`;
+                  page.content = `[TAFSIR IBN KATHIR FOR QURAN ${ref.surah}:${ref.ayah}]\n\n${page.content}`;
+                  allCrawledPages.push(page);
+                }
+                send({
+                  type: "step_content",
+                  step: exploreStep.id,
+                  content: `  ✓ Got tafsir for Quran ${ref.surah}:${ref.ayah}\n`,
+                });
+              }
+            } catch (err) {
+              send({
+                type: "step_content",
+                step: exploreStep.id,
+                content: `  ⚠ Could not fetch tafsir for ${ref.surah}:${ref.ayah}\n`,
+              });
+            }
+          }
+        }
+
         send({ type: "step_complete", step: exploreStep.id });
 
         // Step 5: Synthesizing (dynamic title)
@@ -638,7 +684,12 @@ export async function POST(request: NextRequest) {
             "\n---\nUse the above context to inform your answer to the current follow-up question. Reference previous answers when relevant.\n";
         }
 
-        const synthesisPrompt = buildPrompt(SYNTHESIS_PROMPT, {
+        // Build synthesis prompt, optionally adding AI summary instructions
+        const baseSynthesisPrompt = wantsAISummary
+          ? SYNTHESIS_PROMPT + AI_SUMMARY_ADDENDUM
+          : SYNTHESIS_PROMPT;
+
+        const synthesisPrompt = buildPrompt(baseSynthesisPrompt, {
           query: history.length > 0 ? `[Follow-up Question] ${query}` : query,
           research: crawledContent + conversationContext,
         });
@@ -967,7 +1018,10 @@ export async function POST(request: NextRequest) {
                   // Re-synthesize with all evidence
                   const updatedCrawledContent =
                     formatCrawlResultsForAI(allCrawledPages);
-                  const reSynthesisPrompt = buildPrompt(SYNTHESIS_PROMPT, {
+                  const reSynthesisBasePrompt = wantsAISummary
+                    ? SYNTHESIS_PROMPT + AI_SUMMARY_ADDENDUM
+                    : SYNTHESIS_PROMPT;
+                  const reSynthesisPrompt = buildPrompt(reSynthesisBasePrompt, {
                     query:
                       history.length > 0
                         ? `[Follow-up Question] ${query}`

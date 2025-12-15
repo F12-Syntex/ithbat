@@ -74,9 +74,13 @@ function getRandomQuestions(count: number): string[] {
 }
 
 export function ResearchContainer() {
-  const { state, startResearch, askFollowUp, reset } = useResearch();
+  const { state, startResearch: baseStartResearch, askFollowUp: baseAskFollowUp, requestAIAnalysis, reset } = useResearch();
   const { theme, setTheme, themes } = useTheme();
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Wrapper functions - never include AI summary by default
+  const startResearch = (query: string) => baseStartResearch(query, false);
+  const askFollowUp = (question: string) => baseAskFollowUp(question, false);
 
   // Random example questions - set client-side only to avoid hydration mismatch
   const [exampleQuestions, setExampleQuestions] = useState<string[]>([
@@ -629,6 +633,63 @@ export function ResearchContainer() {
                           />
                         </motion.div>
                       )}
+
+                      {/* Request AI Analysis Button */}
+                      {(state.status === "completed" || (state.status === "researching" && state.response)) &&
+                        state.response &&
+                        !state.response.includes("## ⚠️ AI Analysis") && (
+                          <motion.div
+                            animate={{ opacity: 1, y: 0 }}
+                            className="mt-4 flex justify-center"
+                            initial={{ opacity: 0, y: 10 }}
+                            transition={{ delay: 0.3 }}
+                          >
+                            <button
+                              className="group flex items-center gap-2 px-4 py-2 text-xs bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:border-amber-300 dark:hover:border-amber-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={isResearching}
+                              onClick={requestAIAnalysis}
+                            >
+                              {isResearching ? (
+                                <>
+                                  <motion.div
+                                    animate={{ rotate: 360 }}
+                                    className="w-3.5 h-3.5 border-2 border-amber-400 border-t-transparent rounded-full"
+                                    transition={{
+                                      duration: 0.8,
+                                      repeat: Infinity,
+                                      ease: "linear",
+                                    }}
+                                  />
+                                  <span className="text-amber-700 dark:text-amber-400">
+                                    Analyzing...
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <svg
+                                    className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth={2}
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    />
+                                  </svg>
+                                  <span className="text-amber-700 dark:text-amber-400">
+                                    Request AI Analysis
+                                  </span>
+                                  <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 dark:bg-amber-800/50 text-amber-600 dark:text-amber-300 rounded group-hover:bg-amber-200 dark:group-hover:bg-amber-800 transition-colors">
+                                    Can make mistakes
+                                  </span>
+                                </>
+                              )}
+                            </button>
+                          </motion.div>
+                        )}
                     </>
                   )}
 

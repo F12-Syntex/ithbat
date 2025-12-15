@@ -9,13 +9,14 @@ export async function* streamResearch(
   depth: ResearchDepth,
   signal?: AbortSignal,
   conversationHistory?: ConversationTurn[],
+  includeAISummary?: boolean,
 ): AsyncGenerator<ResearchStepEvent> {
   const response = await fetch("/api/research", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ query, depth, conversationHistory }),
+    body: JSON.stringify({ query, depth, conversationHistory, includeAISummary }),
     signal,
   });
 

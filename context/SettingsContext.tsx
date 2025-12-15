@@ -12,12 +12,14 @@ interface Settings {
   maxWebsiteNodes: number;
   autoExpandSteps: boolean;
   showTimestamps: boolean;
+  includeAISummary: boolean;
 }
 
 const DEFAULT_SETTINGS: Settings = {
   maxWebsiteNodes: 8,
   autoExpandSteps: false,
   showTimestamps: true,
+  includeAISummary: false,
 };
 
 interface SettingsContextValue {
