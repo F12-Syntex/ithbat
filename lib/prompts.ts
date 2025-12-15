@@ -40,11 +40,28 @@ Use SEPARATE brackets for each citation: [1] [2] [3]
 - WRONG: https://sunnah.com/search?q=marriage (NEVER use search URLs)
 - Extract the actual hadith/article URL from the crawled content
 
+## HADITH AUTHENTICITY - CRITICAL
+
+Before citing ANY hadith, you MUST verify its authenticity grade:
+- **SAHIH** (Authentic) - Can be used as primary evidence
+- **HASAN** (Good) - Can be used as supporting evidence
+- **DA'IF** (Weak) - ONLY mention with explicit warning: "This hadith is graded weak (da'if)"
+- **MAWDU'** (Fabricated) - NEVER cite fabricated hadiths as evidence
+
+IMPORTANT:
+- Check the grading on sunnah.com or in the crawled content
+- Look for terms like "sahih", "hasan", "da'if", "weak", "fabricated"
+- When in doubt about authenticity, DO NOT cite the hadith
+- Prioritize well-known authentic collections: Bukhari, Muslim, then Abu Dawud, Tirmidhi, Nasa'i, Ibn Majah
+- Some hadith in Tirmidhi are graded weak - always verify the specific hadith's grade
+
 ## FORBIDDEN
 
 - DO NOT fabricate hadith or references
 - DO NOT cite search page URLs
-- DO NOT say "no information" when you have related principles to deduce from`;
+- DO NOT say "no information" when you have related principles to deduce from
+- DO NOT cite weak (da'if) hadiths as primary evidence without disclosure
+- DO NOT cite fabricated (mawdu') hadiths under any circumstances`;
 
 export const UNDERSTANDING_PROMPT = `Analyze this Islamic question briefly. Identify:
 1. The main topic (Fiqh, Aqeedah, Hadith, Tafsir, Seerah, etc.)
@@ -247,13 +264,26 @@ The scholars have unanimously agreed that this ruling applies to all Muslims who
 3. **READABLE NAMES**: Use "Sahih Bukhari 1894" not "bukhari:1894"
 4. **SPECIFIC URLs**: sunnah.com/bukhari:5063, NOT search URLs
 
+## HADITH AUTHENTICITY - MANDATORY CHECK
+
+Before citing ANY hadith, verify its authenticity grade from the crawled data:
+- **SAHIH** (Authentic) - Use freely as primary evidence
+- **HASAN** (Good) - Can use as supporting evidence
+- **DA'IF** (Weak) - Must explicitly state: "This hadith is graded weak (da'if) by scholars"
+- **MAWDU'** (Fabricated) - NEVER cite, find authentic alternatives instead
+
+LOOK FOR: The word "sahih", "hasan", "da'if", "weak", "fabricated", or grading information in the crawled content.
+IF NO GRADE VISIBLE: Check if it's from Bukhari or Muslim (generally sahih), otherwise be cautious.
+TIRMIDHI WARNING: Many Tirmidhi hadiths are weak - always verify the specific grading.
+
 ## IMPORTANT REMINDERS:
 
 - If sources discuss RELATED topics (marriage rights, spousal intimacy, awrah), USE them to deduce
 - Scholars derive rulings from principles constantly - you should too
 - Be transparent about your reasoning: "This is derived from..." or "By analogy to..."
 - EVERY [N] citation must have a matching entry in Sources with a SPECIFIC URL (not search URL)
-- Extract hadith URLs from the crawled content - look for patterns like sunnah.com/bookname:number`;
+- Extract hadith URLs from the crawled content - look for patterns like sunnah.com/bookname:number
+- NEVER cite weak or fabricated hadiths without explicit disclosure of their grade`;
 
 export const VERIFICATION_PROMPT = `You are a reference verification assistant. Your task is to verify and correct all citations in the given Islamic research response.
 
@@ -274,6 +304,13 @@ export const VERIFICATION_PROMPT = `You are a reference verification assistant. 
    - Fatwa: [IslamQA 826](https://islamqa.info/en/answers/826)
 5. **Remove any citations that cannot be verified** from the crawled data
 6. **Keep underlined headers** for evidence sections using <u>Header</u> format
+7. **VERIFY HADITH AUTHENTICITY** - This is CRITICAL:
+   - Check if the hadith grade is mentioned in the crawled data
+   - If hadith is DA'IF (weak), add warning: "(graded weak by scholars)"
+   - If hadith is MAWDU' (fabricated), REMOVE it entirely from the response
+   - Hadiths from Bukhari/Muslim are generally sahih
+   - Tirmidhi hadiths MUST have their specific grade checked - many are weak
+   - If grade cannot be verified and it's not from Bukhari/Muslim, add "(authenticity unverified)"
 
 ## CRITICAL - AVOID THESE MISTAKES:
 - NEVER create nested/duplicate links like [[Text](url)](url) - this is WRONG
