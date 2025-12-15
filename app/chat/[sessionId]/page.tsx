@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import Link from "next/link";
 import { ResearchResponse } from "@/components/research/ResearchResponse";
 
@@ -224,11 +224,7 @@ export default function ChatPage({
   if (checkingAuth) {
     return (
       <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex items-center justify-center">
-        <motion.div
-          animate={{ rotate: 360 }}
-          className="w-6 h-6 border-2 border-neutral-200 dark:border-neutral-700 border-t-neutral-600 dark:border-t-neutral-300 rounded-full"
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-        />
+        <div className="w-5 h-5 border-2 border-neutral-200 dark:border-neutral-800 border-t-neutral-400 dark:border-t-neutral-500 rounded-full animate-spin" />
       </div>
     );
   }
@@ -238,150 +234,57 @@ export default function ChatPage({
     return (
       <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex items-center justify-center p-4">
         <motion.div
-          initial={{ opacity: 0, y: 30, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-          className="w-full max-w-md relative"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-xs"
         >
-          <div className="bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl rounded-3xl border border-neutral-200/50 dark:border-neutral-700/50 p-8 shadow-2xl shadow-neutral-200/50 dark:shadow-black/30">
-            {/* Logo/Icon */}
-            <div className="text-center mb-8">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
-                className="w-20 h-20 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-accent-400 to-accent-600 dark:from-accent-500 dark:to-accent-700 flex items-center justify-center shadow-lg shadow-accent-500/25"
-              >
-                <svg
-                  className="w-10 h-10 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={1.5}
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <h1 className="text-2xl font-semibold text-neutral-800 dark:text-neutral-100">
-                  Chat Thread
-                </h1>
-                <p className="text-neutral-500 dark:text-neutral-400 mt-2">
-                  Enter password to view this conversation
-                </p>
-              </motion.div>
-            </div>
+          <div className="text-center mb-6">
+            <h1 className="text-lg font-medium text-neutral-800 dark:text-neutral-100">
+              Chat Thread
+            </h1>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+              Enter password to continue
+            </p>
+          </div>
 
-            <motion.form
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              onSubmit={handleLogin}
-              className="space-y-4"
+          <form onSubmit={handleLogin} className="space-y-3">
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setAuthError(false);
+              }}
+              placeholder="Password"
+              className={`w-full px-4 py-3 text-base bg-white dark:bg-neutral-900 border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent-500/20 transition-all placeholder:text-neutral-400 ${
+                authError
+                  ? "border-red-300 dark:border-red-800"
+                  : "border-neutral-200 dark:border-neutral-800 focus:border-accent-400 dark:focus:border-accent-600"
+              }`}
+              autoFocus
+            />
+
+            {authError && (
+              <p className="text-xs text-red-500 text-center">
+                Incorrect password
+              </p>
+            )}
+
+            <button
+              type="submit"
+              className="w-full py-3 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-sm font-medium rounded-xl hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-colors"
             >
-              <div className="relative">
-                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                  <svg
-                    className="w-5 h-5 text-neutral-400"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={1.5}
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setAuthError(false);
-                  }}
-                  placeholder="Enter password"
-                  className={`w-full pl-12 pr-4 py-4 text-base bg-neutral-50/50 dark:bg-neutral-800/50 border-2 rounded-2xl focus:outline-none transition-all placeholder:text-neutral-400 ${
-                    authError
-                      ? "border-red-300 dark:border-red-700 focus:border-red-400 dark:focus:border-red-600"
-                      : "border-neutral-200 dark:border-neutral-700 focus:border-accent-400 dark:focus:border-accent-500"
-                  }`}
-                  autoFocus
-                />
-              </div>
+              Continue
+            </button>
+          </form>
 
-              <AnimatePresence>
-                {authError && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10, height: 0 }}
-                    animate={{ opacity: 1, y: 0, height: "auto" }}
-                    exit={{ opacity: 0, y: -10, height: 0 }}
-                    className="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl"
-                  >
-                    <svg
-                      className="w-4 h-4 text-red-500"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <span className="text-sm text-red-600 dark:text-red-400">
-                      Incorrect password. Please try again.
-                    </span>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <button
-                type="submit"
-                className="w-full py-4 bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white font-medium rounded-2xl transition-all shadow-lg shadow-accent-500/25 hover:shadow-xl hover:shadow-accent-500/30 active:scale-[0.98]"
-              >
-                View Chat
-              </button>
-            </motion.form>
-
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="mt-6 pt-6 border-t border-neutral-200/50 dark:border-neutral-700/50 text-center"
+          <div className="mt-6 text-center">
+            <Link
+              href="/"
+              className="text-sm text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
             >
-              <Link
-                href="/"
-                className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                Back to search
-              </Link>
-            </motion.div>
+              Back to search
+            </Link>
           </div>
         </motion.div>
       </div>
