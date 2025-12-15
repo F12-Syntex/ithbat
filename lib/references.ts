@@ -421,13 +421,9 @@ export function parseHadithReference(text: string): ParsedReference | null {
   }
 
   if (hadith) {
-    // sunnah.com URL format varies - use search for reliability
-    // Format: https://sunnah.com/search?q=collection+book+hadith
-    const searchTerms = [collection];
-
-    if (book) searchTerms.push(`book ${book}`);
-    searchTerms.push(`hadith ${hadith}`);
-    const url = `https://sunnah.com/search?q=${encodeURIComponent(searchTerms.join(" "))}`;
+    // sunnah.com direct URL format: https://sunnah.com/collection:hadith
+    // e.g., https://sunnah.com/bukhari:605, https://sunnah.com/muslim:19
+    const url = `https://sunnah.com/${collection}:${hadith}`;
 
     return {
       type: "hadith",
@@ -441,6 +437,97 @@ export function parseHadithReference(text: string): ParsedReference | null {
 }
 
 /**
+ * Parse the numbered sources list from AI response
+ * Looks for patterns like:
+ * [1] Title - https://example.com
+ * [2] Title - URL
+ */
+function parseSourcesList(
+  text: string,
+): Map<number, { title: string; url: string }> {
+  const sources = new Map<number, { title: string; url: string }>();
+
+  // Find sources section - look for ## Sources or just sources list
+  const sourcesSection = text.match(/##\s*Sources[\s\S]*$/i);
+  const textToSearch = sourcesSection ? sourcesSection[0] : text;
+
+  // Pattern for [N] Title - URL or [N] URL
+  const sourcePattern =
+    /\[(\d+)\]\s*([^-\n]+(?:\s*-\s*)?)(https?:\/\/[^\s\n]+)/gi;
+
+  let match;
+
+  while ((match = sourcePattern.exec(textToSearch)) !== null) {
+    const num = parseInt(match[1], 10);
+    const title = match[2].replace(/\s*-\s*$/, "").trim() || "Source";
+    const url = match[3].trim();
+
+    sources.set(num, { title, url });
+  }
+
+  return sources;
+}
+
+/**
+ * Convert [1], [2] style citations to clickable links
+ */
+function processNumberedCitations(
+  text: string,
+  sources: Map<number, { title: string; url: string }>,
+): string {
+  if (sources.size === 0) return text;
+
+  // Replace [N] citations with clickable links (but not in the Sources section)
+  const sourcesIndex = text.search(/##\s*Sources/i);
+  const mainText = sourcesIndex > 0 ? text.substring(0, sourcesIndex) : text;
+  const sourcesSection = sourcesIndex > 0 ? text.substring(sourcesIndex) : "";
+
+  let processedMain = mainText;
+
+  // Replace [1], [2], etc. with clickable superscript-style links
+  // Match [N] but not when followed by Title - URL (which is the sources list)
+  processedMain = processedMain.replace(
+    /\[(\d+)\](?!\s*[^\[\]]+\s*-?\s*https?:)/g,
+    (match, num) => {
+      const n = parseInt(num, 10);
+      const source = sources.get(n);
+
+      if (source) {
+        return `[[${n}]](${source.url})`;
+      }
+
+      return match;
+    },
+  );
+
+  // Also make the sources list clickable
+  let processedSources = sourcesSection;
+
+  for (const [num, { title, url }] of sources) {
+    // Replace [N] Title - URL with [N] [Title](URL)
+    const pattern = new RegExp(
+      `\\[${num}\\]\\s*${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*-?\\s*${url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
+      "g",
+    );
+
+    processedSources = processedSources.replace(
+      pattern,
+      `[${num}] [${title}](${url})`,
+    );
+  }
+
+  // If that didn't work, try a simpler approach
+  if (processedSources === sourcesSection && sourcesSection) {
+    processedSources = sourcesSection.replace(
+      /\[(\d+)\]\s*([^-\n]+)\s*-\s*(https?:\/\/[^\s\n]+)/g,
+      (_, num, title, url) => `[${num}] [${title.trim()}](${url.trim()})`,
+    );
+  }
+
+  return processedMain + processedSources;
+}
+
+/**
  * Extract all references from a text and convert to clickable links
  */
 export function extractReferences(text: string): {
@@ -449,6 +536,23 @@ export function extractReferences(text: string): {
 } {
   const references: ParsedReference[] = [];
   let processedText = text;
+
+  // First, parse the numbered sources list and convert [1], [2] citations
+  const sources = parseSourcesList(text);
+
+  if (sources.size > 0) {
+    processedText = processNumberedCitations(processedText, sources);
+
+    // Add sources to references
+    for (const [, { title, url }] of sources) {
+      references.push({
+        type: "url",
+        text: title,
+        url,
+        details: { source: title },
+      });
+    }
+  }
 
   // Quran reference patterns to find and replace
   const quranPatterns = [
@@ -518,22 +622,14 @@ export function getQuranUrl(
 }
 
 /**
- * Generate a Sunnah.com search URL for a hadith
+ * Generate a direct Sunnah.com URL for a hadith
  */
-export function getHadithUrl(
-  collection: string,
-  hadith: number,
-  book?: number,
-): string {
+export function getHadithUrl(collection: string, hadith: number): string {
   const collectionSlug =
     HADITH_COLLECTION_MAP[collection.toLowerCase()] || collection.toLowerCase();
 
-  const searchTerms = [collectionSlug];
-
-  if (book) searchTerms.push(`book ${book}`);
-  searchTerms.push(`hadith ${hadith}`);
-
-  return `https://sunnah.com/search?q=${encodeURIComponent(searchTerms.join(" "))}`;
+  // Direct URL format: https://sunnah.com/collection:hadith
+  return `https://sunnah.com/${collectionSlug}:${hadith}`;
 }
 
 /**

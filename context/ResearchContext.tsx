@@ -256,7 +256,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
 
   return (
     <ResearchContext.Provider
-      value={{ state, depth, setDepth, startResearch, cancelResearch, reset }}
+      value={{ state, startResearch, cancelResearch, reset }}
     >
       {children}
     </ResearchContext.Provider>

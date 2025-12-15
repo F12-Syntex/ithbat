@@ -26,6 +26,26 @@ export interface CrawlProgress {
   message?: string;
 }
 
+// Hadith collection patterns for sunnah.com
+const HADITH_COLLECTIONS = [
+  "bukhari",
+  "muslim",
+  "tirmidhi",
+  "abudawud",
+  "nasai",
+  "ibnmajah",
+  "malik",
+  "ahmad",
+  "darimi",
+  "nawawi40",
+  "qudsi40",
+  "riyadussalihin",
+  "adab",
+  "bulugh",
+  "mishkat",
+  "hisn",
+];
+
 // Islamic source configurations
 const ISLAMIC_SOURCES = {
   sunnah: {
@@ -34,10 +54,12 @@ const ISLAMIC_SOURCES = {
       `https://sunnah.com/search?q=${encodeURIComponent(q)}`,
     baseUrl: "https://sunnah.com",
     selectors: {
-      results: ".hadith_result, .search-result, .hadithContainer",
+      results: ".hadith_result, .search-result, .hadithContainer, .allresults",
       title: "h1, .hadithTitle, .chapter-title",
-      content: ".hadithText, .text_details, .hadith-text, .arabic_text_details",
-      links: 'a[href*="/hadith"], a[href*="/bukhari"], a[href*="/muslim"]',
+      content:
+        ".hadithText, .text_details, .hadith-text, .arabic_text_details, .actualHadithContainer",
+      // Match all hadith collection links
+      links: HADITH_COLLECTIONS.map((c) => `a[href*="/${c}"]`).join(", "),
     },
   },
   islamqa: {
@@ -61,8 +83,57 @@ const ISLAMIC_SOURCES = {
       results: ".search-result, [class*='SearchResult']",
       title: "h1, [class*='ChapterName']",
       content: "[class*='Translation'], [class*='verse'], .verse-text",
-      links: 'a[href^="/"]',
+      // Match verse links like /2/255 or /4:103
+      links: 'a[href^="/"][href*="/"]',
     },
+  },
+  daruliftaa: {
+    name: "Darul Iftaa",
+    searchUrl: (q: string) =>
+      `https://daruliftaa.com/?s=${encodeURIComponent(q)}`,
+    baseUrl: "https://daruliftaa.com",
+    selectors: {
+      results: ".post, .entry, article, .search-result",
+      title: "h1, h2.entry-title, .post-title",
+      content: ".entry-content, .post-content, article p, .answer",
+      links: 'a[href*="daruliftaa.com"]',
+    },
+  },
+  askimam: {
+    name: "AskImam",
+    searchUrl: (q: string) =>
+      `https://askimam.org/public/search?keyword=${encodeURIComponent(q)}&page=1`,
+    baseUrl: "https://askimam.org",
+    selectors: {
+      results: ".fatwa, .question-answer, .search-result, article",
+      title: "h1, h2, .fatwa-title",
+      content: ".answer, .fatwa-content, .response, p",
+      links: 'a[href*="askimam.org"]',
+    },
+  },
+  seekersguidance: {
+    name: "SeekersGuidance",
+    searchUrl: (q: string) =>
+      `https://seekersguidance.org/answers/?search=${encodeURIComponent(q)}`,
+    baseUrl: "https://seekersguidance.org",
+    selectors: {
+      results: ".post, article, .search-result, .answer-item",
+      title: "h1, h2.entry-title, .post-title",
+      content: ".entry-content, .post-content, article p, .answer-content",
+      links: 'a[href*="seekersguidance.org/answers/"]',
+    },
+  },
+};
+
+// Generic source config for unknown domains
+const GENERIC_SOURCE = {
+  name: "Web",
+  baseUrl: "",
+  selectors: {
+    results: "article, .post, .content, main, .entry",
+    title: "h1, h2, .title, .post-title",
+    content: "article p, .content p, main p, .post-content, .entry-content, p",
+    links: "a[href]",
   },
 };
 
@@ -119,6 +190,70 @@ function extractTextContent($: cheerio.CheerioAPI, selector: string): string {
   return texts.join("\n\n").slice(0, 8000);
 }
 
+/**
+ * Check if a URL is a direct content link (not a search/index page)
+ */
+function isDirectContentLink(url: string): boolean {
+  // Skip search pages, pagination, and generic pages
+  if (
+    url.includes("/search") ||
+    url.includes("?q=") ||
+    url.includes("?s=") ||
+    url.includes("?keyword=")
+  ) {
+    return false;
+  }
+
+  // Skip pagination
+  if (/[?&]page=\d+/.test(url)) {
+    return false;
+  }
+
+  // Sunnah.com: direct hadith links like /bukhari:123 or /muslim/1
+  if (url.includes("sunnah.com")) {
+    // Match collection:number or collection/number format
+    const hadithPattern =
+      /sunnah\.com\/(bukhari|muslim|tirmidhi|abudawud|nasai|ibnmajah|malik|ahmad|darimi|nawawi40|qudsi40|riyadussalihin|adab|bulugh|mishkat|hisn)[:/]\d+/;
+
+    return hadithPattern.test(url);
+  }
+
+  // IslamQA: direct answer links
+  if (url.includes("islamqa.info")) {
+    return url.includes("/answers/") || url.includes("/fatwa/");
+  }
+
+  // Quran.com: direct verse links like /2/255
+  if (url.includes("quran.com")) {
+    const versePattern = /quran\.com\/\d+\/\d+/;
+
+    return versePattern.test(url) || /quran\.com\/\d+:\d+/.test(url);
+  }
+
+  // Darul Iftaa: article links (not search or home)
+  if (url.includes("daruliftaa.com")) {
+    // Skip home, search, and category pages
+    if (url === "https://daruliftaa.com" || url === "https://daruliftaa.com/") {
+      return false;
+    }
+
+    // Articles typically have longer paths
+    return url.split("/").length > 4;
+  }
+
+  // AskImam: fatwa/question links
+  if (url.includes("askimam.org")) {
+    return url.includes("/fatwa/") || url.includes("/question/");
+  }
+
+  // SeekersGuidance: answer links
+  if (url.includes("seekersguidance.org")) {
+    return url.includes("/answers/") && url.split("/").length > 5;
+  }
+
+  return true;
+}
+
 function extractLinks(
   $: cheerio.CheerioAPI,
   selector: string,
@@ -126,6 +261,7 @@ function extractLinks(
 ): string[] {
   const links: string[] = [];
 
+  // First, try specific selector
   $(selector).each((_, el) => {
     const href = $(el).attr("href");
 
@@ -135,8 +271,11 @@ function extractLinks(
           ? href
           : new URL(href, baseUrl).href;
 
-        // Only include links from the same domain
-        if (fullUrl.includes(new URL(baseUrl).hostname)) {
+        // Only include links from the same domain that are direct content links
+        if (
+          fullUrl.includes(new URL(baseUrl).hostname) &&
+          isDirectContentLink(fullUrl)
+        ) {
           links.push(fullUrl);
         }
       } catch {
@@ -145,7 +284,32 @@ function extractLinks(
     }
   });
 
-  return [...new Set(links)].slice(0, 10);
+  // If we didn't find many direct content links, also check all links on page
+  if (links.length < 5) {
+    $("a[href]").each((_, el) => {
+      const href = $(el).attr("href");
+
+      if (href) {
+        try {
+          const fullUrl = href.startsWith("http")
+            ? href
+            : new URL(href, baseUrl).href;
+
+          if (
+            fullUrl.includes(new URL(baseUrl).hostname) &&
+            isDirectContentLink(fullUrl)
+          ) {
+            links.push(fullUrl);
+          }
+        } catch {
+          // Invalid URL, skip
+        }
+      }
+    });
+  }
+
+  // Return more links for thorough crawling
+  return [...new Set(links)].slice(0, 30);
 }
 
 async function crawlPage(
@@ -282,7 +446,7 @@ export async function* crawlIslamicSources(
 }
 
 /**
- * Format crawled pages into a research context string
+ * Format crawled pages into a research context string with numbered sources
  */
 export function formatCrawlResultsForAI(pages: CrawledPage[]): string {
   if (pages.length === 0) {
@@ -291,11 +455,32 @@ export function formatCrawlResultsForAI(pages: CrawledPage[]): string {
 
   const sections: string[] = [];
 
-  for (const page of pages) {
+  // First, list all sources with numbers for easy citation
+  sections.push("=== SOURCE INDEX (use these numbers for citations) ===");
+  for (let i = 0; i < pages.length; i++) {
+    const page = pages[i];
+    // Skip search result pages, only show direct content URLs
+    const isSearchPage =
+      page.url.includes("/search") || page.url.includes("?q=");
+    const urlNote = isSearchPage
+      ? " (search page - cite specific hadith links from content instead)"
+      : "";
+
+    sections.push(`[${i + 1}] ${page.title} - ${page.url}${urlNote}`);
+  }
+  sections.push("\n");
+
+  // Then, provide the full content
+  for (let i = 0; i < pages.length; i++) {
+    const page = pages[i];
+
     sections.push(`
-=== SOURCE: ${page.source} ===
+=== SOURCE [${i + 1}]: ${page.source} ===
 URL: ${page.url}
 TITLE: ${page.title}
+EXTRACTED LINKS FROM THIS PAGE (use these for citations when relevant):
+${page.links.slice(0, 15).join("\n")}
+
 CONTENT:
 ${page.content}
 ---
@@ -350,4 +535,159 @@ export async function deepSearch(
   } while (!result.done);
 
   return result.value;
+}
+
+/**
+ * Crawl a single URL - used for AI-directed exploration
+ */
+export async function crawlUrl(
+  url: string,
+  onProgress?: (progress: CrawlProgress) => void,
+): Promise<CrawledPage | null> {
+  // Determine which source config to use based on URL
+  let sourceConfig = ISLAMIC_SOURCES.sunnah; // default
+
+  if (url.includes("islamqa.info")) {
+    sourceConfig = ISLAMIC_SOURCES.islamqa;
+  } else if (url.includes("quran.com")) {
+    sourceConfig = ISLAMIC_SOURCES.quran;
+  } else if (url.includes("sunnah.com")) {
+    sourceConfig = ISLAMIC_SOURCES.sunnah;
+  } else if (url.includes("daruliftaa.com")) {
+    sourceConfig = ISLAMIC_SOURCES.daruliftaa;
+  } else if (url.includes("askimam.org")) {
+    sourceConfig = ISLAMIC_SOURCES.askimam;
+  } else if (url.includes("seekersguidance.org")) {
+    sourceConfig = ISLAMIC_SOURCES.seekersguidance;
+  }
+
+  onProgress?.({ type: "visiting", url, depth: 0 });
+
+  const page = await crawlPage(url, sourceConfig, 0);
+
+  if (page) {
+    onProgress?.({ type: "found", url: page.url, title: page.title, depth: 0 });
+  } else {
+    onProgress?.({ type: "error", url, message: "Failed to fetch" });
+  }
+
+  return page;
+}
+
+/**
+ * Crawl multiple URLs in parallel - used for AI-directed exploration
+ */
+export async function crawlUrls(
+  urls: string[],
+  onProgress?: (progress: CrawlProgress) => void,
+): Promise<CrawledPage[]> {
+  const pages: CrawledPage[] = [];
+
+  // Crawl sequentially to respect rate limits
+  for (const url of urls) {
+    const page = await crawlUrl(url, onProgress);
+
+    if (page) {
+      pages.push(page);
+    }
+  }
+
+  return pages;
+}
+
+/**
+ * Get all unique links from crawled pages
+ */
+export function getAllLinks(pages: CrawledPage[]): string[] {
+  const allLinks = new Set<string>();
+  const visitedUrls = new Set(pages.map((p) => p.url));
+
+  for (const page of pages) {
+    for (const link of page.links) {
+      if (!visitedUrls.has(link)) {
+        allLinks.add(link);
+      }
+    }
+  }
+
+  return Array.from(allLinks);
+}
+
+/**
+ * Create a summary of crawled pages for AI analysis
+ */
+export function summarizeCrawledPages(pages: CrawledPage[]): string {
+  if (pages.length === 0) {
+    return "No pages crawled yet.";
+  }
+
+  return pages
+    .map(
+      (p, i) =>
+        `[${i + 1}] ${p.source} - ${p.title}\n    URL: ${p.url}\n    Content preview: ${p.content.slice(0, 300)}...`,
+    )
+    .join("\n\n");
+}
+
+/**
+ * Format available links for AI to choose from
+ */
+export function formatAvailableLinks(
+  links: string[],
+  maxLinks: number = 20,
+): string {
+  if (links.length === 0) {
+    return "No additional links available to explore.";
+  }
+
+  return links
+    .slice(0, maxLinks)
+    .map((link, i) => `[${i + 1}] ${link}`)
+    .join("\n");
+}
+
+/**
+ * Initial search - get search results from all Islamic sources
+ */
+export async function initialSearch(
+  query: string,
+  onProgress?: (progress: CrawlProgress) => void,
+): Promise<CrawledPage[]> {
+  const pages: CrawledPage[] = [];
+
+  for (const [, source] of Object.entries(ISLAMIC_SOURCES)) {
+    const searchUrl = source.searchUrl(query);
+
+    onProgress?.({ type: "visiting", url: searchUrl, depth: 0 });
+
+    const page = await crawlPage(searchUrl, source, 0);
+
+    if (page) {
+      pages.push(page);
+      onProgress?.({
+        type: "found",
+        url: page.url,
+        title: page.title,
+        depth: 0,
+      });
+    } else {
+      onProgress?.({
+        type: "error",
+        url: searchUrl,
+        message: "Failed to fetch",
+      });
+    }
+  }
+
+  return pages;
+}
+
+/**
+ * Search with a specific query on all sources
+ */
+export async function searchQuery(
+  query: string,
+  onProgress?: (progress: CrawlProgress) => void,
+): Promise<CrawledPage[]> {
+  return initialSearch(query, onProgress);
 }

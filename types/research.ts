@@ -1,4 +1,8 @@
-export type ResearchStepType = "understanding" | "searching" | "synthesizing";
+export type ResearchStepType =
+  | "understanding"
+  | "searching"
+  | "exploring"
+  | "synthesizing";
 export type ResearchStepStatus =
   | "pending"
   | "in_progress"
@@ -63,6 +67,7 @@ export interface ResearchStepEvent {
 export const STEP_TITLES: Record<ResearchStepType, string> = {
   understanding: "Understanding your question",
   searching: "Searching Islamic sources",
+  exploring: "AI exploring relevant links",
   synthesizing: "Preparing your answer",
 };
 
