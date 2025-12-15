@@ -40,18 +40,22 @@ export async function POST(request: Request) {
   const { query, evidence } = await request.json();
 
   if (!query || !evidence) {
-    return new Response(JSON.stringify({ error: "Query and evidence required" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "Query and evidence required" }),
+      {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
   }
 
   try {
     const client = getOpenRouterClient();
 
-    const prompt = AI_ANALYSIS_PROMPT
-      .replace("{query}", query)
-      .replace("{evidence}", evidence);
+    const prompt = AI_ANALYSIS_PROMPT.replace("{query}", query).replace(
+      "{evidence}",
+      evidence,
+    );
 
     let analysis = "";
 
@@ -59,7 +63,8 @@ export async function POST(request: Request) {
       [
         {
           role: "system",
-          content: "You are a helpful Islamic research assistant that provides careful, evidence-based analysis. Always include warnings about AI limitations.",
+          content:
+            "You are a helpful Islamic research assistant that provides careful, evidence-based analysis. Always include warnings about AI limitations.",
         },
         { role: "user", content: prompt },
       ],
@@ -73,6 +78,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
+
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { "Content-Type": "application/json" },

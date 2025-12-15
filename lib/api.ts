@@ -16,7 +16,12 @@ export async function* streamResearch(
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ query, depth, conversationHistory, includeAISummary }),
+    body: JSON.stringify({
+      query,
+      depth,
+      conversationHistory,
+      includeAISummary,
+    }),
     signal,
   });
 

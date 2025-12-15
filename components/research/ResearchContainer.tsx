@@ -74,7 +74,13 @@ function getRandomQuestions(count: number): string[] {
 }
 
 export function ResearchContainer() {
-  const { state, startResearch: baseStartResearch, askFollowUp: baseAskFollowUp, requestAIAnalysis, reset } = useResearch();
+  const {
+    state,
+    startResearch: baseStartResearch,
+    askFollowUp: baseAskFollowUp,
+    requestAIAnalysis,
+    reset,
+  } = useResearch();
   const { theme, setTheme, themes } = useTheme();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -635,7 +641,8 @@ export function ResearchContainer() {
                       )}
 
                       {/* Request AI Analysis Button */}
-                      {(state.status === "completed" || (state.status === "researching" && state.response)) &&
+                      {(state.status === "completed" ||
+                        (state.status === "researching" && state.response)) &&
                         state.response &&
                         !state.response.includes("## ⚠️ AI Analysis") && (
                           <motion.div
