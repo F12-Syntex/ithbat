@@ -25,8 +25,10 @@ import {
   type ResearchDepth,
   type Source,
   type CrawledLink,
+  type ResearchStep,
   DEPTH_CONFIG,
 } from "@/types/research";
+import { logConversation } from "@/lib/conversation-logger";
 
 interface ResearchStepEvent {
   type:
@@ -165,8 +167,11 @@ export async function POST(request: NextRequest) {
     query,
     depth = "deep",
     conversationHistory = [],
+    sessionId: providedSessionId,
   } = await request.json();
   const history = conversationHistory as ConversationTurn[];
+  const sessionId = providedSessionId || crypto.randomUUID();
+  const isFollowUp = history.length > 0;
 
   if (!query || typeof query !== "string") {
     return new Response(JSON.stringify({ error: "Query is required" }), {
@@ -181,11 +186,35 @@ export async function POST(request: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       const send = (event: ResearchStepEvent) => {
+        // Track sources for logging
+        if (event.type === "source" && event.source) {
+          allSources.push(event.source);
+        }
+        // Track steps for logging
+        if (event.type === "step_start" && event.step) {
+          allSteps.push({
+            id: event.step,
+            type: event.step,
+            status: "in_progress",
+            title: event.stepTitle || event.step,
+            content: "",
+            startTime: Date.now(),
+          });
+        }
+        if (event.type === "step_complete" && event.step) {
+          const step = allSteps.find((s) => s.id === event.step);
+          if (step) {
+            step.status = "completed";
+            step.endTime = Date.now();
+          }
+        }
         controller.enqueue(encoder.encode(encodeSSE(event)));
       };
 
       const client = getOpenRouterClient();
       const allCrawledPages: CrawledPage[] = [];
+      const allSources: Source[] = [];
+      const allSteps: ResearchStep[] = [];
       let sourceId = 1;
       const maxIterations = 5; // Reduced - AI now decides to stop when enough evidence found
 
@@ -668,6 +697,16 @@ export async function POST(request: NextRequest) {
           // Small delay for smoother streaming effect
           await new Promise((resolve) => setTimeout(resolve, 5));
         }
+
+        // Log conversation to Supabase (non-blocking)
+        logConversation(
+          sessionId,
+          query,
+          cleanedResponse,
+          allSteps,
+          allSources,
+          isFollowUp
+        ).catch((err) => console.error("Failed to log conversation:", err));
 
         send({ type: "done" });
       } catch (error) {

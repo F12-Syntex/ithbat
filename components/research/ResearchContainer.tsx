@@ -595,9 +595,18 @@ export function ResearchContainer() {
 
         {/* Fixed Footer */}
         <div className="flex-shrink-0 py-2 sm:py-3 text-center border-t border-neutral-200/50 dark:border-neutral-800/50">
-          <span className="text-[10px] text-neutral-400 dark:text-neutral-600">
-            ithbat v0.1
-          </span>
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-[10px] text-neutral-400 dark:text-neutral-600">
+              ithbat v0.1
+            </span>
+            <span className="text-neutral-300 dark:text-neutral-700">·</span>
+            <a
+              href="/logs"
+              className="text-[10px] text-neutral-400 dark:text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors"
+            >
+              Chats logged for analysis
+            </a>
+          </div>
         </div>
       </div>
     </ContextMenu>

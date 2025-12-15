@@ -19,6 +19,7 @@
     "@heroui/system": "2.4.24",
     "@heroui/theme": "2.4.24",
     "@react-aria/visually-hidden": "3.8.28",
+    "@supabase/supabase-js": "^2.87.1",
     "@tailwindcss/typography": "^0.5.19",
     "cheerio": "^1.1.2",
     "clsx": "2.1.1",
