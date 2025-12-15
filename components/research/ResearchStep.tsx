@@ -2,7 +2,7 @@
 
 import type { ResearchStep as ResearchStepType } from "@/types/research";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 
@@ -27,8 +27,13 @@ export function ResearchStep({
 }: ResearchStepProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const contentRef = useRef<HTMLDivElement>(null);
   const isActive = step.status === "in_progress";
   const isCompleted = step.status === "completed";
+
+  const handleToggle = () => {
+    setIsExpanded(!isExpanded);
+  };
 
   useEffect(() => {
     if (isActive && step.startTime) {
@@ -58,7 +63,7 @@ export function ResearchStep({
             ? "bg-accent-50/50 dark:bg-accent-900/10"
             : "hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
         }`}
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={handleToggle}
       >
         {/* Status indicator */}
         <div className="relative flex-shrink-0">
@@ -158,11 +163,19 @@ export function ResearchStep({
       <AnimatePresence initial={false}>
         {isExpanded && step.content && (
           <motion.div
+            ref={contentRef}
             animate={{ height: "auto", opacity: 1 }}
             className="overflow-hidden"
             exit={{ height: 0, opacity: 0 }}
             initial={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: "easeInOut" }}
+            onAnimationComplete={() => {
+              // Scroll into view after animation completes
+              contentRef.current?.scrollIntoView({
+                behavior: "smooth",
+                block: "nearest",
+              });
+            }}
           >
             <div className="px-4 pb-4">
               <div className="ml-11 max-h-56 overflow-y-auto no-scrollbar">

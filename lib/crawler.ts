@@ -287,6 +287,36 @@ function extractLinks(
     }
   }
 
+  // For quran.com, extract verse links aggressively
+  if (baseUrl.includes("quran.com")) {
+    $("a[href]").each((_, el) => {
+      const href = $(el).attr("href");
+      if (!href) return;
+
+      try {
+        const fullUrl = href.startsWith("http")
+          ? href
+          : new URL(href, "https://quran.com").href;
+
+        // Match verse links like /2/255 or /4/93 (surah/ayah format)
+        if (/quran\.com\/\d+\/\d+/.test(fullUrl)) {
+          links.push(fullUrl);
+        }
+        // Also match /surah-name/ayah format
+        else if (/quran\.com\/[a-z-]+\/\d+/.test(fullUrl.toLowerCase())) {
+          links.push(fullUrl);
+        }
+      } catch {
+        // Invalid URL, skip
+      }
+    });
+
+    // Return early if we found verse links
+    if (links.length > 0) {
+      return [...new Set(links)].slice(0, 50);
+    }
+  }
+
   // First, try specific selector
   $(selector).each((_, el) => {
     const href = $(el).attr("href");
@@ -548,9 +578,9 @@ function isSpecificContentUrl(url: string): boolean {
     return url.includes("/answers/") && /\/\d+/.test(url);
   }
 
-  // Quran.com: specific verses
+  // Quran.com: specific verses like /2/255 or /25/11
   if (url.includes("quran.com")) {
-    return /quran\.com\/\d+[:/]\d+/.test(url);
+    return /quran\.com\/\d+\/\d+/.test(url);
   }
 
   // Other sites: must have meaningful path

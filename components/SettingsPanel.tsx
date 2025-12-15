@@ -181,7 +181,7 @@ export function SettingsPanel({
                       Auto-expand steps
                     </span>
                     <div className={`w-10 h-6 rounded-full p-0.5 transition-colors ${
-                      settings.autoExpandSteps ? "bg-emerald-500" : "bg-neutral-300 dark:bg-neutral-600"
+                      settings.autoExpandSteps ? "bg-accent-500" : "bg-neutral-300 dark:bg-neutral-600"
                     }`}>
                       <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
                         settings.autoExpandSteps ? "translate-x-4" : "translate-x-0"
@@ -202,7 +202,7 @@ export function SettingsPanel({
                       Show timestamps
                     </span>
                     <div className={`w-10 h-6 rounded-full p-0.5 transition-colors ${
-                      settings.showTimestamps ? "bg-emerald-500" : "bg-neutral-300 dark:bg-neutral-600"
+                      settings.showTimestamps ? "bg-accent-500" : "bg-neutral-300 dark:bg-neutral-600"
                     }`}>
                       <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
                         settings.showTimestamps ? "translate-x-4" : "translate-x-0"
