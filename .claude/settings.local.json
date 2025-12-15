@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude mcp add heroui-react -- npx -y @heroui/react-mcp@latest)",
+      "Bash(claude mcp remove:*)",
+      "Bash(claude mcp list:*)",
+      "Bash(npx:*)",
+      "Bash(cat:*)",
+      "Bash(tree:*)"
+    ]
+  }
+}
