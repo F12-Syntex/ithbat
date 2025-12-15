@@ -128,6 +128,7 @@ const ISLAMIC_SOURCES = {
 // Generic source config for unknown domains
 const GENERIC_SOURCE = {
   name: "Web",
+  searchUrl: (q: string) => `https://www.google.com/search?q=${encodeURIComponent(q)}`,
   baseUrl: "",
   selectors: {
     results: "article, .post, .content, main, .entry",
