@@ -337,10 +337,9 @@ export function ResearchContainer() {
                       إثبات
                     </h1>
                     {/* Tooltip */}
-                    <div className="absolute left-1/2 -translate-x-1/2 -bottom-10 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none">
-                      <div className="px-3 py-1.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-xs font-medium rounded-lg shadow-lg whitespace-nowrap">
-                        Ithbat — Proof / Evidence
-                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-neutral-900 dark:bg-white rotate-45" />
+                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-10">
+                      <div className="px-2.5 py-1 bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 text-[11px] rounded-md whitespace-nowrap">
+                        Proof / Evidence
                       </div>
                     </div>
                   </div>
