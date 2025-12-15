@@ -158,8 +158,9 @@ export function SettingsPanel({
                     </span>
                   </div>
                   <input
-                    className="w-full h-2 bg-neutral-200 dark:bg-neutral-700 rounded-full appearance-none cursor-pointer accent-emerald-500"
-                    max="15"
+                    className="w-full h-2 bg-neutral-200 dark:bg-neutral-700 rounded-full appearance-none cursor-pointer"
+                    style={{ accentColor: 'var(--accent-500)' }}
+                    max="100"
                     min="3"
                     type="range"
                     value={settings.maxWebsiteNodes}

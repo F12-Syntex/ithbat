@@ -83,6 +83,66 @@ export function ResearchContainer() {
     },
     { divider: true as const },
     {
+      label: "Copy",
+      icon: (
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ),
+      onClick: () => {
+        const selection = window.getSelection()?.toString();
+        if (selection) {
+          navigator.clipboard.writeText(selection);
+        }
+      },
+    },
+    {
+      label: "Paste",
+      icon: (
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m0 0v4m0 4v4m-4-4h4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ),
+      onClick: async () => {
+        try {
+          const text = await navigator.clipboard.readText();
+          // Focus on active input and paste
+          const activeElement = document.activeElement as HTMLInputElement;
+          if (activeElement?.tagName === "INPUT" || activeElement?.tagName === "TEXTAREA") {
+            const start = activeElement.selectionStart || 0;
+            const end = activeElement.selectionEnd || 0;
+            const value = activeElement.value;
+            activeElement.value = value.slice(0, start) + text + value.slice(end);
+            activeElement.selectionStart = activeElement.selectionEnd = start + text.length;
+            activeElement.dispatchEvent(new Event("input", { bubbles: true }));
+          }
+        } catch {
+          // Clipboard access denied
+        }
+      },
+    },
+    { divider: true as const },
+    {
       label: "Copy Response",
       icon: (
         <svg
@@ -264,7 +324,7 @@ export function ResearchContainer() {
                     <motion.button
                       key={example}
                       animate={{ opacity: 1, y: 0 }}
-                      className="px-2.5 sm:px-3 py-1.5 text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg hover:border-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all active:scale-95 sm:hover:scale-105"
+                      className="px-2.5 sm:px-3 py-1.5 text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg hover:border-accent-400 hover:text-accent-600 dark:hover:text-accent-400 transition-all active:scale-95 sm:hover:scale-105"
                       initial={{ opacity: 0, y: 10 }}
                       transition={{ delay: i * 0.05 }}
                       onClick={() => startResearch(example)}

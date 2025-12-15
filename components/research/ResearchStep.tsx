@@ -4,6 +4,7 @@ import type { ResearchStep as ResearchStepType } from "@/types/research";
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import ReactMarkdown from "react-markdown";
 
 interface ResearchStepProps {
   step: ResearchStepType;
@@ -54,7 +55,7 @@ export function ResearchStep({
       <button
         className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-all duration-200 ${
           isActive
-            ? "bg-emerald-50/50 dark:bg-emerald-900/10"
+            ? "bg-accent-50/50 dark:bg-accent-900/10"
             : "hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
         }`}
         onClick={() => setIsExpanded(!isExpanded)}
@@ -64,23 +65,23 @@ export function ResearchStep({
           {isActive ? (
             <motion.div
               animate={{ scale: [1, 1.1, 1] }}
-              className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center"
+              className="w-8 h-8 rounded-full bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center"
               transition={{ duration: 1.5, repeat: Infinity }}
             >
               <motion.div
                 animate={{ rotate: 360 }}
-                className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full"
+                className="w-4 h-4 border-2 border-accent-500 border-t-transparent rounded-full"
                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
               />
             </motion.div>
           ) : isCompleted ? (
             <motion.div
               animate={{ scale: 1 }}
-              className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center"
+              className="w-8 h-8 rounded-full bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center"
               initial={{ scale: 0.8 }}
             >
               <svg
-                className="w-4 h-4 text-emerald-600 dark:text-emerald-400"
+                className="w-4 h-4 text-accent-600 dark:text-accent-400"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth={2.5}
@@ -106,7 +107,7 @@ export function ResearchStep({
             <span
               className={`text-sm font-medium truncate ${
                 isActive
-                  ? "text-emerald-700 dark:text-emerald-300"
+                  ? "text-accent-700 dark:text-accent-300"
                   : isCompleted
                     ? "text-neutral-700 dark:text-neutral-200"
                     : "text-neutral-500 dark:text-neutral-400"
@@ -121,7 +122,7 @@ export function ResearchStep({
                 {formatDuration(elapsedTime)}
               </span>
               {isActive && (
-                <span className="text-xs text-emerald-600 dark:text-emerald-400">
+                <span className="text-xs text-accent-600 dark:text-accent-400">
                   in progress
                 </span>
               )}
@@ -227,9 +228,9 @@ function getSourceColor(source: string): {
       border: "border-amber-200 dark:border-amber-800",
     },
     IslamQA: {
-      bg: "bg-emerald-50 dark:bg-emerald-900/20",
-      text: "text-emerald-700 dark:text-emerald-400",
-      border: "border-emerald-200 dark:border-emerald-800",
+      bg: "bg-accent-50 dark:bg-accent-900/20",
+      text: "text-accent-700 dark:text-accent-400",
+      border: "border-accent-200 dark:border-accent-800",
     },
     "Quran.com": {
       bg: "bg-sky-50 dark:bg-sky-900/20",
@@ -351,17 +352,17 @@ function StepTree({
 }) {
   const { searchResults, otherLines, headerText } = parseContent(content);
 
-  // For understanding step, show as readable prose
+  // For understanding step, show as readable prose with markdown
   if (stepType === "understanding") {
     return (
       <div className="space-y-2">
-        <p className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">
-          {content}
-        </p>
+        <div className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed prose prose-sm dark:prose-invert prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-strong:text-neutral-800 dark:prose-strong:text-neutral-200 max-w-none">
+          <ReactMarkdown>{content}</ReactMarkdown>
+        </div>
         {isActive && (
           <motion.span
             animate={{ opacity: [1, 0] }}
-            className="inline-block w-0.5 h-4 bg-emerald-500"
+            className="inline-block w-0.5 h-4 bg-accent-500"
             transition={{ duration: 0.6, repeat: Infinity }}
           />
         )}
@@ -408,7 +409,7 @@ function StepTree({
                     {isLast ? "   " : "│  "}└─
                   </span>
                   <a
-                    className="ml-1 text-neutral-600 dark:text-neutral-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors truncate"
+                    className="ml-1 text-neutral-600 dark:text-neutral-300 hover:text-accent-600 dark:hover:text-accent-400 transition-colors truncate"
                     href={result.url}
                     rel="noopener noreferrer"
                     target="_blank"
@@ -443,7 +444,7 @@ function StepTree({
                 <span
                   className={`ml-1 ${
                     line.type === "success"
-                      ? "text-emerald-600 dark:text-emerald-400"
+                      ? "text-accent-600 dark:text-accent-400"
                       : line.type === "error"
                         ? "text-red-500 dark:text-red-400"
                         : line.type === "action"
@@ -469,7 +470,7 @@ function StepTree({
           transition={{ duration: 1.2, repeat: Infinity }}
         >
           <span className="text-neutral-400 dark:text-neutral-600 select-none">└─</span>
-          <span className="ml-1 text-emerald-600 dark:text-emerald-400">
+          <span className="ml-1 text-accent-600 dark:text-accent-400">
             working...
           </span>
         </motion.div>
