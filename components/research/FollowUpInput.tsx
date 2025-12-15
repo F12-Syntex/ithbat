@@ -60,7 +60,7 @@ export function FollowUpInput({
         <div className="relative">
           <input
             ref={inputRef}
-            className="w-full px-4 py-3 pr-12 text-sm bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:outline-none focus:border-accent-400 dark:focus:border-accent-500 focus:ring-1 focus:ring-accent-400/20 dark:focus:ring-accent-500/20 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 transition-all"
+            className="w-full px-4 py-3 pr-12 text-base sm:text-sm bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:outline-none focus:border-accent-400 dark:focus:border-accent-500 focus:ring-1 focus:ring-accent-400/20 dark:focus:ring-accent-500/20 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 transition-all"
             disabled={isLoading}
             placeholder={`Follow up on "${previousQuery.slice(0, 30)}${previousQuery.length > 30 ? "..." : ""}"...`}
             type="text"

@@ -21,6 +21,10 @@ export default function RootLayout({
           content="Search for authentic Islamic knowledge backed by Quran, Hadith, and scholarly sources"
           name="description"
         />
+        <meta
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
+          name="viewport"
+        />
       </head>
       <body className="min-h-screen antialiased">
         <ThemeProvider enableSystem attribute="class" defaultTheme="dark">
