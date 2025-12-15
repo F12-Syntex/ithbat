@@ -38,7 +38,9 @@ export function ResearchResponse({
             className="w-1.5 h-1.5 bg-accent-500 rounded-full"
             transition={{ duration: 1, repeat: Infinity }}
           />
-          <span className="text-[10px] text-accent-500 font-medium">Writing response...</span>
+          <span className="text-[10px] text-accent-500 font-medium">
+            Writing response...
+          </span>
         </div>
       )}
 

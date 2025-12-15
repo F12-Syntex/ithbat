@@ -92,7 +92,7 @@ IMPORTANT:
 - 2-4 steps total
 - Titles must be 2-4 words ONLY - no long descriptions!`;
 
-export const EXPLORATION_PROMPT = `You are analyzing crawled web content to answer an Islamic question. Decide what to do next.
+export const EXPLORATION_PROMPT = `You are analyzing crawled web content to answer an Islamic question. Decide if you have enough evidence or need more.
 
 ## QUESTION:
 {query}
@@ -103,49 +103,42 @@ export const EXPLORATION_PROMPT = `You are analyzing crawled web content to answ
 ## AVAILABLE LINKS TO EXPLORE:
 {availableLinks}
 
-## YOUR TASK:
-Analyze the crawled content and decide:
+## DECISION CRITERIA - When to STOP searching (hasEnoughInfo = true):
 
-1. **Do you have ENOUGH information to answer the question comprehensively?**
-   - Need specific hadith references with numbers?
-   - Need Quran verse citations?
-   - Need scholarly opinions from qualified muftis?
-   - Can you provide a well-sourced answer?
+Set hasEnoughInfo = TRUE if you have ANY of these:
+- At least 1-2 specific hadith with numbers (e.g., Bukhari 1234)
+- At least 1 Quran verse reference
+- At least 1 scholarly fatwa or ruling with reasoning
+- Enough general principles to deduce an answer
 
-2. **If NOT enough, which links should be explored?**
-   - Choose links that are likely to contain specific evidence
-   - Prioritize hadith pages, fatwa pages, and detailed articles
-   - Avoid generic/index pages
+Set hasEnoughInfo = FALSE only if:
+- You have NO relevant content at all
+- The content is completely off-topic
+- You found search results but no actual content
 
-3. **Should we do a broader Google search?**
-   - If Islamic source sites don't have relevant info, set useGoogleSearch to true
-   - Suggest specific search terms for Google
-
-4. **IMPORTANT: Keep exploring until you have SOLID EVIDENCE**
-   - Do NOT set hasEnoughInfo to true if you only have vague information
-   - You need SPECIFIC hadith numbers, Quran verses, or scholarly fatwa
-   - If sources say "the scholars say" without specifics, keep exploring
-   - If the topic is niche/sensitive, TRY GOOGLE SEARCH with specific terms
-   - NEVER give up after just Islamic site searches - always try Google
-   - If first exploration round has no results, set useGoogleSearch=true
+## IMPORTANT - DON'T OVER-SEARCH:
+- Quality over quantity - 2-3 good sources is enough
+- If you have hadith/Quran/fatwa content, STOP and let AI synthesize
+- The AI can deduce answers from related principles - you don't need exact matches
+- After 2-3 rounds of searching, you likely have enough
 
 ## RESPOND IN THIS EXACT JSON FORMAT:
 {
   "hasEnoughInfo": true/false,
-  "reasoning": "Brief explanation of your decision",
+  "reasoning": "Brief explanation - what evidence do you have?",
   "linksToExplore": ["url1", "url2"],
-  "alternativeQueries": ["query1", "query2"],
+  "alternativeQueries": ["query1"],
   "useGoogleSearch": true/false,
-  "googleSearchQuery": "specific search terms for Google",
-  "keyFindingsSoFar": "Summary of relevant info found"
+  "googleSearchQuery": "search terms if needed",
+  "keyFindingsSoFar": "Summary of evidence found"
 }
 
 IMPORTANT:
-- Return ONLY valid JSON, no other text
-- Maximum 5 links to explore per iteration
-- Maximum 2 alternative queries for Islamic sites
-- Set useGoogleSearch=true if Islamic sites lack info
-- Be THOROUGH - don't give up until you have concrete evidence`;
+- Return ONLY valid JSON
+- Maximum 3 links per iteration (not 5)
+- Maximum 1 alternative query
+- Prefer to STOP if you have reasonable evidence
+- Only use Google if Islamic sites have NO relevant content`;
 
 export const SYNTHESIS_PROMPT = `Answer this Islamic question using the crawled research data below.
 
@@ -216,10 +209,25 @@ Highlight:
 [Your reasoned answer with inline linked citations like [Sahih Muslim 1468](https://sunnah.com/muslim:1468)]
 
 ## Evidence
-[Hadith texts and scholarly statements with inline links]
+Use PARAGRAPHS separated by blank lines, NOT bullet points. Each piece of evidence should have an UNDERLINED header.
 
-Example response:
-"Based on the hadith where the Prophet (ﷺ) said '**Fasting is a shield**' [Sahih Bukhari 1894](https://sunnah.com/bukhari:1894), and the principle established in [Sahih Muslim 1151](https://sunnah.com/muslim:1151), we can conclude that this is **permissible**..."
+Format each evidence item like this:
+<u>Source Title or Topic</u>
+
+The full text or explanation of the evidence with the inline citation [Sahih Muslim 1468](https://sunnah.com/muslim:1468). Include the relevant hadith text or scholarly statement here as a full paragraph.
+
+<u>Second Source or Point</u>
+
+Another paragraph explaining this piece of evidence with its citation [Sahih Bukhari 1894](https://sunnah.com/bukhari:1894).
+
+Example evidence section:
+<u>The Prophet's Guidance on Fasting</u>
+
+The Prophet (ﷺ) said: "**Fasting is a shield**" [Sahih Bukhari 1894](https://sunnah.com/bukhari:1894). This hadith establishes the protective nature of fasting and its spiritual benefits for the believer.
+
+<u>Scholarly Consensus</u>
+
+The scholars have unanimously agreed that this ruling applies to all Muslims who are capable, as established in [Sahih Muslim 1151](https://sunnah.com/muslim:1151).
 
 ## CITATION FORMATTING - CRITICAL:
 
@@ -235,6 +243,35 @@ Example response:
 - Be transparent about your reasoning: "This is derived from..." or "By analogy to..."
 - EVERY [N] citation must have a matching entry in Sources with a SPECIFIC URL (not search URL)
 - Extract hadith URLs from the crawled content - look for patterns like sunnah.com/bookname:number`;
+
+export const VERIFICATION_PROMPT = `You are a reference verification assistant. Your task is to verify and correct all citations in the given Islamic research response.
+
+## GENERATED RESPONSE TO VERIFY:
+{response}
+
+## CRAWLED RESEARCH DATA (for verification):
+{research}
+
+## YOUR TASK:
+
+1. **Check every citation** in the response against the crawled data
+2. **Verify URLs are correct** - ensure hadith numbers, Quran verses, and fatwa IDs match the content
+3. **Fix any broken or incorrect references** - if a citation doesn't match, correct it or remove it
+4. **Ensure formatting is correct**:
+   - Hadith: [Sahih Bukhari 1234](https://sunnah.com/bukhari:1234)
+   - Quran: [Quran 2:255](https://quran.com/2/255)
+   - Fatwa: [IslamQA 826](https://islamqa.info/en/answers/826)
+5. **Remove any citations that cannot be verified** from the crawled data
+6. **Keep underlined headers** for evidence sections using <u>Header</u> format
+
+## RESPOND WITH:
+The COMPLETE corrected response with all verified citations. If everything is correct, return the response unchanged.
+
+IMPORTANT:
+- Return the FULL response, not just corrections
+- Preserve all formatting including **bold** highlights and <u>underlined headers</u>
+- Only change citations that are incorrect or unverifiable
+- Do NOT add new content, only verify and correct existing citations`;
 
 export function buildPrompt(
   template: string,

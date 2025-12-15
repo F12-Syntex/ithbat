@@ -439,7 +439,9 @@ function StepTree({
 
       {/* Other lines with indentation */}
       {otherLines.length > 0 && (
-        <div className={`space-y-0.5 ${searchResults.length > 0 ? "mt-2" : ""}`}>
+        <div
+          className={`space-y-0.5 ${searchResults.length > 0 ? "mt-2" : ""}`}
+        >
           {otherLines.map((line, index) => {
             const isLast = index === otherLines.length - 1;
 
@@ -482,7 +484,9 @@ function StepTree({
           className="flex items-center mt-2"
           transition={{ duration: 1.2, repeat: Infinity }}
         >
-          <span className="text-neutral-400 dark:text-neutral-600 select-none">└─</span>
+          <span className="text-neutral-400 dark:text-neutral-600 select-none">
+            └─
+          </span>
           <span className="ml-1 text-accent-600 dark:text-accent-400">
             working...
           </span>

@@ -265,6 +265,7 @@ function extractLinks(
   if (baseUrl.includes("sunnah.com")) {
     $("a[href]").each((_, el) => {
       const href = $(el).attr("href");
+
       if (!href) return;
 
       try {
@@ -291,6 +292,7 @@ function extractLinks(
   if (baseUrl.includes("quran.com")) {
     $("a[href]").each((_, el) => {
       const href = $(el).attr("href");
+
       if (!href) return;
 
       try {
@@ -513,6 +515,7 @@ export function formatCrawlResultsForAI(pages: CrawledPage[]): string {
 
   // Collect ALL specific hadith/article links for easy reference
   const specificLinks: string[] = [];
+
   for (const page of pages) {
     for (const link of page.links) {
       // Only include direct content links (not search pages)
@@ -525,7 +528,9 @@ export function formatCrawlResultsForAI(pages: CrawledPage[]): string {
 
   // CRITICAL: Show specific citation URLs FIRST
   sections.push("=== SPECIFIC URLS FOR CITATIONS (USE THESE!) ===");
-  sections.push("IMPORTANT: Only cite these specific URLs, NEVER cite search URLs!");
+  sections.push(
+    "IMPORTANT: Only cite these specific URLs, NEVER cite search URLs!",
+  );
   sections.push("");
 
   if (uniqueSpecificLinks.length > 0) {
@@ -533,14 +538,19 @@ export function formatCrawlResultsForAI(pages: CrawledPage[]): string {
       sections.push(`[${i + 1}] ${link}`);
     });
   } else {
-    sections.push("(No specific hadith/article links found - use article URLs from content below)");
+    sections.push(
+      "(No specific hadith/article links found - use article URLs from content below)",
+    );
   }
   sections.push("\n");
 
   // Then, provide the full content
   for (let i = 0; i < pages.length; i++) {
     const page = pages[i];
-    const isSearchPage = page.url.includes("/search") || page.url.includes("?q=") || page.url.includes("?s=");
+    const isSearchPage =
+      page.url.includes("/search") ||
+      page.url.includes("?q=") ||
+      page.url.includes("?s=");
 
     sections.push(`
 === SOURCE: ${page.source} ===
@@ -564,7 +574,12 @@ ${page.content}
  */
 function isSpecificContentUrl(url: string): boolean {
   // Reject search pages
-  if (url.includes("/search") || url.includes("?q=") || url.includes("?s=") || url.includes("?keyword=")) {
+  if (
+    url.includes("/search") ||
+    url.includes("?q=") ||
+    url.includes("?s=") ||
+    url.includes("?keyword=")
+  ) {
     return false;
   }
 
@@ -586,6 +601,7 @@ function isSpecificContentUrl(url: string): boolean {
   // Other sites: must have meaningful path
   try {
     const path = new URL(url).pathname;
+
     return path.length > 10 && !path.endsWith("/");
   } catch {
     return false;

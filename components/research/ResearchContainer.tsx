@@ -34,6 +34,7 @@ export function ResearchContainer() {
   const handlePasteAndSearch = async () => {
     try {
       const text = await navigator.clipboard.readText();
+
       if (text.trim()) {
         startResearch(text.trim());
       }
@@ -101,6 +102,7 @@ export function ResearchContainer() {
       ),
       onClick: () => {
         const selection = window.getSelection()?.toString();
+
         if (selection) {
           navigator.clipboard.writeText(selection);
         }
@@ -128,12 +130,19 @@ export function ResearchContainer() {
           const text = await navigator.clipboard.readText();
           // Focus on active input and paste
           const activeElement = document.activeElement as HTMLInputElement;
-          if (activeElement?.tagName === "INPUT" || activeElement?.tagName === "TEXTAREA") {
+
+          if (
+            activeElement?.tagName === "INPUT" ||
+            activeElement?.tagName === "TEXTAREA"
+          ) {
             const start = activeElement.selectionStart || 0;
             const end = activeElement.selectionEnd || 0;
             const value = activeElement.value;
-            activeElement.value = value.slice(0, start) + text + value.slice(end);
-            activeElement.selectionStart = activeElement.selectionEnd = start + text.length;
+
+            activeElement.value =
+              value.slice(0, start) + text + value.slice(end);
+            activeElement.selectionStart = activeElement.selectionEnd =
+              start + text.length;
             activeElement.dispatchEvent(new Event("input", { bubbles: true }));
           }
         } catch {
@@ -267,14 +276,14 @@ export function ResearchContainer() {
   return (
     <ContextMenu items={contextMenuItems}>
       <div className="relative h-screen h-[100dvh] overflow-hidden bg-neutral-50 dark:bg-neutral-950 flex flex-col">
-        {/* Settings Button - Fixed top right */}
+        {/* Settings Button - Fixed top right (desktop only) */}
         <button
-          className="fixed top-3 right-3 sm:top-4 sm:right-4 z-40 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center shadow-sm hover:shadow-md hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
-          onClick={() => setSettingsOpen(true)}
           aria-label="Settings"
+          className="hidden sm:flex fixed top-4 right-4 z-40 w-10 h-10 rounded-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 items-center justify-center shadow-sm hover:shadow-md hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
+          onClick={() => setSettingsOpen(true)}
         >
           <svg
-            className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-500 dark:text-neutral-400"
+            className="w-5 h-5 text-neutral-500 dark:text-neutral-400"
             fill="none"
             stroke="currentColor"
             strokeWidth={1.5}
@@ -327,9 +336,39 @@ export function ResearchContainer() {
               )}
             </AnimatePresence>
 
-            {/* Search Input */}
-            <div className="w-full max-w-md">
-              <SearchInput isLoading={isResearching} onSearch={startResearch} />
+            {/* Search Input with mobile settings button */}
+            <div className="w-full max-w-md flex items-center gap-2">
+              <div className="flex-1">
+                <SearchInput
+                  isLoading={isResearching}
+                  onSearch={startResearch}
+                />
+              </div>
+              {/* Mobile settings button - matches search input (px-4 py-3 with h-8 content) */}
+              <button
+                aria-label="Settings"
+                className="sm:hidden flex-shrink-0 px-4 py-3 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
+                onClick={() => setSettingsOpen(true)}
+              >
+                <svg
+                  className="w-8 h-8 text-neutral-500 dark:text-neutral-400"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
             </div>
 
             {/* Example Buttons */}

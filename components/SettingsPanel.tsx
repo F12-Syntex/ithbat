@@ -39,198 +39,298 @@ export function SettingsPanel({
             initial={{ opacity: 0 }}
             onClick={onClose}
           />
+          {/* Mobile: Bottom sheet */}
+          <motion.div
+            animate={{ y: 0 }}
+            className="sm:hidden fixed inset-x-0 bottom-0 max-h-[85vh] bg-white dark:bg-neutral-900 z-50 rounded-t-2xl shadow-2xl overflow-hidden"
+            exit={{ y: "100%" }}
+            initial={{ y: "100%" }}
+            transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+          >
+            {/* Drag handle */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 bg-neutral-300 dark:bg-neutral-700 rounded-full" />
+            </div>
+            <SettingsPanelContent
+              darkThemes={darkThemes}
+              lightThemes={lightThemes}
+              setTheme={setTheme}
+              settings={settings}
+              theme={theme}
+              themes={themes}
+              updateSetting={updateSetting}
+              onClose={onClose}
+            />
+          </motion.div>
+          {/* Desktop: Side panel */}
           <motion.div
             animate={{ opacity: 1, scale: 1 }}
-            className="fixed inset-x-4 top-[10%] sm:inset-auto sm:right-4 sm:top-4 sm:w-80 max-h-[80vh] bg-white dark:bg-neutral-900 z-50 rounded-2xl shadow-2xl overflow-hidden"
+            className="hidden sm:block fixed right-4 top-4 w-80 max-h-[80vh] bg-white dark:bg-neutral-900 z-50 rounded-2xl shadow-2xl overflow-hidden"
             exit={{ opacity: 0, scale: 0.95 }}
             initial={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
-            {/* Header */}
-            <div className="px-5 py-4 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-neutral-900 dark:text-white">
-                Settings
-              </h2>
-              <button
-                className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 flex items-center justify-center transition-colors"
-                onClick={onClose}
-              >
+            <SettingsPanelContent
+              darkThemes={darkThemes}
+              lightThemes={lightThemes}
+              setTheme={setTheme}
+              settings={settings}
+              theme={theme}
+              themes={themes}
+              updateSetting={updateSetting}
+              onClose={onClose}
+            />
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function SettingsPanelContent({
+  theme,
+  themes,
+  setTheme,
+  settings,
+  updateSetting,
+  darkThemes,
+  lightThemes,
+  onClose,
+}: {
+  theme: ReturnType<typeof useTheme>["theme"];
+  themes: ReturnType<typeof useTheme>["themes"];
+  setTheme: ReturnType<typeof useTheme>["setTheme"];
+  settings: ReturnType<typeof useSettings>["settings"];
+  updateSetting: ReturnType<typeof useSettings>["updateSetting"];
+  darkThemes: ReturnType<typeof useTheme>["themes"];
+  lightThemes: ReturnType<typeof useTheme>["themes"];
+  onClose: () => void;
+}) {
+  return (
+    <>
+      {/* Header */}
+      <div className="px-5 py-4 flex items-center justify-between">
+        <h2 className="text-base font-semibold text-neutral-900 dark:text-white">
+          Settings
+        </h2>
+        <button
+          className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 flex items-center justify-center transition-colors"
+          onClick={onClose}
+        >
+          <svg
+            className="w-4 h-4 text-neutral-500"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M6 18L18 6M6 6l12 12"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <div className="px-5 pb-5 space-y-6 overflow-y-auto max-h-[calc(80vh-60px)]">
+        {/* Theme Colors */}
+        <div>
+          <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-4">
+            Theme
+          </p>
+
+          {/* Color Selection */}
+          <div className="flex items-center justify-center gap-3 mb-4">
+            {["emerald", "blue", "purple", "rose", "amber", "cyan"].map(
+              (accent) => (
+                <button
+                  key={accent}
+                  className={`w-8 h-8 rounded-full transition-all ${
+                    ACCENT_COLORS[accent as ThemeAccent].bg
+                  } ${
+                    theme.accent === accent
+                      ? `ring-4 ${ACCENT_COLORS[accent as ThemeAccent].ring} scale-110`
+                      : "hover:scale-110"
+                  }`}
+                  onClick={() => {
+                    const newTheme = themes.find(
+                      (t) => t.accent === accent && t.mode === theme.mode,
+                    );
+
+                    if (newTheme) setTheme(newTheme);
+                  }}
+                />
+              ),
+            )}
+          </div>
+
+          {/* Mode Toggle */}
+          <div className="flex bg-neutral-100 dark:bg-neutral-800 rounded-xl p-1">
+            <button
+              className={`flex-1 py-2.5 text-xs font-medium rounded-lg transition-all ${
+                theme.mode === "light"
+                  ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm"
+                  : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+              }`}
+              onClick={() => {
+                const newTheme = lightThemes.find(
+                  (t) => t.accent === theme.accent,
+                );
+
+                if (newTheme) setTheme(newTheme);
+              }}
+            >
+              <span className="flex items-center justify-center gap-1.5">
                 <svg
-                  className="w-4 h-4 text-neutral-500"
+                  className="w-4 h-4"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth={2}
                   viewBox="0 0 24 24"
                 >
                   <path
-                    d="M6 18L18 6M6 6l12 12"
+                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
                 </svg>
-              </button>
-            </div>
+                Light
+              </span>
+            </button>
+            <button
+              className={`flex-1 py-2.5 text-xs font-medium rounded-lg transition-all ${
+                theme.mode === "dark"
+                  ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm"
+                  : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+              }`}
+              onClick={() => {
+                const newTheme = darkThemes.find(
+                  (t) => t.accent === theme.accent,
+                );
 
-            <div className="px-5 pb-5 space-y-6 overflow-y-auto max-h-[calc(80vh-60px)]">
-              {/* Theme Colors */}
-              <div>
-                <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-4">
-                  Theme
-                </p>
-
-                {/* Color Selection */}
-                <div className="flex items-center justify-center gap-3 mb-4">
-                  {["emerald", "blue", "purple", "rose", "amber", "cyan"].map((accent) => (
-                    <button
-                      key={accent}
-                      className={`w-8 h-8 rounded-full transition-all ${
-                        ACCENT_COLORS[accent as ThemeAccent].bg
-                      } ${
-                        theme.accent === accent
-                          ? `ring-4 ${ACCENT_COLORS[accent as ThemeAccent].ring} scale-110`
-                          : "hover:scale-110"
-                      }`}
-                      onClick={() => {
-                        const newTheme = themes.find(
-                          (t) => t.accent === accent && t.mode === theme.mode
-                        );
-                        if (newTheme) setTheme(newTheme);
-                      }}
-                    />
-                  ))}
-                </div>
-
-                {/* Mode Toggle */}
-                <div className="flex bg-neutral-100 dark:bg-neutral-800 rounded-xl p-1">
-                  <button
-                    className={`flex-1 py-2.5 text-xs font-medium rounded-lg transition-all ${
-                      theme.mode === "light"
-                        ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm"
-                        : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
-                    }`}
-                    onClick={() => {
-                      const newTheme = lightThemes.find((t) => t.accent === theme.accent);
-                      if (newTheme) setTheme(newTheme);
-                    }}
-                  >
-                    <span className="flex items-center justify-center gap-1.5">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      Light
-                    </span>
-                  </button>
-                  <button
-                    className={`flex-1 py-2.5 text-xs font-medium rounded-lg transition-all ${
-                      theme.mode === "dark"
-                        ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm"
-                        : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
-                    }`}
-                    onClick={() => {
-                      const newTheme = darkThemes.find((t) => t.accent === theme.accent);
-                      if (newTheme) setTheme(newTheme);
-                    }}
-                  >
-                    <span className="flex items-center justify-center gap-1.5">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      Dark
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Research Settings */}
-              <div>
-                <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-4">
-                  Research
-                </p>
-
-                {/* Sources Slider */}
-                <div className="bg-neutral-50 dark:bg-neutral-800/50 rounded-xl p-4 mb-3">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm text-neutral-700 dark:text-neutral-300">
-                      Max sources
-                    </span>
-                    <span className="text-sm font-semibold text-neutral-900 dark:text-white bg-neutral-200 dark:bg-neutral-700 px-2 py-0.5 rounded-md">
-                      {settings.maxWebsiteNodes}
-                    </span>
-                  </div>
-                  <input
-                    className="w-full h-2 bg-neutral-200 dark:bg-neutral-700 rounded-full appearance-none cursor-pointer"
-                    style={{ accentColor: 'var(--accent-500)' }}
-                    max="100"
-                    min="3"
-                    type="range"
-                    value={settings.maxWebsiteNodes}
-                    onChange={(e) =>
-                      updateSetting("maxWebsiteNodes", parseInt(e.target.value))
-                    }
+                if (newTheme) setTheme(newTheme);
+              }}
+            >
+              <span className="flex items-center justify-center gap-1.5">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                   />
-                  <div className="flex justify-between text-[10px] text-neutral-400 mt-2">
-                    <span>Faster</span>
-                    <span>More thorough</span>
-                  </div>
-                </div>
+                </svg>
+                Dark
+              </span>
+            </button>
+          </div>
+        </div>
 
-                {/* Toggle Options */}
-                <div className="space-y-2">
-                  <label className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
-                    <span className="text-sm text-neutral-700 dark:text-neutral-300">
-                      Auto-expand steps
-                    </span>
-                    <div className={`w-10 h-6 rounded-full p-0.5 transition-colors ${
-                      settings.autoExpandSteps ? "bg-accent-500" : "bg-neutral-300 dark:bg-neutral-600"
-                    }`}>
-                      <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                        settings.autoExpandSteps ? "translate-x-4" : "translate-x-0"
-                      }`} />
-                    </div>
-                    <input
-                      checked={settings.autoExpandSteps}
-                      className="sr-only"
-                      type="checkbox"
-                      onChange={(e) =>
-                        updateSetting("autoExpandSteps", e.target.checked)
-                      }
-                    />
-                  </label>
+        {/* Research Settings */}
+        <div>
+          <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-4">
+            Research
+          </p>
 
-                  <label className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
-                    <span className="text-sm text-neutral-700 dark:text-neutral-300">
-                      Show timestamps
-                    </span>
-                    <div className={`w-10 h-6 rounded-full p-0.5 transition-colors ${
-                      settings.showTimestamps ? "bg-accent-500" : "bg-neutral-300 dark:bg-neutral-600"
-                    }`}>
-                      <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                        settings.showTimestamps ? "translate-x-4" : "translate-x-0"
-                      }`} />
-                    </div>
-                    <input
-                      checked={settings.showTimestamps}
-                      className="sr-only"
-                      type="checkbox"
-                      onChange={(e) =>
-                        updateSetting("showTimestamps", e.target.checked)
-                      }
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {/* About */}
-              <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-neutral-400">ithbat</span>
-                  <span className="text-xs text-neutral-400">v0.1</span>
-                </div>
-              </div>
+          {/* Sources Slider */}
+          <div className="bg-neutral-50 dark:bg-neutral-800/50 rounded-xl p-4 mb-3">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                Max sources
+              </span>
+              <span className="text-sm font-semibold text-neutral-900 dark:text-white bg-neutral-200 dark:bg-neutral-700 px-2 py-0.5 rounded-md">
+                {settings.maxWebsiteNodes}
+              </span>
             </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+            <input
+              className="w-full h-2 bg-neutral-200 dark:bg-neutral-700 rounded-full appearance-none cursor-pointer"
+              max="100"
+              min="3"
+              style={{ accentColor: "var(--accent-500)" }}
+              type="range"
+              value={settings.maxWebsiteNodes}
+              onChange={(e) =>
+                updateSetting("maxWebsiteNodes", parseInt(e.target.value))
+              }
+            />
+            <div className="flex justify-between text-[10px] text-neutral-400 mt-2">
+              <span>Faster</span>
+              <span>More thorough</span>
+            </div>
+          </div>
+
+          {/* Toggle Options */}
+          <div className="space-y-2">
+            <label className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+              <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                Auto-expand steps
+              </span>
+              <div
+                className={`w-10 h-6 rounded-full p-0.5 transition-colors ${
+                  settings.autoExpandSteps
+                    ? "bg-accent-500"
+                    : "bg-neutral-300 dark:bg-neutral-600"
+                }`}
+              >
+                <div
+                  className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                    settings.autoExpandSteps ? "translate-x-4" : "translate-x-0"
+                  }`}
+                />
+              </div>
+              <input
+                checked={settings.autoExpandSteps}
+                className="sr-only"
+                type="checkbox"
+                onChange={(e) =>
+                  updateSetting("autoExpandSteps", e.target.checked)
+                }
+              />
+            </label>
+
+            <label className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+              <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                Show timestamps
+              </span>
+              <div
+                className={`w-10 h-6 rounded-full p-0.5 transition-colors ${
+                  settings.showTimestamps
+                    ? "bg-accent-500"
+                    : "bg-neutral-300 dark:bg-neutral-600"
+                }`}
+              >
+                <div
+                  className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                    settings.showTimestamps ? "translate-x-4" : "translate-x-0"
+                  }`}
+                />
+              </div>
+              <input
+                checked={settings.showTimestamps}
+                className="sr-only"
+                type="checkbox"
+                onChange={(e) =>
+                  updateSetting("showTimestamps", e.target.checked)
+                }
+              />
+            </label>
+          </div>
+        </div>
+
+        {/* About */}
+        <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-neutral-400">ithbat</span>
+            <span className="text-xs text-neutral-400">v0.1</span>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

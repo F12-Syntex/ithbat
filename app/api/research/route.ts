@@ -7,6 +7,7 @@ import {
   PLANNING_PROMPT,
   EXPLORATION_PROMPT,
   SYNTHESIS_PROMPT,
+  VERIFICATION_PROMPT,
   buildPrompt,
 } from "@/lib/prompts";
 import {
@@ -138,7 +139,7 @@ export async function POST(request: NextRequest) {
       const client = getOpenRouterClient();
       const allCrawledPages: CrawledPage[] = [];
       let sourceId = 1;
-      const maxIterations = 10; // Maximum exploration iterations - be thorough
+      const maxIterations = 5; // Reduced - AI now decides to stop when enough evidence found
 
       try {
         // Step 1: Understanding (always first)
@@ -521,10 +522,8 @@ export async function POST(request: NextRequest) {
           research: crawledContent,
         });
 
-        send({ type: "step_complete", step: synthesizeStep.id });
-
-        // Start streaming the response
-        send({ type: "response_start" });
+        // Collect the initial synthesis response
+        let synthesisResponse = "";
 
         for await (const chunk of client.streamChat(
           [
@@ -533,7 +532,57 @@ export async function POST(request: NextRequest) {
           ],
           "HIGH",
         )) {
+          synthesisResponse += chunk;
+        }
+
+        send({
+          type: "step_content",
+          step: synthesizeStep.id,
+          content: `Generated initial response, verifying references...\n`,
+        });
+
+        // Step 6: Verification - validate all references
+        const verificationPrompt = buildPrompt(VERIFICATION_PROMPT, {
+          response: synthesisResponse,
+          research: crawledContent,
+        });
+
+        let verifiedResponse = "";
+
+        for await (const chunk of client.streamChat(
+          [
+            {
+              role: "system",
+              content:
+                "You are a reference verification assistant. Return the complete verified response.",
+            },
+            { role: "user", content: verificationPrompt },
+          ],
+          "HIGH",
+        )) {
+          verifiedResponse += chunk;
+        }
+
+        send({
+          type: "step_content",
+          step: synthesizeStep.id,
+          content: `✓ References verified\n`,
+        });
+
+        send({ type: "step_complete", step: synthesizeStep.id });
+
+        // Stream the verified response
+        send({ type: "response_start" });
+
+        // Stream it in chunks for better UX
+        const chunkSize = 20;
+
+        for (let i = 0; i < verifiedResponse.length; i += chunkSize) {
+          const chunk = verifiedResponse.slice(i, i + chunkSize);
+
           send({ type: "response_content", content: chunk });
+          // Small delay for smoother streaming effect
+          await new Promise((resolve) => setTimeout(resolve, 5));
         }
 
         send({ type: "done" });
