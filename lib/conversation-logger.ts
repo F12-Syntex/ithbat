@@ -12,6 +12,48 @@ export interface ConversationLog {
   created_at?: string;
 }
 
+const MAX_SESSIONS = 20;
+
+async function cleanupOldSessions(): Promise<void> {
+  try {
+    const supabase = createServerClient();
+
+    // Get all unique sessions ordered by most recent activity
+    const { data: sessions } = await supabase
+      .from("conversation_logs")
+      .select("session_id, created_at")
+      .order("created_at", { ascending: false });
+
+    if (!sessions || sessions.length === 0) return;
+
+    // Get unique session IDs in order of most recent
+    const uniqueSessions: string[] = [];
+    const seen = new Set<string>();
+    for (const s of sessions) {
+      if (!seen.has(s.session_id)) {
+        seen.add(s.session_id);
+        uniqueSessions.push(s.session_id);
+      }
+    }
+
+    // If we have more than MAX_SESSIONS, delete the oldest ones
+    if (uniqueSessions.length > MAX_SESSIONS) {
+      const sessionsToDelete = uniqueSessions.slice(MAX_SESSIONS);
+
+      const { error } = await supabase
+        .from("conversation_logs")
+        .delete()
+        .in("session_id", sessionsToDelete);
+
+      if (error) {
+        console.error("Failed to cleanup old sessions:", error);
+      }
+    }
+  } catch (err) {
+    console.error("Error cleaning up old sessions:", err);
+  }
+}
+
 export async function logConversation(
   sessionId: string,
   query: string,
@@ -35,6 +77,11 @@ export async function logConversation(
     if (error) {
       console.error("Failed to log conversation:", error);
     }
+
+    // Cleanup old sessions (non-blocking)
+    cleanupOldSessions().catch((err) =>
+      console.error("Cleanup error:", err)
+    );
   } catch (err) {
     console.error("Error logging conversation:", err);
   }

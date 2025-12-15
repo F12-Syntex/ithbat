@@ -10,6 +10,7 @@ import { FollowUpInput } from "./FollowUpInput";
 
 import { ContextMenu } from "@/components/ContextMenu";
 import { SettingsPanel } from "@/components/SettingsPanel";
+import { IntroModal } from "@/components/IntroModal";
 import { useResearch } from "@/hooks/useResearch";
 import { useTheme } from "@/context/ThemeContext";
 
@@ -277,6 +278,9 @@ export function ResearchContainer() {
 
   return (
     <ContextMenu items={contextMenuItems}>
+      {/* Intro Modal for first-time visitors */}
+      <IntroModal />
+
       <div className="relative h-screen h-[100dvh] overflow-hidden bg-neutral-50 dark:bg-neutral-950 flex flex-col">
         {/* Settings Button - Fixed top right (desktop only) */}
         <button
