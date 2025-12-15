@@ -2,9 +2,47 @@
 
 import { useMemo } from "react";
 import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
 import { motion } from "framer-motion";
 
 import { extractReferences } from "@/lib/references";
+
+// Sites that support text fragment highlighting
+const TEXT_FRAGMENT_SITES = ["sunnah.com", "islamqa.info", "quran.com"];
+
+// Build URL with text fragment for supported sites
+function getTextFragmentUrl(href: string, linkText: string): string {
+  try {
+    const url = new URL(href);
+    const isSupported = TEXT_FRAGMENT_SITES.some((site) =>
+      url.hostname.includes(site),
+    );
+
+    if (!isSupported) return href;
+
+    // For sunnah.com, use hadith book name for search
+    if (url.hostname.includes("sunnah.com")) {
+      const bookMatch = linkText.match(
+        /(Bukhari|Muslim|Tirmidhi|Abu Dawud|Nasa'i|Ibn Majah|Muwatta)/i,
+      );
+
+      if (bookMatch) {
+        return `${href}#:~:text=${encodeURIComponent(bookMatch[0])}`;
+      }
+    }
+
+    // For other sites, use part of link text for search
+    if (linkText.length > 5) {
+      const words = linkText.split(" ").slice(0, 4).join(" ");
+
+      return `${href}#:~:text=${encodeURIComponent(words)}`;
+    }
+
+    return href;
+  } catch {
+    return href;
+  }
+}
 
 interface ResearchResponseProps {
   content: string;
@@ -61,15 +99,27 @@ export function ResearchResponse({
       >
         <ReactMarkdown
           components={{
-            a: ({ href, children }) => (
-              <a
-                className="text-accent-600 dark:text-accent-400 hover:underline font-medium"
-                href={href}
-                rel="noopener noreferrer"
-                target="_blank"
-              >
+            a: ({ href, children }) => {
+              const linkText =
+                typeof children === "string" ? children : String(children);
+              const finalHref = href ? getTextFragmentUrl(href, linkText) : "#";
+
+              return (
+                <a
+                  className="text-accent-600 dark:text-accent-400 hover:underline font-medium"
+                  href={finalHref}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  {children}
+                </a>
+              );
+            },
+            // Render <u> tags as underlined text
+            u: ({ children }) => (
+              <span className="underline decoration-accent-500/50 underline-offset-2">
                 {children}
-              </a>
+              </span>
             ),
             h2: ({ children }) => (
               <h2 className="flex items-center gap-2 text-base sm:text-lg font-semibold text-neutral-800 dark:text-neutral-100 mt-6 mb-3 pb-2 border-b border-neutral-200 dark:border-neutral-800">
@@ -128,6 +178,7 @@ export function ResearchResponse({
               </h2>
             ),
           }}
+          rehypePlugins={[rehypeRaw]}
         >
           {processedContent}
         </ReactMarkdown>

@@ -70,6 +70,14 @@ function encodeSSE(event: ResearchStepEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
 }
 
+// Clean up nested/duplicate markdown links
+// Fixes patterns like [[Text](url)](url) -> [Text](url)
+function cleanupNestedLinks(text: string): string {
+  // Pattern: [[inner text](inner url)](outer url)
+  // Replace with: [inner text](inner url)
+  return text.replace(/\[\[([^\]]+)\]\(([^)]+)\)\]\([^)]+\)/g, "[$1]($2)");
+}
+
 function parsePlanningResponse(response: string): PlanningDecision {
   try {
     const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -593,6 +601,9 @@ export async function POST(request: NextRequest) {
           verifiedResponse += chunk;
         }
 
+        // Clean up any nested/duplicate links that slipped through
+        const cleanedResponse = cleanupNestedLinks(verifiedResponse);
+
         send({
           type: "step_content",
           step: synthesizeStep.id,
@@ -601,14 +612,14 @@ export async function POST(request: NextRequest) {
 
         send({ type: "step_complete", step: synthesizeStep.id });
 
-        // Stream the verified response
+        // Stream the cleaned response
         send({ type: "response_start" });
 
         // Stream it in chunks for better UX
         const chunkSize = 20;
 
-        for (let i = 0; i < verifiedResponse.length; i += chunkSize) {
-          const chunk = verifiedResponse.slice(i, i + chunkSize);
+        for (let i = 0; i < cleanedResponse.length; i += chunkSize) {
+          const chunk = cleanedResponse.slice(i, i + chunkSize);
 
           send({ type: "response_content", content: chunk });
           // Small delay for smoother streaming effect

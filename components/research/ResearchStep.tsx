@@ -12,6 +12,39 @@ interface ResearchStepProps {
   index?: number;
 }
 
+// Helper to render text with clickable URLs
+function renderTextWithLinks(text: string, className: string) {
+  // URL regex pattern
+  const urlPattern = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlPattern);
+
+  if (parts.length === 1) {
+    return <span className={className}>{text}</span>;
+  }
+
+  return (
+    <span className={className}>
+      {parts.map((part, i) => {
+        if (part.match(urlPattern)) {
+          return (
+            <a
+              key={i}
+              className="text-accent-600 dark:text-accent-400 hover:underline break-all"
+              href={part}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              {part}
+            </a>
+          );
+        }
+
+        return <span key={i}>{part}</span>;
+      })}
+    </span>
+  );
+}
+
 function formatDuration(ms: number): string {
   const seconds = Math.floor(ms / 1000);
   const minutes = Math.floor(seconds / 60);
@@ -467,8 +500,9 @@ function StepTree({
                 <span className="text-neutral-400 dark:text-neutral-600 select-none">
                   {isLast ? "└─" : "├─"}
                 </span>
-                <span
-                  className={`ml-1 ${
+                {renderTextWithLinks(
+                  line.text,
+                  `ml-1 ${
                     line.type === "success"
                       ? "text-accent-600 dark:text-accent-400"
                       : line.type === "error"
@@ -478,10 +512,8 @@ function StepTree({
                           : line.type === "header"
                             ? "text-amber-600 dark:text-amber-400 font-medium"
                             : "text-neutral-600 dark:text-neutral-400"
-                  }`}
-                >
-                  {line.text}
-                </span>
+                  }`,
+                )}
               </motion.div>
             );
           })}

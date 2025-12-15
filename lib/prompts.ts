@@ -275,6 +275,13 @@ export const VERIFICATION_PROMPT = `You are a reference verification assistant. 
 5. **Remove any citations that cannot be verified** from the crawled data
 6. **Keep underlined headers** for evidence sections using <u>Header</u> format
 
+## CRITICAL - AVOID THESE MISTAKES:
+- NEVER create nested/duplicate links like [[Text](url)](url) - this is WRONG
+- Each citation should be a SINGLE markdown link: [Text](url)
+- If you see a nested link, fix it to be a single link
+- WRONG: [[Quran 4:93](https://quran.com/4/93)](https://quran.com/4/93)
+- RIGHT: [Quran 4:93](https://quran.com/4/93)
+
 ## RESPOND WITH:
 The COMPLETE corrected response with all verified citations. If everything is correct, return the response unchanged.
 
@@ -282,7 +289,8 @@ IMPORTANT:
 - Return the FULL response, not just corrections
 - Preserve all formatting including **bold** highlights and <u>underlined headers</u>
 - Only change citations that are incorrect or unverifiable
-- Do NOT add new content, only verify and correct existing citations`;
+- Do NOT add new content, only verify and correct existing citations
+- NEVER wrap a link inside another link`;
 
 export function buildPrompt(
   template: string,
