@@ -1,6 +1,4 @@
-import { Link } from "@heroui/link";
-
-import { Navbar } from "@/components/navbar";
+import { ThemeSwitch } from "@/components/theme-switch";
 
 export default function DefaultLayout({
   children,
@@ -8,21 +6,22 @@ export default function DefaultLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative flex flex-col h-screen">
-      <Navbar />
-      <main className="container mx-auto max-w-7xl px-6 flex-grow pt-16">
+    <div className="relative flex flex-col min-h-screen bg-background">
+      {/* Minimal Header */}
+      <header className="w-full flex items-center justify-end px-6 py-4">
+        <ThemeSwitch />
+      </header>
+
+      {/* Main Content */}
+      <main className="container mx-auto max-w-7xl px-6 flex-grow">
         {children}
       </main>
-      <footer className="w-full flex items-center justify-center py-3">
-        <Link
-          isExternal
-          className="flex items-center gap-1 text-current"
-          href="https://heroui.com"
-          title="heroui.com homepage"
-        >
-          <span className="text-default-600">Powered by</span>
-          <p className="text-primary">HeroUI</p>
-        </Link>
+
+      {/* Footer */}
+      <footer className="w-full flex items-center justify-center py-4">
+        <p className="text-default-400 text-sm">
+          Ithbat - Authentic Islamic Knowledge Research
+        </p>
       </footer>
     </div>
   );
