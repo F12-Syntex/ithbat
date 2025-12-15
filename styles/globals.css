@@ -19,33 +19,29 @@ body {
   @apply transition-colors duration-200;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  @apply w-2 h-2;
+/* Hide all scrollbars globally */
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-::-webkit-scrollbar-track {
-  @apply bg-transparent;
+*::-webkit-scrollbar {
+  display: none;
 }
 
-::-webkit-scrollbar-thumb {
-  @apply bg-neutral-200 dark:bg-neutral-800 rounded-full;
-  @apply hover:bg-neutral-300 dark:hover:bg-neutral-700;
-  @apply transition-colors;
+/* Focus styles - minimal */
+:focus {
+  @apply outline-none;
 }
 
-/* Thin scrollbar variant */
-.scrollbar-thin::-webkit-scrollbar {
-  @apply w-1.5 h-1.5;
-}
-
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  @apply bg-neutral-200 dark:bg-neutral-800;
-}
-
-/* Focus visible styles */
 :focus-visible {
-  @apply outline-none ring-2 ring-emerald-500/40 ring-offset-2 ring-offset-neutral-50 dark:ring-offset-neutral-950;
+  @apply outline-none;
+}
+
+input:focus,
+button:focus,
+textarea:focus {
+  @apply outline-none ring-0;
 }
 
 /* Selection styles */

@@ -5,6 +5,8 @@ import { HeroUIProvider } from "@heroui/system";
 import { ThemeProvider } from "next-themes";
 
 import { ResearchProvider } from "@/context/ResearchContext";
+import { AppThemeProvider } from "@/context/ThemeContext";
+import { SettingsProvider } from "@/context/SettingsContext";
 
 export default function RootLayout({
   children,
@@ -23,7 +25,11 @@ export default function RootLayout({
       <body className="min-h-screen antialiased">
         <ThemeProvider enableSystem attribute="class" defaultTheme="dark">
           <HeroUIProvider>
-            <ResearchProvider>{children}</ResearchProvider>
+            <AppThemeProvider>
+              <SettingsProvider>
+                <ResearchProvider>{children}</ResearchProvider>
+              </SettingsProvider>
+            </AppThemeProvider>
           </HeroUIProvider>
         </ThemeProvider>
       </body>

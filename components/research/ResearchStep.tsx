@@ -4,7 +4,6 @@ import type { ResearchStep as ResearchStepType } from "@/types/research";
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import ReactMarkdown from "react-markdown";
 
 interface ResearchStepProps {
   step: ResearchStepType;
@@ -20,46 +19,6 @@ function formatDuration(ms: number): string {
   return `${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
 }
 
-// Icon based on step type
-function StepIcon({ type, isActive }: { type: string; isActive: boolean }) {
-  const baseClass = `w-4 h-4 ${isActive ? "text-emerald-500" : "text-neutral-400 dark:text-neutral-500"}`;
-
-  if (type.includes("understand")) {
-    return (
-      <svg className={baseClass} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-      </svg>
-    );
-  }
-  if (type.includes("search")) {
-    return (
-      <svg className={baseClass} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-      </svg>
-    );
-  }
-  if (type.includes("explor")) {
-    return (
-      <svg className={baseClass} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-      </svg>
-    );
-  }
-  if (type.includes("synthes") || type.includes("prepar")) {
-    return (
-      <svg className={baseClass} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    );
-  }
-  // Default icon
-  return (
-    <svg className={baseClass} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-    </svg>
-  );
-}
-
 export function ResearchStep({
   step,
   defaultExpanded = false,
@@ -69,15 +28,15 @@ export function ResearchStep({
   const [elapsedTime, setElapsedTime] = useState(0);
   const isActive = step.status === "in_progress";
   const isCompleted = step.status === "completed";
-  const isPending = step.status === "pending";
 
-  // Update elapsed time every second when step is active
   useEffect(() => {
     if (isActive && step.startTime) {
       const interval = setInterval(() => {
         setElapsedTime(Date.now() - step.startTime!);
       }, 1000);
+
       setElapsedTime(Date.now() - step.startTime);
+
       return () => clearInterval(interval);
     } else if (isCompleted && step.startTime && step.endTime) {
       setElapsedTime(step.endTime - step.startTime);
@@ -104,7 +63,7 @@ export function ResearchStep({
         <div className="relative flex-shrink-0">
           {isActive ? (
             <motion.div
-              animate={{ scale: [1, 1.2, 1] }}
+              animate={{ scale: [1, 1.1, 1] }}
               className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center"
               transition={{ duration: 1.5, repeat: Infinity }}
             >
@@ -120,13 +79,23 @@ export function ResearchStep({
               className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center"
               initial={{ scale: 0.8 }}
             >
-              <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+              <svg
+                className="w-4 h-4 text-emerald-600 dark:text-emerald-400"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M5 13l4 4L19 7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </motion.div>
           ) : (
             <div className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
-              <StepIcon isActive={false} type={step.type} />
+              <div className="w-2 h-2 rounded-full bg-neutral-300 dark:bg-neutral-600" />
             </div>
           )}
         </div>
@@ -174,13 +143,17 @@ export function ResearchStep({
               strokeWidth={2}
               viewBox="0 0 24 24"
             >
-              <path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M19 9l-7 7-7-7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </motion.div>
         )}
       </button>
 
-      {/* Step Content */}
+      {/* Step Content - Visual Tree */}
       <AnimatePresence initial={false}>
         {isExpanded && step.content && (
           <motion.div
@@ -190,36 +163,317 @@ export function ResearchStep({
             initial={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: "easeInOut" }}
           >
-            <div className="px-4 pb-4 pt-1">
-              <div className="ml-11 pl-4 border-l-2 border-neutral-200 dark:border-neutral-700">
-                {step.type === "understanding" ? (
-                  <div className="prose prose-sm dark:prose-invert max-w-none prose-p:text-neutral-600 dark:prose-p:text-neutral-400 prose-p:my-1.5 prose-p:leading-relaxed">
-                    <ReactMarkdown>{step.content}</ReactMarkdown>
-                    {isActive && (
-                      <motion.span
-                        animate={{ opacity: [1, 0] }}
-                        className="inline-block w-0.5 h-4 bg-emerald-500 ml-0.5"
-                        transition={{ duration: 0.8, repeat: Infinity }}
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <pre className="text-xs text-neutral-500 dark:text-neutral-400 whitespace-pre-wrap leading-relaxed font-mono max-h-48 overflow-y-auto scrollbar-thin">
-                    {step.content}
-                    {isActive && (
-                      <motion.span
-                        animate={{ opacity: [1, 0] }}
-                        className="inline-block w-0.5 h-3 bg-emerald-500 ml-0.5"
-                        transition={{ duration: 0.8, repeat: Infinity }}
-                      />
-                    )}
-                  </pre>
-                )}
+            <div className="px-4 pb-4">
+              <div className="ml-11 max-h-56 overflow-y-auto no-scrollbar bg-neutral-50/50 dark:bg-neutral-800/30 rounded-lg p-3">
+                <StepTree
+                  content={step.content}
+                  isActive={isActive}
+                  stepType={step.type}
+                />
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
     </motion.div>
+  );
+}
+
+// Parse content into structured items
+interface SearchResult {
+  url: string;
+  title: string;
+  source: string;
+}
+
+interface ParsedContent {
+  searchResults: SearchResult[];
+  otherLines: {
+    text: string;
+    type: "action" | "success" | "info" | "error" | "header";
+  }[];
+  headerText: string | null;
+}
+
+function getSourceFromUrl(url: string): string {
+  if (url.includes("sunnah.com")) return "Sunnah.com";
+  if (url.includes("islamqa.info")) return "IslamQA";
+  if (url.includes("quran.com")) return "Quran.com";
+  if (url.includes("daruliftaa.com")) return "Darul Iftaa";
+  if (url.includes("askimam.org")) return "Ask Imam";
+  if (url.includes("islamweb.net")) return "IslamWeb";
+  if (url.includes("abuaminaelias.com")) return "Abu Amina Elias";
+  try {
+    const hostname = new URL(url).hostname.replace("www.", "");
+
+    return (
+      hostname.split(".")[0].charAt(0).toUpperCase() +
+      hostname.split(".")[0].slice(1)
+    );
+  } catch {
+    return "Source";
+  }
+}
+
+function getSourceColor(source: string): {
+  bg: string;
+  text: string;
+  border: string;
+} {
+  const colors: Record<string, { bg: string; text: string; border: string }> = {
+    "Sunnah.com": {
+      bg: "bg-amber-50 dark:bg-amber-900/20",
+      text: "text-amber-700 dark:text-amber-400",
+      border: "border-amber-200 dark:border-amber-800",
+    },
+    IslamQA: {
+      bg: "bg-emerald-50 dark:bg-emerald-900/20",
+      text: "text-emerald-700 dark:text-emerald-400",
+      border: "border-emerald-200 dark:border-emerald-800",
+    },
+    "Quran.com": {
+      bg: "bg-sky-50 dark:bg-sky-900/20",
+      text: "text-sky-700 dark:text-sky-400",
+      border: "border-sky-200 dark:border-sky-800",
+    },
+    "Darul Iftaa": {
+      bg: "bg-purple-50 dark:bg-purple-900/20",
+      text: "text-purple-700 dark:text-purple-400",
+      border: "border-purple-200 dark:border-purple-800",
+    },
+    "Ask Imam": {
+      bg: "bg-rose-50 dark:bg-rose-900/20",
+      text: "text-rose-700 dark:text-rose-400",
+      border: "border-rose-200 dark:border-rose-800",
+    },
+  };
+
+  return (
+    colors[source] || {
+      bg: "bg-neutral-50 dark:bg-neutral-800/50",
+      text: "text-neutral-600 dark:text-neutral-400",
+      border: "border-neutral-200 dark:border-neutral-700",
+    }
+  );
+}
+
+function parseContent(content: string): ParsedContent {
+  const lines = content.split("\n").filter((line) => line.trim());
+  const searchResults: SearchResult[] = [];
+  const otherLines: ParsedContent["otherLines"] = [];
+  let headerText: string | null = null;
+
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i].trim();
+
+    // Check for header/searching line
+    if (line.toLowerCase().startsWith("searching for")) {
+      headerText = line;
+      i++;
+      continue;
+    }
+
+    // URL detection - group with following title
+    if (line.match(/^https?:\/\//)) {
+      const url = line;
+      const source = getSourceFromUrl(url);
+      let title = source;
+
+      // Check if next line is a title (not a URL)
+      if (i + 1 < lines.length && !lines[i + 1].trim().match(/^https?:\/\//)) {
+        title = lines[i + 1].trim();
+        i++; // Skip the title line
+      }
+
+      searchResults.push({ url, title, source });
+      i++;
+      continue;
+    }
+
+    // Success items
+    if (line.startsWith("✓") || line.toLowerCase().startsWith("found:")) {
+      const text = line.replace(/^[✓✔]\s*/, "").replace(/^found:\s*/i, "");
+
+      otherLines.push({ text, type: "success" });
+      i++;
+      continue;
+    }
+
+    // Error items
+    if (line.startsWith("✗") || line.toLowerCase().startsWith("failed:")) {
+      const text = line.replace(/^[✗✘]\s*/, "").replace(/^failed:\s*/i, "");
+
+      otherLines.push({ text, type: "error" });
+      i++;
+      continue;
+    }
+
+    // Action items
+    if (
+      line.startsWith("→") ||
+      line.startsWith("Searching") ||
+      line.startsWith("Exploring")
+    ) {
+      const text = line.replace(/^[→]\s*/, "");
+
+      otherLines.push({ text, type: "action" });
+      i++;
+      continue;
+    }
+
+    // Headers
+    if (line.match(/^[🔍🌐⚠━─]+/) || line.startsWith("━━━")) {
+      const text = line.replace(/^━+\s*/, "").replace(/\s*━+$/, "");
+
+      if (text) otherLines.push({ text, type: "header" });
+      i++;
+      continue;
+    }
+
+    // Default info
+    otherLines.push({ text: line, type: "info" });
+    i++;
+  }
+
+  return { searchResults, otherLines, headerText };
+}
+
+function StepTree({
+  content,
+  isActive,
+  stepType,
+}: {
+  content: string;
+  isActive: boolean;
+  stepType: string;
+}) {
+  const { searchResults, otherLines, headerText } = parseContent(content);
+
+  // For understanding step, show as readable prose
+  if (stepType === "understanding") {
+    return (
+      <div className="space-y-2">
+        <p className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">
+          {content}
+        </p>
+        {isActive && (
+          <motion.span
+            animate={{ opacity: [1, 0] }}
+            className="inline-block w-0.5 h-4 bg-emerald-500"
+            transition={{ duration: 0.6, repeat: Infinity }}
+          />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="font-mono text-xs">
+      {/* Header text */}
+      {headerText && (
+        <div className="text-neutral-500 dark:text-neutral-400 mb-2">
+          {headerText}
+        </div>
+      )}
+
+      {/* Search Results as indented tree */}
+      {searchResults.length > 0 && (
+        <div className="space-y-0.5">
+          {searchResults.map((result, index) => {
+            const colors = getSourceColor(result.source);
+            const isLast = index === searchResults.length - 1;
+
+            return (
+              <motion.div
+                key={index}
+                animate={{ opacity: 1 }}
+                initial={{ opacity: 0 }}
+                transition={{ delay: index * 0.03, duration: 0.15 }}
+              >
+                {/* Source line with tree connector */}
+                <div className="flex items-center">
+                  <span className="text-neutral-400 dark:text-neutral-600 select-none">
+                    {isLast ? "└─" : "├─"}
+                  </span>
+                  <span className={`ml-1 ${colors.text} font-medium`}>
+                    {result.source}
+                  </span>
+                </div>
+
+                {/* Title indented under source */}
+                <div className="flex items-start">
+                  <span className="text-neutral-400 dark:text-neutral-600 select-none">
+                    {isLast ? "   " : "│  "}└─
+                  </span>
+                  <a
+                    className="ml-1 text-neutral-600 dark:text-neutral-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors truncate"
+                    href={result.url}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                    title={result.title}
+                  >
+                    {result.title}
+                  </a>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Other lines with indentation */}
+      {otherLines.length > 0 && (
+        <div className={`space-y-0.5 ${searchResults.length > 0 ? "mt-2" : ""}`}>
+          {otherLines.map((line, index) => {
+            const isLast = index === otherLines.length - 1;
+
+            return (
+              <motion.div
+                key={index}
+                animate={{ opacity: 1 }}
+                className="flex items-start"
+                initial={{ opacity: 0 }}
+                transition={{ delay: index * 0.02, duration: 0.15 }}
+              >
+                <span className="text-neutral-400 dark:text-neutral-600 select-none">
+                  {isLast ? "└─" : "├─"}
+                </span>
+                <span
+                  className={`ml-1 ${
+                    line.type === "success"
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : line.type === "error"
+                        ? "text-red-500 dark:text-red-400"
+                        : line.type === "action"
+                          ? "text-blue-600 dark:text-blue-400"
+                          : line.type === "header"
+                            ? "text-amber-600 dark:text-amber-400 font-medium"
+                            : "text-neutral-600 dark:text-neutral-400"
+                  }`}
+                >
+                  {line.text}
+                </span>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Active indicator */}
+      {isActive && (
+        <motion.div
+          animate={{ opacity: [0.4, 1, 0.4] }}
+          className="flex items-center mt-2"
+          transition={{ duration: 1.2, repeat: Infinity }}
+        >
+          <span className="text-neutral-400 dark:text-neutral-600 select-none">└─</span>
+          <span className="ml-1 text-emerald-600 dark:text-emerald-400">
+            working...
+          </span>
+        </motion.div>
+      )}
+    </div>
   );
 }

@@ -626,10 +626,10 @@ export async function googleSearch(
   const html = await response.text();
   const $ = cheerio.load(html);
 
-  // Extract search result URLs
+  // Extract search result URLs - try multiple patterns
   const resultUrls: string[] = [];
 
-  // Google search result links
+  // Pattern 1: /url?q= format (older Google)
   $("a[href]").each((_, el) => {
     const href = $(el).attr("href");
 
@@ -640,14 +640,7 @@ export async function googleSearch(
         try {
           const decodedUrl = decodeURIComponent(match[1]);
 
-          // Filter out Google's own pages and unwanted domains
-          if (
-            !decodedUrl.includes("google.com") &&
-            !decodedUrl.includes("youtube.com") &&
-            !decodedUrl.includes("facebook.com") &&
-            !decodedUrl.includes("twitter.com") &&
-            decodedUrl.startsWith("http")
-          ) {
+          if (isValidExternalUrl(decodedUrl)) {
             resultUrls.push(decodedUrl);
           }
         } catch {
@@ -657,15 +650,58 @@ export async function googleSearch(
     }
   });
 
+  // Pattern 2: Direct href links that look like search results
+  $('a[href^="http"]').each((_, el) => {
+    const href = $(el).attr("href");
+
+    if (href && isValidExternalUrl(href)) {
+      resultUrls.push(href);
+    }
+  });
+
+  // Pattern 3: data-href attributes
+  $("[data-href]").each((_, el) => {
+    const href = $(el).attr("data-href");
+
+    if (href && isValidExternalUrl(href)) {
+      resultUrls.push(href);
+    }
+  });
+
+  // Pattern 4: Look in cite elements (Google shows URLs there)
+  $("cite").each((_, el) => {
+    const text = $(el).text().trim();
+
+    if (text.startsWith("http")) {
+      if (isValidExternalUrl(text)) {
+        resultUrls.push(text);
+      }
+    } else if (text.includes(".")) {
+      // Try to construct URL from domain
+      const url = `https://${text.split(" ")[0]}`;
+
+      try {
+        new URL(url);
+        if (isValidExternalUrl(url)) {
+          resultUrls.push(url);
+        }
+      } catch {
+        // Not a valid URL
+      }
+    }
+  });
+
+  const uniqueUrls = [...new Set(resultUrls)];
+
   onProgress?.({
     type: "found",
     url: googleUrl,
-    title: `Google Search: Found ${resultUrls.length} results`,
+    title: `Google Search: Found ${uniqueUrls.length} results`,
     depth: 0,
   });
 
   // Crawl the first few result pages
-  const urlsToCrawl = [...new Set(resultUrls)].slice(0, 8);
+  const urlsToCrawl = uniqueUrls.slice(0, 8);
 
   for (const url of urlsToCrawl) {
     const page = await crawlUrl(url, onProgress);
@@ -676,6 +712,31 @@ export async function googleSearch(
   }
 
   return pages;
+}
+
+/**
+ * Check if URL is valid external URL (not Google, social media, etc.)
+ */
+function isValidExternalUrl(url: string): boolean {
+  if (!url.startsWith("http")) return false;
+
+  const blockedDomains = [
+    "google.com",
+    "google.",
+    "youtube.com",
+    "facebook.com",
+    "twitter.com",
+    "instagram.com",
+    "tiktok.com",
+    "linkedin.com",
+    "reddit.com",
+    "pinterest.com",
+    "gstatic.com",
+    "googleapis.com",
+    "accounts.google",
+  ];
+
+  return !blockedDomains.some((domain) => url.includes(domain));
 }
 
 /**
