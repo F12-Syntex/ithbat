@@ -332,9 +332,18 @@ export function ResearchContainer() {
                   initial={{ opacity: 0, y: 20, scale: 0.95 }}
                   transition={{ duration: 0.3, ease: "easeOut" }}
                 >
-                  <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-neutral-800 dark:text-neutral-100">
-                    ithbat
-                  </h1>
+                  <div className="relative inline-block group">
+                    <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-neutral-800 dark:text-neutral-100 cursor-default">
+                      إثبات
+                    </h1>
+                    {/* Tooltip */}
+                    <div className="absolute left-1/2 -translate-x-1/2 -bottom-10 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none">
+                      <div className="px-3 py-1.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-xs font-medium rounded-lg shadow-lg whitespace-nowrap">
+                        Ithbat — Proof / Evidence
+                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-neutral-900 dark:bg-white rotate-45" />
+                      </div>
+                    </div>
+                  </div>
                   <p className="text-neutral-400 dark:text-neutral-500 text-xs sm:text-sm mt-2">
                     Search hadith, Quran, and scholarly rulings
                   </p>
