@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { SearchInput } from "./SearchInput";
@@ -14,10 +14,79 @@ import { IntroModal } from "@/components/IntroModal";
 import { useResearch } from "@/hooks/useResearch";
 import { useTheme } from "@/context/ThemeContext";
 
+// Pool of common Islamic questions
+const EXAMPLE_QUESTIONS = [
+  // Salah (Prayer)
+  "How to pray Fajr?",
+  "Prayer while traveling",
+  "Can I combine prayers?",
+  "What breaks wudu?",
+  "Is music haram?",
+  "Praying in congregation",
+  // Fasting
+  "What breaks the fast?",
+  "Fasting while sick",
+  "Making up missed fasts",
+  "Fasting on Ashura",
+  "Can I brush teeth while fasting?",
+  // Zakat & Charity
+  "Rules of Zakat",
+  "Zakat on gold",
+  "Who can receive Zakat?",
+  "Sadaqah vs Zakat",
+  // Hajj & Umrah
+  "Steps of Hajj",
+  "Umrah requirements",
+  "Ihram rules",
+  // Daily Life
+  "Is insurance halal?",
+  "Halal investing rules",
+  "Can Muslims have dogs?",
+  "Is cryptocurrency halal?",
+  "Beard in Islam",
+  "Hijab requirements",
+  // Marriage & Family
+  "Rights of the wife",
+  "Mahr requirements",
+  "Marriage in Islam",
+  "Divorce in Islam",
+  // Quran & Hadith
+  "How to memorize Quran?",
+  "Virtues of Surah Kahf",
+  "Best dhikr to recite",
+  "Dua for anxiety",
+  // Beliefs
+  "Signs of the Day of Judgment",
+  "Who are the angels?",
+  "What is Qadr?",
+  "Intercession in Islam",
+  // Ethics
+  "Backbiting in Islam",
+  "Lying exceptions",
+  "Treatment of parents",
+  "Rights of neighbors",
+];
+
+function getRandomQuestions(count: number): string[] {
+  const shuffled = [...EXAMPLE_QUESTIONS].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
+
 export function ResearchContainer() {
   const { state, startResearch, askFollowUp, reset } = useResearch();
   const { theme, setTheme, themes } = useTheme();
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Random example questions - set client-side only to avoid hydration mismatch
+  const [exampleQuestions, setExampleQuestions] = useState<string[]>([
+    EXAMPLE_QUESTIONS[0],
+    EXAMPLE_QUESTIONS[1],
+    EXAMPLE_QUESTIONS[2],
+  ]);
+
+  useEffect(() => {
+    setExampleQuestions(getRandomQuestions(3));
+  }, []);
 
   const isResearching = state.status === "researching";
   const hasResults =
@@ -395,11 +464,7 @@ export function ResearchContainer() {
                   initial={{ opacity: 0, y: 10 }}
                   transition={{ duration: 0.2 }}
                 >
-                  {[
-                    "What breaks the fast?",
-                    "Rules of Zakat",
-                    "Prayer while traveling",
-                  ].map((example, i) => (
+                  {exampleQuestions.map((example, i) => (
                     <motion.button
                       key={example}
                       animate={{ opacity: 1, y: 0 }}

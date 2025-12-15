@@ -19,7 +19,7 @@ export interface AIConfig {
 export const aiConfig: AIConfig = {
   models: {
     QUICK: {
-      id: "google/gemini-2.5-flash",
+      id: "google/gemini-2.0-flash-lite",
       name: "Gemini 2.5 Flash",
       description:
         "Fast responses for question understanding and quick lookups",
@@ -29,7 +29,7 @@ export const aiConfig: AIConfig = {
       temperature: 0.7,
     },
     HIGH: {
-      id: "google/gemini-2.5-flash",
+      id: "google/gemini-2.0-flash-lite",
       name: "Gemini 2.5 Flash",
       description: "High quality responses for synthesis and detailed analysis",
       supportsStreaming: true,
@@ -38,7 +38,7 @@ export const aiConfig: AIConfig = {
       temperature: 0.7,
     },
     REASONING: {
-      id: "google/gemini-2.5-flash",
+      id: "google/gemini-2.0-flash-lite",
       name: "Gemini 2.5 Flash",
       description:
         "Deep research with built-in web search for comprehensive Islamic sources",
