@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { SearchInput } from "./SearchInput";
 import { ResearchStep } from "./ResearchStep";
 import { ResearchResponse } from "./ResearchResponse";
+import { FollowUpInput } from "./FollowUpInput";
 
 import { ContextMenu } from "@/components/ContextMenu";
 import { SettingsPanel } from "@/components/SettingsPanel";
@@ -13,7 +14,7 @@ import { useResearch } from "@/hooks/useResearch";
 import { useTheme } from "@/context/ThemeContext";
 
 export function ResearchContainer() {
-  const { state, startResearch, reset } = useResearch();
+  const { state, startResearch, askFollowUp, reset } = useResearch();
   const { theme, setTheme, themes } = useTheme();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -468,6 +469,15 @@ export function ResearchContainer() {
                         isStreaming={isStreaming}
                       />
                     </motion.div>
+                  )}
+
+                  {/* Follow-up Input */}
+                  {state.status === "completed" && state.response && (
+                    <FollowUpInput
+                      isLoading={isResearching}
+                      previousQuery={state.query}
+                      onSubmit={askFollowUp}
+                    />
                   )}
 
                   {/* Error */}

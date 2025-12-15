@@ -22,6 +22,13 @@ import {
 
 type ResearchAction =
   | { type: "START_RESEARCH"; query: string; depth: ResearchDepth }
+  | {
+      type: "START_FOLLOWUP";
+      query: string;
+      depth: ResearchDepth;
+      previousQuery: string;
+      previousResponse: string;
+    }
   | { type: "ADD_STEP"; stepType: ResearchStepType; stepTitle?: string }
   | {
       type: "UPDATE_STEP_STATUS";
@@ -40,6 +47,7 @@ type ResearchAction =
 interface ResearchContextValue {
   state: ResearchState;
   startResearch: (query: string) => Promise<void>;
+  askFollowUp: (question: string) => Promise<void>;
   cancelResearch: () => void;
   reset: () => void;
 }
@@ -53,6 +61,7 @@ const initialState: ResearchState = {
   response: "",
   error: null,
   depth: "deep",
+  conversationHistory: [],
 };
 
 function researchReducer(
@@ -66,6 +75,18 @@ function researchReducer(
         query: action.query,
         status: "researching",
         depth: action.depth,
+      };
+
+    case "START_FOLLOWUP":
+      return {
+        ...initialState,
+        query: action.query,
+        status: "researching",
+        depth: action.depth,
+        conversationHistory: [
+          ...(state.conversationHistory || []),
+          { query: action.previousQuery, response: action.previousResponse },
+        ],
       };
 
     case "ADD_STEP":
@@ -267,9 +288,110 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "RESET" });
   };
 
+  const askFollowUp = async (question: string) => {
+    // Cancel any existing research
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
+
+    const previousQuery = state.query;
+    const previousResponse = state.response;
+
+    // Build conversation history including current Q&A
+    const conversationHistory = [
+      ...(state.conversationHistory || []),
+      { query: previousQuery, response: previousResponse },
+    ];
+
+    dispatch({
+      type: "START_FOLLOWUP",
+      query: question,
+      depth,
+      previousQuery,
+      previousResponse,
+    });
+
+    try {
+      for await (const event of streamResearch(
+        question,
+        depth,
+        abortControllerRef.current.signal,
+        conversationHistory,
+      )) {
+        switch (event.type) {
+          case "step_start":
+            if (event.step) {
+              dispatch({
+                type: "ADD_STEP",
+                stepType: event.step,
+                stepTitle: event.stepTitle,
+              });
+            }
+            break;
+
+          case "step_content":
+            if (event.step && event.content) {
+              dispatch({
+                type: "APPEND_STEP_CONTENT",
+                stepType: event.step,
+                content: event.content,
+              });
+            }
+            break;
+
+          case "step_complete":
+            if (event.step) {
+              dispatch({
+                type: "UPDATE_STEP_STATUS",
+                stepType: event.step,
+                status: "completed",
+              });
+            }
+            break;
+
+          case "source":
+            if (event.source) {
+              dispatch({ type: "ADD_SOURCE", source: event.source });
+            }
+            break;
+
+          case "crawl_link":
+            if (event.crawlLink) {
+              dispatch({ type: "ADD_CRAWL_LINK", crawlLink: event.crawlLink });
+            }
+            break;
+
+          case "response_start":
+            dispatch({ type: "SET_RESPONSE", content: "" });
+            break;
+
+          case "response_content":
+            if (event.content) {
+              dispatch({ type: "APPEND_RESPONSE", content: event.content });
+            }
+            break;
+
+          case "error":
+            dispatch({
+              type: "SET_ERROR",
+              error: event.error || "Unknown error",
+            });
+            break;
+
+          case "done":
+            dispatch({ type: "COMPLETE" });
+            break;
+        }
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name !== "AbortError") {
+        dispatch({ type: "SET_ERROR", error: error.message });
+      }
+    }
+  };
+
   return (
     <ResearchContext.Provider
-      value={{ state, startResearch, cancelResearch, reset }}
+      value={{ state, startResearch, askFollowUp, cancelResearch, reset }}
     >
       {children}
     </ResearchContext.Provider>

@@ -26,6 +26,11 @@ export interface ResearchStep {
   endTime?: number;
 }
 
+export interface ConversationTurn {
+  query: string;
+  response: string;
+}
+
 export interface ResearchState {
   query: string;
   status: ResearchStatus;
@@ -35,6 +40,7 @@ export interface ResearchState {
   response: string;
   error: string | null;
   depth: ResearchDepth;
+  conversationHistory: ConversationTurn[];
 }
 
 export interface CrawledLink {

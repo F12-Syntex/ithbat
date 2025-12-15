@@ -1,16 +1,21 @@
-import type { ResearchStepEvent, ResearchDepth } from "@/types/research";
+import type {
+  ResearchStepEvent,
+  ResearchDepth,
+  ConversationTurn,
+} from "@/types/research";
 
 export async function* streamResearch(
   query: string,
   depth: ResearchDepth,
   signal?: AbortSignal,
+  conversationHistory?: ConversationTurn[],
 ): AsyncGenerator<ResearchStepEvent> {
   const response = await fetch("/api/research", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ query, depth }),
+    body: JSON.stringify({ query, depth, conversationHistory }),
     signal,
   });
 

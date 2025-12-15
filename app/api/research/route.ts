@@ -155,8 +155,18 @@ function parseExplorationResponse(response: string): ExplorationDecision {
   };
 }
 
+interface ConversationTurn {
+  query: string;
+  response: string;
+}
+
 export async function POST(request: NextRequest) {
-  const { query, depth = "deep" } = await request.json();
+  const {
+    query,
+    depth = "deep",
+    conversationHistory = [],
+  } = await request.json();
+  const history = conversationHistory as ConversationTurn[];
 
   if (!query || typeof query !== "string") {
     return new Response(JSON.stringify({ error: "Query is required" }), {
@@ -555,9 +565,22 @@ export async function POST(request: NextRequest) {
 
         const crawledContent = formatCrawlResultsForAI(allCrawledPages);
 
+        // Build conversation context for follow-up questions
+        let conversationContext = "";
+
+        if (history.length > 0) {
+          conversationContext = "\n\n## CONVERSATION HISTORY (for context):\n";
+          for (const turn of history) {
+            conversationContext += `\n**Previous Question:** ${turn.query}\n`;
+            conversationContext += `**Previous Answer:** ${turn.response.slice(0, 2000)}${turn.response.length > 2000 ? "..." : ""}\n`;
+          }
+          conversationContext +=
+            "\n---\nUse the above context to inform your answer to the current follow-up question. Reference previous answers when relevant.\n";
+        }
+
         const synthesisPrompt = buildPrompt(SYNTHESIS_PROMPT, {
-          query,
-          research: crawledContent,
+          query: history.length > 0 ? `[Follow-up Question] ${query}` : query,
+          research: crawledContent + conversationContext,
         });
 
         // Collect the initial synthesis response
