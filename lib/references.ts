@@ -438,9 +438,11 @@ export function parseHadithReference(text: string): ParsedReference | null {
 
 /**
  * Parse the numbered sources list from AI response
- * Looks for patterns like:
+ * Handles multiple formats:
  * [1] Title - https://example.com
- * [2] Title - URL
+ * [1] https://example.com
+ * [1] [Title](https://example.com)
+ * 1. Title - https://example.com
  */
 function parseSourcesList(
   text: string,
@@ -451,18 +453,73 @@ function parseSourcesList(
   const sourcesSection = text.match(/##\s*Sources[\s\S]*$/i);
   const textToSearch = sourcesSection ? sourcesSection[0] : text;
 
-  // Pattern for [N] Title - URL or [N] URL
-  const sourcePattern =
-    /\[(\d+)\]\s*([^-\n]+(?:\s*-\s*)?)(https?:\/\/[^\s\n]+)/gi;
+  // Pattern 1: [N] Title - URL or [N] URL
+  const pattern1 =
+    /\[(\d+)\]\s*([^-\[\]\n]*?)(?:\s*-\s*)?(https?:\/\/[^\s\n\)]+)/gi;
+
+  // Pattern 2: [N] [Title](URL) - markdown link format
+  const pattern2 = /\[(\d+)\]\s*\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/gi;
+
+  // Pattern 3: N. Title - URL (numbered list)
+  const pattern3 = /^(\d+)\.\s*([^-\n]+?)\s*-\s*(https?:\/\/[^\s\n]+)/gim;
 
   let match;
 
-  while ((match = sourcePattern.exec(textToSearch)) !== null) {
+  // Try pattern 1
+  while ((match = pattern1.exec(textToSearch)) !== null) {
     const num = parseInt(match[1], 10);
-    const title = match[2].replace(/\s*-\s*$/, "").trim() || "Source";
+    const title = match[2].trim() || "Source";
+    const url = match[3].trim().replace(/[)\].,;]+$/, ""); // Clean trailing punctuation
+
+    if (!sources.has(num)) {
+      sources.set(num, { title, url });
+    }
+  }
+
+  // Try pattern 2 (markdown links)
+  while ((match = pattern2.exec(textToSearch)) !== null) {
+    const num = parseInt(match[1], 10);
+    const title = match[2].trim();
     const url = match[3].trim();
 
-    sources.set(num, { title, url });
+    if (!sources.has(num)) {
+      sources.set(num, { title, url });
+    }
+  }
+
+  // Try pattern 3 (numbered list)
+  while ((match = pattern3.exec(textToSearch)) !== null) {
+    const num = parseInt(match[1], 10);
+    const title = match[2].trim();
+    const url = match[3].trim();
+
+    if (!sources.has(num)) {
+      sources.set(num, { title, url });
+    }
+  }
+
+  // Also scan the entire text for any URL on a line with [N]
+  const lines = text.split("\n");
+
+  for (const line of lines) {
+    const numMatch = line.match(/\[(\d+)\]/);
+    const urlMatch = line.match(/(https?:\/\/[^\s\n\)]+)/);
+
+    if (numMatch && urlMatch) {
+      const num = parseInt(numMatch[1], 10);
+      const url = urlMatch[1].replace(/[)\].,;]+$/, "");
+
+      if (!sources.has(num)) {
+        // Try to extract title from line
+        const titlePart = line
+          .replace(/\[\d+\]/, "")
+          .replace(url, "")
+          .replace(/-/g, " ")
+          .trim();
+
+        sources.set(num, { title: titlePart || "Source", url });
+      }
+    }
   }
 
   return sources;
@@ -619,6 +676,18 @@ export function extractReferences(text: string): {
       return match;
     });
   }
+
+  // Convert any remaining plain URLs to clickable links (not already in markdown format)
+  processedText = processedText.replace(
+    /(?<!\]\()(?<!\()(?<!href=["'])(https?:\/\/[^\s\n\)\]<>"]+)(?!\))/g,
+    (url) => {
+      // Don't wrap if it's already part of a markdown link
+      const cleanUrl = url.replace(/[.,;:]+$/, ""); // Clean trailing punctuation
+      const domain = new URL(cleanUrl).hostname.replace("www.", "");
+
+      return `[${domain}](${cleanUrl})`;
+    },
+  );
 
   return { processedText, references };
 }

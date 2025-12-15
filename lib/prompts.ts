@@ -48,35 +48,33 @@ export const PLANNING_PROMPT = `Based on your analysis of this Islamic question,
 {understanding}
 
 ## TASK:
-Create a research plan with specific steps. Each step should have:
-- A unique identifier (lowercase, no spaces, use underscores)
-- A clear, concise title describing what that step does
+Create a research plan with specific steps.
 
 ## RULES:
-1. The first step "understanding" has already been completed - DO NOT include it
-2. Always include a final "synthesizing" step for preparing the answer
-3. Be specific about what each step will do
-4. Typical steps might include:
-   - searching_hadith: Searching hadith collections
-   - searching_quran: Finding Quran verses
-   - searching_fatwa: Finding scholarly rulings
-   - exploring_sources: Exploring discovered links
-   - verifying_references: Cross-checking references
-   - comparing_opinions: Comparing different scholarly views
+1. DO NOT include "understanding" - it's already done
+2. Last step must be "synthesizing"
+3. Keep titles SHORT (2-4 words max!)
+
+## EXAMPLE TITLES (follow this style):
+- "Searching hadith"
+- "Finding Quran verses"
+- "Exploring fatwas"
+- "Verifying sources"
+- "Preparing answer"
 
 ## RESPOND IN THIS EXACT JSON FORMAT:
 {
   "steps": [
-    {"id": "step_id", "title": "Step Title Description"},
-    {"id": "step_id2", "title": "Another Step Title"}
+    {"id": "searching", "title": "Searching sources"},
+    {"id": "exploring", "title": "Exploring links"},
+    {"id": "synthesizing", "title": "Preparing answer"}
   ]
 }
 
 IMPORTANT:
-- Return ONLY valid JSON, no other text
-- Include 2-5 steps (not counting understanding which is done)
-- Last step should always be synthesizing
-- Make step titles descriptive and user-friendly`;
+- Return ONLY valid JSON
+- 2-4 steps total
+- Titles must be 2-4 words ONLY - no long descriptions!`;
 
 export const EXPLORATION_PROMPT = `You are analyzing crawled web content to answer an Islamic question. Decide what to do next.
 
@@ -142,64 +140,45 @@ Question: {query}
 
 ## STRICT REQUIREMENTS:
 
-1. **ONLY USE INFORMATION FROM THE CRAWLED DATA ABOVE**
-   - Do not use your own knowledge
-   - If the data doesn't contain an answer, say so clearly
-   - Every statement must be traceable to the crawled sources
+1. **ONLY USE CRAWLED DATA** - Never use your own knowledge
 
-2. **USE SEPARATE NUMBERED CITATIONS [1] [2] [3]**
-   - After every claim or quote, add numbered citations
-   - Each number MUST be in its own separate brackets
-   - CORRECT: "The Prophet (ﷺ) said [1] [2]"
-   - WRONG: "[1, 2]" or "[1-2]" - NEVER combine numbers
-   - Numbers must correspond to URLs in the Sources section
+2. **CITATION FORMAT - CRITICAL**
+   - Use SEPARATE brackets: [1] [2] [3]
+   - WRONG: [1, 2, 3] or [1-3]
+   - Each citation links to the Sources section
 
-3. **CITE SCHOLARS AND AUTHORS**
-   - When quoting a fatwa or answer, mention the scholar who answered
-   - Format: "According to Mufti [Name] [1]..." or "Scholar [Name] states [2]..."
-   - If the author/scholar is not identified, cite the website: "According to SeekersGuidance [1]..."
+3. **ATTRIBUTE SCHOLARS BY NAME**
+   - ALWAYS mention the scholar/mufti who gave the ruling
+   - "Shaykh Ibn Baz stated... [1]"
+   - "According to Mufti Muhammad ibn Adam al-Kawthari [2]..."
+   - "The scholars at IslamQA explain [3]..."
+   - If no scholar name, use website: "SeekersGuidance states [4]..."
 
-4. **VERIFY HADITH AND QURAN REFERENCES**
-   - When a source mentions a hadith (e.g., "Sahih Bukhari 3013"), VERIFY it exists in the crawled sunnah.com data
-   - If you CANNOT verify the reference from crawled data, clearly note: "(reference not verified in crawled sources)"
-   - If a reference seems incorrect or the source doesn't exist, DISMISS it and note why
-   - Only cite verified references with their exact sunnah.com/quran.com URLs
+4. **STRUCTURE YOUR ANSWER**:
 
-5. **Structure your answer**:
+## Answer
+[Direct answer with scholar names and citations]
 
-   ## Answer
-   [Direct answer with numbered citations and scholar attribution]
+## Evidence
+[Hadith, Quran verses, scholarly opinions with citations]
 
-   ## Evidence
-   [Detailed evidence with citations, verified references]
+## Sources
+[1] Shaykh Name - https://actual-url.com/article
+[2] Mufti Name - https://sunnah.com/bukhari:123
+[3] Website - https://islamqa.info/en/answers/123
 
-   ## Sources
-   [1] Scholar Name - Title - URL
-   [2] Scholar Name - Title - URL
-   ...
+5. **SOURCES SECTION IS CRITICAL**
+   - EVERY citation number [1], [2], etc. MUST have a corresponding entry
+   - Format: [N] Scholar/Source - URL
+   - Use DIRECT article URLs, not search pages
+   - Extract actual URLs from the crawled data EXTRACTED LINKS sections
 
-6. **IMPORTANT FOR SOURCES SECTION**:
-   - ONLY use direct content URLs (like https://sunnah.com/bukhari:123)
-   - NEVER use search page URLs (like https://sunnah.com/search?q=...)
-   - Include the scholar/author name when known
-   - Extract actual hadith/article URLs from the crawled data
+6. **IF INFO IS LIMITED**
+   - Summarize what WAS found with citations
+   - State clearly what's missing
+   - Suggest better search terms
 
-7. **If crawled sources lack SPECIFIC information**:
-   - First, summarize what WAS found that's related to the topic
-   - Then clearly state what specific aspect was not found
-   - Suggest specific alternative search terms for deeper research
-   - Format:
-     "## What We Found
-     [Summary of related information found with citations]
-
-     ## Information Gap
-     The sources did not specifically address [exact aspect missing].
-
-     ## Suggested Search Terms
-     Try searching for: '[specific term 1]', '[specific term 2]'"
-   - Do NOT fill in gaps with your own knowledge
-
-REMEMBER: Your response credibility depends on verified sources, proper scholar attribution, and accurate citations. Always use SEPARATE brackets [1] [2] never [1, 2].`;
+IMPORTANT: Without proper Sources section with URLs, citations won't be clickable!`;
 
 export function buildPrompt(
   template: string,
