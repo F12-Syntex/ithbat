@@ -603,12 +603,25 @@ function processNumberedCitations(
 
 /**
  * Extract all references from a text and convert to clickable links
+ * IMPORTANT: If the text already contains markdown links (from AI inline citations),
+ * we skip re-processing to avoid double-wrapping
  */
 export function extractReferences(text: string): {
   processedText: string;
   references: ParsedReference[];
 } {
   const references: ParsedReference[] = [];
+
+  // Check if the text already has properly formatted markdown links
+  // Pattern: [text](url) - if we find these, the AI has already formatted the links
+  const hasInlineLinks = /\[[^\]]+\]\(https?:\/\/[^)]+\)/.test(text);
+
+  // If the AI has already created inline links, just return the text as-is
+  // This prevents double-wrapping like [[Text](url)](url)
+  if (hasInlineLinks) {
+    return { processedText: text, references };
+  }
+
   let processedText = text;
 
   // First, parse the numbered sources list and convert [1], [2] citations

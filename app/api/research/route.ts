@@ -190,15 +190,35 @@ export async function POST(request: NextRequest) {
       const maxIterations = 5; // Reduced - AI now decides to stop when enough evidence found
 
       try {
+        // Build conversation context for follow-up questions
+        let conversationContextForUnderstanding = "";
+
+        if (history.length > 0) {
+          conversationContextForUnderstanding =
+            "\n\n## PREVIOUS CONVERSATION CONTEXT:\n";
+          for (const turn of history) {
+            conversationContextForUnderstanding += `\nPrevious Question: ${turn.query}\n`;
+            conversationContextForUnderstanding += `Previous Answer Summary: ${turn.response.slice(0, 1000)}${turn.response.length > 1000 ? "..." : ""}\n`;
+          }
+          conversationContextForUnderstanding +=
+            "\n---\nThis is a FOLLOW-UP question. Analyze it in context of the previous discussion.\n";
+        }
+
         // Step 1: Understanding (always first)
         send({
           type: "step_start",
           step: "understanding",
-          stepTitle: "Understanding your question",
+          stepTitle:
+            history.length > 0
+              ? "Understanding your follow-up"
+              : "Understanding your question",
         });
 
         const understandingPrompt = buildPrompt(UNDERSTANDING_PROMPT, {
-          query,
+          query:
+            history.length > 0
+              ? `[Follow-up Question] ${query}${conversationContextForUnderstanding}`
+              : query,
         });
 
         let understandingContent = "";
