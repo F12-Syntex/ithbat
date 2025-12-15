@@ -19,7 +19,8 @@ export function ResearchContainer() {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const isResearching = state.status === "researching";
-  const hasResults = state.steps.length > 0;
+  const hasResults =
+    state.steps.length > 0 || (state.completedSessions?.length || 0) > 0;
   const isStreaming = isResearching && state.response.length > 0;
 
   const toggleDarkMode = () => {
@@ -414,61 +415,143 @@ export function ResearchContainer() {
                 transition={{ duration: 0.4, ease: "easeOut" }}
               >
                 <div className="max-w-2xl mx-auto py-3 sm:py-4">
-                  {/* Query Display */}
+                  {/* Clear button at top */}
                   <motion.div
                     animate={{ opacity: 1 }}
-                    className="flex items-center justify-between mb-3 sm:mb-4"
+                    className="flex items-center justify-end mb-3 sm:mb-4"
                     initial={{ opacity: 0 }}
                   >
-                    <span className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-300 truncate mr-2">
-                      {state.query}
-                    </span>
                     {state.status === "completed" && (
                       <button
                         className="flex-shrink-0 text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors"
                         onClick={reset}
                       >
-                        Clear
+                        New conversation
                       </button>
                     )}
                   </motion.div>
 
-                  {/* Research Progress */}
-                  <motion.div
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-white dark:bg-neutral-900 rounded-lg sm:rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden mb-3 sm:mb-4"
-                    initial={{ opacity: 0, y: 20 }}
-                    transition={{ delay: 0.1 }}
-                  >
-                    <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-neutral-100 dark:border-neutral-800">
-                      <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                        Progress
-                      </span>
-                    </div>
-                    <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
-                      {state.steps.map((step, index) => (
-                        <ResearchStep
-                          key={step.id}
-                          defaultExpanded={false}
-                          index={index}
-                          step={step}
-                        />
-                      ))}
-                    </div>
-                  </motion.div>
+                  {/* Completed Sessions (Previous Q&A in thread) */}
+                  {state.completedSessions?.map((session, sessionIndex) => (
+                    <div key={sessionIndex} className="mb-6">
+                      {/* Previous Query */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-5 h-5 rounded-full bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center flex-shrink-0">
+                          <span className="text-[10px] font-medium text-accent-600 dark:text-accent-400">
+                            {sessionIndex + 1}
+                          </span>
+                        </span>
+                        <span className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-300">
+                          {session.query}
+                        </span>
+                      </div>
 
-                  {/* Response */}
-                  {(state.response || isStreaming) && (
-                    <motion.div
-                      animate={{ opacity: 1, y: 0 }}
-                      initial={{ opacity: 0, y: 20 }}
-                      transition={{ delay: 0.2 }}
-                    >
-                      <ResearchResponse
-                        content={state.response}
-                        isStreaming={isStreaming}
-                      />
-                    </motion.div>
+                      {/* Previous Progress (collapsed by default) */}
+                      <div className="bg-white dark:bg-neutral-900 rounded-lg sm:rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden mb-3 opacity-75">
+                        <details className="group">
+                          <summary className="px-3 sm:px-4 py-2 sm:py-2.5 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors flex items-center justify-between">
+                            <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+                              Progress ({session.steps.length} steps)
+                            </span>
+                            <svg
+                              className="w-3 h-3 text-neutral-400 transition-transform group-open:rotate-180"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                d="M19 9l-7 7-7-7"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </summary>
+                          <div className="divide-y divide-neutral-100 dark:divide-neutral-800 border-t border-neutral-100 dark:border-neutral-800">
+                            {session.steps.map((step, stepIndex) => (
+                              <ResearchStep
+                                key={step.id}
+                                defaultExpanded={false}
+                                index={stepIndex}
+                                step={step}
+                              />
+                            ))}
+                          </div>
+                        </details>
+                      </div>
+
+                      {/* Previous Response */}
+                      <div className="opacity-90">
+                        <ResearchResponse
+                          content={session.response}
+                          isStreaming={false}
+                        />
+                      </div>
+
+                      {/* Divider between sessions */}
+                      <div className="flex items-center gap-3 my-6">
+                        <div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-800" />
+                        <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
+                          Follow-up
+                        </span>
+                        <div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-800" />
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Current Session */}
+                  {state.steps.length > 0 && (
+                    <>
+                      {/* Current Query Display */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-5 h-5 rounded-full bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center flex-shrink-0">
+                          <span className="text-[10px] font-medium text-accent-600 dark:text-accent-400">
+                            {(state.completedSessions?.length || 0) + 1}
+                          </span>
+                        </span>
+                        <span className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-300">
+                          {state.query}
+                        </span>
+                      </div>
+
+                      {/* Current Research Progress */}
+                      <motion.div
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-white dark:bg-neutral-900 rounded-lg sm:rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden mb-3 sm:mb-4"
+                        initial={{ opacity: 0, y: 20 }}
+                        transition={{ delay: 0.1 }}
+                      >
+                        <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-neutral-100 dark:border-neutral-800">
+                          <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+                            Progress
+                          </span>
+                        </div>
+                        <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                          {state.steps.map((step, index) => (
+                            <ResearchStep
+                              key={step.id}
+                              defaultExpanded={false}
+                              index={index}
+                              step={step}
+                            />
+                          ))}
+                        </div>
+                      </motion.div>
+
+                      {/* Current Response */}
+                      {(state.response || isStreaming) && (
+                        <motion.div
+                          animate={{ opacity: 1, y: 0 }}
+                          initial={{ opacity: 0, y: 20 }}
+                          transition={{ delay: 0.2 }}
+                        >
+                          <ResearchResponse
+                            content={state.response}
+                            isStreaming={isStreaming}
+                          />
+                        </motion.div>
+                      )}
+                    </>
                   )}
 
                   {/* Follow-up Input */}

@@ -62,6 +62,7 @@ const initialState: ResearchState = {
   error: null,
   depth: "deep",
   conversationHistory: [],
+  completedSessions: [],
 };
 
 function researchReducer(
@@ -78,6 +79,13 @@ function researchReducer(
       };
 
     case "START_FOLLOWUP":
+      // Save the current session to completed sessions before starting new one
+      const currentSession = {
+        query: action.previousQuery,
+        response: action.previousResponse,
+        steps: state.steps,
+      };
+
       return {
         ...initialState,
         query: action.query,
@@ -87,6 +95,7 @@ function researchReducer(
           ...(state.conversationHistory || []),
           { query: action.previousQuery, response: action.previousResponse },
         ],
+        completedSessions: [...(state.completedSessions || []), currentSession],
       };
 
     case "ADD_STEP":
