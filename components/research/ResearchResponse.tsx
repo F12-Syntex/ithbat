@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import { motion } from "framer-motion";
 
-import { extractReferences, type ParsedReference } from "@/lib/references";
+import { extractReferences } from "@/lib/references";
 
 interface ResearchResponseProps {
   content: string;
@@ -15,32 +15,13 @@ export function ResearchResponse({
   content,
   isStreaming,
 }: ResearchResponseProps) {
-  const [showReferences, setShowReferences] = useState(false);
-
   // Extract and convert references to clickable links
-  const { processedContent, references } = useMemo(() => {
-    if (!content) return { processedContent: "", references: [] };
+  const { processedContent } = useMemo(() => {
+    if (!content) return { processedContent: "" };
 
     const result = extractReferences(content);
-
-    return {
-      processedContent: result.processedText,
-      references: result.references,
-    };
+    return { processedContent: result.processedText };
   }, [content]);
-
-  // Group references by type
-  const groupedReferences = useMemo(() => {
-    const quran: ParsedReference[] = [];
-    const hadith: ParsedReference[] = [];
-
-    references.forEach((ref) => {
-      if (ref.type === "quran") quran.push(ref);
-      else if (ref.type === "hadith") hadith.push(ref);
-    });
-
-    return { quran, hadith };
-  }, [references]);
 
   if (!content) return null;
 
@@ -50,144 +31,102 @@ export function ResearchResponse({
       className="mt-6"
       initial={{ opacity: 0, y: 10 }}
     >
-      {/* Response Header */}
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-        <h2 className="text-sm font-medium text-neutral-700 dark:text-neutral-200">
-          Response
-        </h2>
-        {isStreaming && (
-          <span className="text-xs text-emerald-600 dark:text-emerald-400 animate-pulse">
-            generating...
-          </span>
-        )}
-      </div>
+      {/* Response Card */}
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-sm border border-neutral-200/50 dark:border-neutral-800/50 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-neutral-100 dark:border-neutral-800/50 bg-gradient-to-r from-emerald-50/50 to-transparent dark:from-emerald-900/10 dark:to-transparent">
+          <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+            <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">
+              Research Findings
+            </h2>
+            {isStreaming && (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 mt-0.5">
+                <motion.span
+                  animate={{ opacity: [1, 0.5, 1] }}
+                  className="w-1.5 h-1.5 bg-emerald-500 rounded-full"
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                />
+                Generating response...
+              </p>
+            )}
+          </div>
+        </div>
 
-      {/* Response Content */}
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-5 shadow-sm">
-        <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:text-neutral-800 dark:prose-headings:text-neutral-100 prose-headings:font-medium prose-headings:mt-4 prose-headings:mb-2 prose-p:text-neutral-600 dark:prose-p:text-neutral-300 prose-p:my-2 prose-strong:text-neutral-700 dark:prose-strong:text-neutral-200 prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-a:font-medium prose-a:no-underline hover:prose-a:underline prose-ul:text-neutral-600 dark:prose-ul:text-neutral-300 prose-ol:text-neutral-600 dark:prose-ol:text-neutral-300 prose-li:my-1 prose-blockquote:border-emerald-500 prose-blockquote:text-neutral-600 dark:prose-blockquote:text-neutral-400 prose-blockquote:not-italic prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-code:bg-neutral-100 dark:prose-code:bg-neutral-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-code:font-normal">
-          <ReactMarkdown
-            components={{
-              a: ({ href, children }) => (
-                <a
-                  className="inline text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors font-medium"
-                  href={href}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  {children}
-                </a>
-              ),
-              h2: ({ children }) => (
-                <h2 className="text-base font-semibold text-neutral-800 dark:text-neutral-100 mt-6 mb-3 pb-2 border-b border-neutral-200 dark:border-neutral-700">
-                  {children}
-                </h2>
-              ),
-              h3: ({ children }) => (
-                <h3 className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 mt-4 mb-2">
-                  {children}
-                </h3>
-              ),
-            }}
+        {/* Content */}
+        <div className="p-5">
+          <article className="prose prose-sm dark:prose-invert max-w-none
+            prose-headings:font-semibold
+            prose-h2:text-base prose-h2:text-neutral-800 dark:prose-h2:text-neutral-100 prose-h2:mt-6 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-neutral-200 dark:prose-h2:border-neutral-700
+            prose-h3:text-sm prose-h3:text-neutral-700 dark:prose-h3:text-neutral-200 prose-h3:mt-5 prose-h3:mb-2
+            prose-p:text-neutral-600 dark:prose-p:text-neutral-300 prose-p:leading-relaxed prose-p:my-2.5
+            prose-strong:text-neutral-700 dark:prose-strong:text-neutral-200 prose-strong:font-semibold
+            prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-a:font-medium prose-a:no-underline hover:prose-a:underline prose-a:transition-colors
+            prose-ul:text-neutral-600 dark:prose-ul:text-neutral-300 prose-ul:my-2
+            prose-ol:text-neutral-600 dark:prose-ol:text-neutral-300 prose-ol:my-2
+            prose-li:my-1 prose-li:leading-relaxed
+            prose-blockquote:border-l-emerald-500 prose-blockquote:bg-emerald-50/50 dark:prose-blockquote:bg-emerald-900/10 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r-lg prose-blockquote:not-italic prose-blockquote:text-neutral-600 dark:prose-blockquote:text-neutral-400
+            prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-code:bg-emerald-50 dark:prose-code:bg-emerald-900/20 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-code:font-medium"
           >
-            {processedContent}
-          </ReactMarkdown>
-          {isStreaming && (
-            <span className="inline-block w-2 h-4 bg-emerald-500 ml-0.5 animate-pulse" />
-          )}
+            <ReactMarkdown
+              components={{
+                a: ({ href, children }) => (
+                  <a
+                    className="inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors font-medium"
+                    href={href}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    {children}
+                    <svg className="w-3 h-3 opacity-50" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                ),
+                h2: ({ children }) => (
+                  <h2 className="flex items-center gap-2 text-base font-semibold text-neutral-800 dark:text-neutral-100 mt-6 mb-3 pb-2 border-b border-neutral-200 dark:border-neutral-700">
+                    {String(children).toLowerCase().includes('answer') && (
+                      <span className="w-5 h-5 rounded bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </span>
+                    )}
+                    {String(children).toLowerCase().includes('evidence') && (
+                      <span className="w-5 h-5 rounded bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                      </span>
+                    )}
+                    {String(children).toLowerCase().includes('source') && (
+                      <span className="w-5 h-5 rounded bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                        </svg>
+                      </span>
+                    )}
+                    {children}
+                  </h2>
+                ),
+              }}
+            >
+              {processedContent}
+            </ReactMarkdown>
+            {isStreaming && (
+              <motion.span
+                animate={{ opacity: [1, 0] }}
+                className="inline-block w-0.5 h-5 bg-emerald-500 ml-0.5 align-middle"
+                transition={{ duration: 0.8, repeat: Infinity }}
+              />
+            )}
+          </article>
         </div>
       </div>
-
-      {/* Extracted References Summary */}
-      {references.length > 0 && !isStreaming && (
-        <div className="mt-4">
-          <button
-            className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors"
-            onClick={() => setShowReferences(!showReferences)}
-          >
-            <span
-              className={`transition-transform ${showReferences ? "rotate-90" : ""}`}
-            >
-              ▶
-            </span>
-            <span>
-              {references.length} reference{references.length !== 1 ? "s" : ""}{" "}
-              found
-            </span>
-          </button>
-
-          {showReferences && (
-            <motion.div
-              animate={{ height: "auto", opacity: 1 }}
-              className="mt-3 space-y-3 overflow-hidden"
-              initial={{ height: 0, opacity: 0 }}
-            >
-              {/* Quran References */}
-              {groupedReferences.quran.length > 0 && (
-                <div>
-                  <h4 className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2 uppercase tracking-wide flex items-center gap-2">
-                    <span className="w-4 h-4 rounded bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-[10px]">
-                      Q
-                    </span>
-                    Quran
-                  </h4>
-                  <div className="space-y-1">
-                    {groupedReferences.quran.map((ref, i) => (
-                      <a
-                        key={i}
-                        className="flex items-center gap-2 px-3 py-2 rounded-md bg-neutral-50 dark:bg-neutral-800/50 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors group"
-                        href={ref.url}
-                        rel="noopener noreferrer"
-                        target="_blank"
-                      >
-                        <span className="text-sm text-neutral-700 dark:text-neutral-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                          {ref.details.surah}:{ref.details.ayah}
-                          {ref.details.ayahEnd && `-${ref.details.ayahEnd}`}
-                        </span>
-                        <span className="text-xs text-neutral-400 dark:text-neutral-500">
-                          quran.com
-                        </span>
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Hadith References */}
-              {groupedReferences.hadith.length > 0 && (
-                <div>
-                  <h4 className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2 uppercase tracking-wide flex items-center gap-2">
-                    <span className="w-4 h-4 rounded bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400 text-[10px]">
-                      H
-                    </span>
-                    Hadith
-                  </h4>
-                  <div className="space-y-1">
-                    {groupedReferences.hadith.map((ref, i) => (
-                      <a
-                        key={i}
-                        className="flex items-center gap-2 px-3 py-2 rounded-md bg-neutral-50 dark:bg-neutral-800/50 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors group"
-                        href={ref.url}
-                        rel="noopener noreferrer"
-                        target="_blank"
-                      >
-                        <span className="text-sm text-neutral-700 dark:text-neutral-200 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-                          {ref.details.collection}
-                          {ref.details.book && ` ${ref.details.book}`}:
-                          {ref.details.hadith}
-                        </span>
-                        <span className="text-xs text-neutral-400 dark:text-neutral-500">
-                          sunnah.com
-                        </span>
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          )}
-        </div>
-      )}
     </motion.div>
   );
 }

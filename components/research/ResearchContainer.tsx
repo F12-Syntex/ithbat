@@ -16,117 +16,143 @@ export function ResearchContainer() {
   const isStreaming = isResearching && state.response.length > 0;
 
   return (
-    <div className="flex flex-col items-center w-full min-h-[80vh] px-4">
-      {/* Header */}
-      <div className="text-center mb-10 mt-8">
-        <h1 className="text-4xl font-light tracking-wider mb-2 text-neutral-800 dark:text-neutral-100">
-          ithbat
-        </h1>
-        <p className="text-neutral-500 dark:text-neutral-400 text-sm">
-          Islamic Knowledge Research
-        </p>
+    <div className="flex flex-col h-screen overflow-hidden">
+      {/* Subtle background */}
+      <div className="fixed inset-0 -z-10 bg-gradient-to-b from-neutral-50 to-white dark:from-neutral-950 dark:to-neutral-900" />
+
+      {/* Header - Compact */}
+      <header className="flex-shrink-0 pt-6 pb-4 px-4">
+        <motion.div
+          animate={{ opacity: 1 }}
+          className="text-center"
+          initial={{ opacity: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <h1 className="text-3xl font-light tracking-tight bg-gradient-to-r from-neutral-800 to-neutral-600 dark:from-neutral-100 dark:to-neutral-300 bg-clip-text text-transparent">
+            ithbat
+          </h1>
+          <p className="text-neutral-400 dark:text-neutral-500 text-xs mt-1">
+            Islamic Knowledge Research
+          </p>
+        </motion.div>
+      </header>
+
+      {/* Search - Fixed position */}
+      <div className="flex-shrink-0 px-4 pb-4">
+        <div className="max-w-xl mx-auto">
+          <SearchInput isLoading={isResearching} onSearch={startResearch} />
+        </div>
       </div>
 
-      {/* Search */}
-      <SearchInput isLoading={isResearching} onSearch={startResearch} />
-
-      {/* Results */}
-      <AnimatePresence mode="wait">
-        {hasResults && (
-          <motion.div
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-2xl mt-8"
-            exit={{ opacity: 0 }}
-            initial={{ opacity: 0, y: 10 }}
-          >
-            {/* Query Header */}
-            <div className="flex items-center justify-between px-3 py-2.5 mb-4 bg-neutral-100 dark:bg-neutral-800/50 rounded-lg font-mono text-sm">
-              <span className="text-neutral-600 dark:text-neutral-300">
-                <span className="text-emerald-500 mr-2">$</span>
-                {state.query}
-              </span>
-              {state.status === "completed" && (
-                <button
-                  className="text-xs text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors"
-                  onClick={reset}
-                >
-                  clear
-                </button>
-              )}
-            </div>
-
-            {/* Research Steps - Collapsed by default */}
-            <div className="bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden divide-y divide-neutral-200 dark:divide-neutral-800">
-              {state.steps.map((step) => (
-                <ResearchStep
-                  key={step.id}
-                  defaultExpanded={false}
-                  step={step}
-                />
-              ))}
-            </div>
-
-            {/* Response - Separate from steps */}
-            {(state.response || isStreaming) && (
-              <ResearchResponse
-                content={state.response}
-                isStreaming={isStreaming}
-              />
-            )}
-
-            {/* Error */}
-            {state.error && (
+      {/* Main Content Area - Scrollable */}
+      <main className="flex-1 overflow-hidden px-4">
+        <div className="h-full max-w-xl mx-auto">
+          <AnimatePresence mode="wait">
+            {hasResults ? (
               <motion.div
                 animate={{ opacity: 1 }}
-                className="mt-4 px-4 py-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800/50 font-mono text-sm"
+                className="h-full flex flex-col"
+                exit={{ opacity: 0 }}
                 initial={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
               >
-                <span className="text-red-600 dark:text-red-400 font-medium">
-                  error:
-                </span>{" "}
-                <span className="text-red-600 dark:text-red-300">
-                  {state.error}
-                </span>
+                {/* Query Bar */}
+                <div className="flex-shrink-0 flex items-center justify-between px-3 py-2 mb-3 bg-neutral-100/80 dark:bg-neutral-800/50 rounded-lg">
+                  <span className="text-sm text-neutral-600 dark:text-neutral-300 truncate pr-2">
+                    {state.query}
+                  </span>
+                  {state.status === "completed" && (
+                    <button
+                      className="flex-shrink-0 text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors"
+                      onClick={reset}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                {/* Scrollable Results */}
+                <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-4">
+                  {/* Research Steps - Collapsed */}
+                  <div className="bg-white dark:bg-neutral-900/50 rounded-xl border border-neutral-200/50 dark:border-neutral-800/50 overflow-hidden">
+                    <div className="px-3 py-2 border-b border-neutral-100 dark:border-neutral-800/50">
+                      <span className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+                        Progress
+                      </span>
+                    </div>
+                    <div className="divide-y divide-neutral-100 dark:divide-neutral-800/30">
+                      {state.steps.map((step, index) => (
+                        <ResearchStep
+                          key={step.id}
+                          defaultExpanded={false}
+                          index={index}
+                          step={step}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Response */}
+                  {(state.response || isStreaming) && (
+                    <ResearchResponse
+                      content={state.response}
+                      isStreaming={isStreaming}
+                    />
+                  )}
+
+                  {/* Error */}
+                  {state.error && (
+                    <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200/50 dark:border-red-800/50">
+                      <p className="text-sm text-red-600 dark:text-red-400">
+                        {state.error}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Disclaimer */}
+                  {state.status === "completed" && (
+                    <p className="text-center text-[10px] text-neutral-400 dark:text-neutral-500 py-2">
+                      Consult a qualified scholar for personal rulings
+                    </p>
+                  )}
+                </div>
               </motion.div>
-            )}
-
-            {/* Disclaimer */}
-            {state.status === "completed" && (
-              <motion.p
-                animate={{ opacity: 1 }}
-                className="mt-8 text-center text-xs text-neutral-400 dark:text-neutral-500"
-                initial={{ opacity: 0 }}
-                transition={{ delay: 0.3 }}
+            ) : !isResearching ? (
+              <motion.div
+                animate={{ opacity: 1, y: 0 }}
+                className="h-full flex flex-col items-center justify-center"
+                exit={{ opacity: 0 }}
+                initial={{ opacity: 0, y: 10 }}
+                transition={{ duration: 0.3 }}
               >
-                For personal religious rulings, please consult a qualified
-                scholar.
-              </motion.p>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Empty State */}
-      {!hasResults && !isResearching && (
-        <div className="mt-16 text-center">
-          <p className="text-neutral-400 dark:text-neutral-500 text-sm">
-            Ask about Islamic rulings, hadith, or Quranic verses
-          </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-2">
-            {["Prayer times", "Zakat rules", "Fasting exemptions"].map(
-              (example) => (
-                <button
-                  key={example}
-                  className="px-3 py-1.5 text-xs text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-                  onClick={() => startResearch(example)}
-                >
-                  {example}
-                </button>
-              ),
-            )}
-          </div>
+                <div className="w-12 h-12 mb-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-emerald-500 dark:text-emerald-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                  </svg>
+                </div>
+                <p className="text-neutral-400 dark:text-neutral-500 text-sm mb-6 text-center">
+                  Search hadith, Quran, and scholarly rulings
+                </p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {[
+                    "What breaks the fast?",
+                    "Rules of Zakat",
+                    "Prayer while traveling",
+                  ].map((example) => (
+                    <button
+                      key={example}
+                      className="px-3 py-1.5 text-xs text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700/50 rounded-lg hover:border-emerald-300 dark:hover:border-emerald-700 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all"
+                      onClick={() => startResearch(example)}
+                    >
+                      {example}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
         </div>
-      )}
+      </main>
     </div>
   );
 }

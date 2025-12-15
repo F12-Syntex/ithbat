@@ -4,15 +4,22 @@
 
 /* Base styles */
 html {
-  @apply antialiased;
+  @apply antialiased scroll-smooth;
 }
 
 body {
   @apply bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100;
+  @apply transition-colors duration-300;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Smooth page transitions */
+* {
   @apply transition-colors duration-200;
 }
 
-/* Custom scrollbar for dark mode */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   @apply w-2 h-2;
 }
@@ -22,19 +29,148 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-neutral-300 dark:bg-neutral-700 rounded-full;
+  @apply bg-neutral-200 dark:bg-neutral-800 rounded-full;
+  @apply hover:bg-neutral-300 dark:hover:bg-neutral-700;
+  @apply transition-colors;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-neutral-400 dark:bg-neutral-600;
+/* Thin scrollbar variant */
+.scrollbar-thin::-webkit-scrollbar {
+  @apply w-1.5 h-1.5;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  @apply bg-neutral-200 dark:bg-neutral-800;
 }
 
 /* Focus visible styles */
 :focus-visible {
-  @apply outline-none ring-2 ring-emerald-500/50 ring-offset-2 ring-offset-neutral-50 dark:ring-offset-neutral-950;
+  @apply outline-none ring-2 ring-emerald-500/40 ring-offset-2 ring-offset-neutral-50 dark:ring-offset-neutral-950;
 }
 
 /* Selection styles */
 ::selection {
   @apply bg-emerald-500/20 text-emerald-900 dark:text-emerald-100;
+}
+
+/* Custom animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+}
+
+/* Glass effect utilities */
+.glass {
+  @apply bg-white/80 dark:bg-neutral-900/80;
+  @apply backdrop-blur-xl;
+  @apply border border-white/20 dark:border-neutral-800/50;
+}
+
+.glass-card {
+  @apply bg-white/90 dark:bg-neutral-900/90;
+  @apply backdrop-blur-lg;
+  @apply border border-neutral-200/50 dark:border-neutral-800/50;
+  @apply shadow-sm;
+}
+
+/* Gradient text utility */
+.gradient-text {
+  @apply bg-gradient-to-r from-neutral-800 via-neutral-600 to-neutral-800;
+  @apply dark:from-neutral-100 dark:via-neutral-300 dark:to-neutral-100;
+  @apply bg-clip-text text-transparent;
+}
+
+/* Button hover effects */
+.btn-glow:hover {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+}
+
+/* Card hover effects */
+.card-hover {
+  @apply transition-all duration-300;
+}
+
+.card-hover:hover {
+  @apply shadow-lg;
+  transform: translateY(-2px);
+}
+
+/* Prose improvements for markdown */
+.prose-custom {
+  @apply prose prose-sm dark:prose-invert;
+  @apply prose-headings:font-semibold;
+  @apply prose-p:leading-relaxed;
+  @apply prose-a:text-emerald-600 dark:prose-a:text-emerald-400;
+  @apply prose-a:no-underline hover:prose-a:underline;
+  @apply prose-blockquote:border-l-emerald-500;
+  @apply prose-blockquote:bg-emerald-50/50 dark:prose-blockquote:bg-emerald-900/10;
+  @apply prose-code:text-emerald-600 dark:prose-code:text-emerald-400;
+}
+
+/* Hide scrollbar but allow scrolling */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
