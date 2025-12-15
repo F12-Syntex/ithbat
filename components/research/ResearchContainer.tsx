@@ -206,19 +206,19 @@ export function ResearchContainer() {
 
   return (
     <ContextMenu items={contextMenuItems}>
-      <div className="relative h-screen overflow-hidden bg-neutral-50 dark:bg-neutral-950">
+      <div className="relative h-screen h-[100dvh] overflow-hidden bg-neutral-50 dark:bg-neutral-950 flex flex-col">
         {/* Settings Panel */}
         <SettingsPanel
           isOpen={settingsOpen}
           onClose={() => setSettingsOpen(false)}
         />
 
-        {/* Main Layout */}
-        <div className="h-full flex flex-col">
-          {/* Centered Search Area */}
+        {/* Main Content Area */}
+        <div className="flex-1 min-h-0 flex flex-col overflow-y-auto">
+          {/* Search Section - Centers when no results, scrolls with content when results exist */}
           <div
-            className={`flex flex-col items-center justify-center px-4 transition-all duration-500 ease-out ${
-              hasResults ? "pt-6 pb-4" : "flex-1"
+            className={`flex flex-col items-center justify-center px-3 sm:px-4 transition-all duration-500 ease-out ${
+              hasResults ? "pt-4 sm:pt-6 pb-3 sm:pb-4" : "flex-1"
             }`}
           >
             {/* Title - Animate out when searching */}
@@ -226,15 +226,15 @@ export function ResearchContainer() {
               {!hasResults && !isResearching && (
                 <motion.div
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  className="text-center mb-8"
+                  className="text-center mb-6 sm:mb-8"
                   exit={{ opacity: 0, scale: 0.95 }}
                   initial={{ opacity: 0, y: 20, scale: 0.95 }}
                   transition={{ duration: 0.3, ease: "easeOut" }}
                 >
-                  <h1 className="text-3xl font-light tracking-tight text-neutral-800 dark:text-neutral-100">
+                  <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-neutral-800 dark:text-neutral-100">
                     ithbat
                   </h1>
-                  <p className="text-neutral-400 dark:text-neutral-500 text-sm mt-2">
+                  <p className="text-neutral-400 dark:text-neutral-500 text-xs sm:text-sm mt-2">
                     Search hadith, Quran, and scholarly rulings
                   </p>
                 </motion.div>
@@ -251,7 +251,7 @@ export function ResearchContainer() {
               {!hasResults && !isResearching && (
                 <motion.div
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex flex-wrap justify-center gap-2 mt-6"
+                  className="flex flex-wrap justify-center gap-1.5 sm:gap-2 mt-4 sm:mt-6 px-2"
                   exit={{ opacity: 0 }}
                   initial={{ opacity: 0, y: 10 }}
                   transition={{ duration: 0.2 }}
@@ -264,7 +264,7 @@ export function ResearchContainer() {
                     <motion.button
                       key={example}
                       animate={{ opacity: 1, y: 0 }}
-                      className="px-3 py-1.5 text-xs text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg hover:border-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all hover:scale-105"
+                      className="px-2.5 sm:px-3 py-1.5 text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg hover:border-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all active:scale-95 sm:hover:scale-105"
                       initial={{ opacity: 0, y: 10 }}
                       transition={{ delay: i * 0.05 }}
                       onClick={() => startResearch(example)}
@@ -277,29 +277,29 @@ export function ResearchContainer() {
             </AnimatePresence>
           </div>
 
-          {/* Results Section */}
+          {/* Results Section - Part of scrollable content */}
           <AnimatePresence>
             {hasResults && (
               <motion.div
                 animate={{ opacity: 1, y: 0 }}
-                className="flex-1 min-h-0 px-4 pb-4"
+                className="px-3 sm:px-4"
                 exit={{ opacity: 0, y: 50 }}
                 initial={{ opacity: 0, y: 50 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
               >
-                <div className="h-full max-w-2xl mx-auto overflow-y-auto no-scrollbar">
+                <div className="max-w-2xl mx-auto py-3 sm:py-4">
                   {/* Query Display */}
                   <motion.div
                     animate={{ opacity: 1 }}
-                    className="flex items-center justify-between mb-4"
+                    className="flex items-center justify-between mb-3 sm:mb-4"
                     initial={{ opacity: 0 }}
                   >
-                    <span className="text-sm text-neutral-600 dark:text-neutral-300">
+                    <span className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-300 truncate mr-2">
                       {state.query}
                     </span>
                     {state.status === "completed" && (
                       <button
-                        className="text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors"
+                        className="flex-shrink-0 text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors"
                         onClick={reset}
                       >
                         Clear
@@ -310,11 +310,11 @@ export function ResearchContainer() {
                   {/* Research Progress */}
                   <motion.div
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden mb-4"
+                    className="bg-white dark:bg-neutral-900 rounded-lg sm:rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden mb-3 sm:mb-4"
                     initial={{ opacity: 0, y: 20 }}
                     transition={{ delay: 0.1 }}
                   >
-                    <div className="px-4 py-2.5 border-b border-neutral-100 dark:border-neutral-800">
+                    <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-neutral-100 dark:border-neutral-800">
                       <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
                         Progress
                       </span>
@@ -349,10 +349,10 @@ export function ResearchContainer() {
                   {state.error && (
                     <motion.div
                       animate={{ opacity: 1 }}
-                      className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg mt-4"
+                      className="p-2.5 sm:p-3 bg-red-50 dark:bg-red-900/20 rounded-lg mt-3 sm:mt-4"
                       initial={{ opacity: 0 }}
                     >
-                      <p className="text-sm text-red-600 dark:text-red-400">
+                      <p className="text-xs sm:text-sm text-red-600 dark:text-red-400">
                         {state.error}
                       </p>
                     </motion.div>
@@ -362,7 +362,7 @@ export function ResearchContainer() {
                   {state.status === "completed" && (
                     <motion.p
                       animate={{ opacity: 1 }}
-                      className="text-center text-[10px] text-neutral-400 pt-6 pb-4"
+                      className="text-center text-[10px] text-neutral-400 pt-4 sm:pt-6 pb-2"
                       initial={{ opacity: 0 }}
                       transition={{ delay: 0.3 }}
                     >
@@ -373,6 +373,13 @@ export function ResearchContainer() {
               </motion.div>
             )}
           </AnimatePresence>
+        </div>
+
+        {/* Fixed Footer */}
+        <div className="flex-shrink-0 py-2 sm:py-3 text-center border-t border-neutral-200/50 dark:border-neutral-800/50">
+          <span className="text-[10px] text-neutral-400 dark:text-neutral-600">
+            ithbat v0.1
+          </span>
         </div>
       </div>
     </ContextMenu>

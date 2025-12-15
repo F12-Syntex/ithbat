@@ -164,7 +164,7 @@ export function ResearchStep({
             transition={{ duration: 0.2, ease: "easeInOut" }}
           >
             <div className="px-4 pb-4">
-              <div className="ml-11 max-h-56 overflow-y-auto no-scrollbar bg-neutral-50/50 dark:bg-neutral-800/30 rounded-lg p-3">
+              <div className="ml-11 max-h-56 overflow-y-auto no-scrollbar">
                 <StepTree
                   content={step.content}
                   isActive={isActive}

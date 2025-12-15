@@ -261,6 +261,32 @@ function extractLinks(
 ): string[] {
   const links: string[] = [];
 
+  // For sunnah.com, extract ALL hadith links aggressively
+  if (baseUrl.includes("sunnah.com")) {
+    $("a[href]").each((_, el) => {
+      const href = $(el).attr("href");
+      if (!href) return;
+
+      try {
+        const fullUrl = href.startsWith("http")
+          ? href
+          : new URL(href, baseUrl).href;
+
+        // Match hadith links like /bukhari:123 or /muslim/1
+        if (/sunnah\.com\/[a-z]+[:/]\d+/.test(fullUrl)) {
+          links.push(fullUrl);
+        }
+      } catch {
+        // Invalid URL, skip
+      }
+    });
+
+    // Return early if we found hadith links
+    if (links.length > 0) {
+      return [...new Set(links)].slice(0, 50);
+    }
+  }
+
   // First, try specific selector
   $(selector).each((_, el) => {
     const href = $(el).attr("href");
@@ -455,31 +481,44 @@ export function formatCrawlResultsForAI(pages: CrawledPage[]): string {
 
   const sections: string[] = [];
 
-  // First, list all sources with numbers for easy citation
-  sections.push("=== SOURCE INDEX (use these numbers for citations) ===");
-  for (let i = 0; i < pages.length; i++) {
-    const page = pages[i];
-    // Skip search result pages, only show direct content URLs
-    const isSearchPage =
-      page.url.includes("/search") || page.url.includes("?q=");
-    const urlNote = isSearchPage
-      ? " (search page - cite specific hadith links from content instead)"
-      : "";
+  // Collect ALL specific hadith/article links for easy reference
+  const specificLinks: string[] = [];
+  for (const page of pages) {
+    for (const link of page.links) {
+      // Only include direct content links (not search pages)
+      if (isSpecificContentUrl(link)) {
+        specificLinks.push(link);
+      }
+    }
+  }
+  const uniqueSpecificLinks = [...new Set(specificLinks)];
 
-    sections.push(`[${i + 1}] ${page.title} - ${page.url}${urlNote}`);
+  // CRITICAL: Show specific citation URLs FIRST
+  sections.push("=== SPECIFIC URLS FOR CITATIONS (USE THESE!) ===");
+  sections.push("IMPORTANT: Only cite these specific URLs, NEVER cite search URLs!");
+  sections.push("");
+
+  if (uniqueSpecificLinks.length > 0) {
+    uniqueSpecificLinks.slice(0, 50).forEach((link, i) => {
+      sections.push(`[${i + 1}] ${link}`);
+    });
+  } else {
+    sections.push("(No specific hadith/article links found - use article URLs from content below)");
   }
   sections.push("\n");
 
   // Then, provide the full content
   for (let i = 0; i < pages.length; i++) {
     const page = pages[i];
+    const isSearchPage = page.url.includes("/search") || page.url.includes("?q=") || page.url.includes("?s=");
 
     sections.push(`
-=== SOURCE [${i + 1}]: ${page.source} ===
-URL: ${page.url}
+=== SOURCE: ${page.source} ===
+PAGE URL: ${page.url}${isSearchPage ? " (SEARCH PAGE - DO NOT CITE THIS URL)" : " (can cite)"}
 TITLE: ${page.title}
-EXTRACTED LINKS FROM THIS PAGE (use these for citations when relevant):
-${page.links.slice(0, 15).join("\n")}
+
+SPECIFIC LINKS FOUND ON THIS PAGE (cite these instead of search URL):
+${page.links.filter(isSpecificContentUrl).slice(0, 20).join("\n") || "(none found)"}
 
 CONTENT:
 ${page.content}
@@ -488,6 +527,39 @@ ${page.content}
   }
 
   return sections.join("\n");
+}
+
+/**
+ * Check if URL is a specific content page (not search/index)
+ */
+function isSpecificContentUrl(url: string): boolean {
+  // Reject search pages
+  if (url.includes("/search") || url.includes("?q=") || url.includes("?s=") || url.includes("?keyword=")) {
+    return false;
+  }
+
+  // Sunnah.com: specific hadith like /bukhari:123 or /muslim/1
+  if (url.includes("sunnah.com")) {
+    return /sunnah\.com\/[a-z]+[:/]\d+/.test(url);
+  }
+
+  // IslamQA: specific answers
+  if (url.includes("islamqa.info")) {
+    return url.includes("/answers/") && /\/\d+/.test(url);
+  }
+
+  // Quran.com: specific verses
+  if (url.includes("quran.com")) {
+    return /quran\.com\/\d+[:/]\d+/.test(url);
+  }
+
+  // Other sites: must have meaningful path
+  try {
+    const path = new URL(url).pathname;
+    return path.length > 10 && !path.endsWith("/");
+  } catch {
+    return false;
+  }
 }
 
 /**
