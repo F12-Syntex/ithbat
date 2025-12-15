@@ -469,6 +469,18 @@ function parseSourcesList(
 }
 
 /**
+ * Convert combined citations like [1, 2, 3] to separate [1] [2] [3]
+ */
+function expandCombinedCitations(text: string): string {
+  // Match [1, 2, 3] or [1,2,3] or [1, 8, 13, 23] patterns
+  return text.replace(/\[(\d+(?:\s*,\s*\d+)+)\]/g, (match, numbers) => {
+    const nums = numbers.split(/\s*,\s*/);
+
+    return nums.map((n: string) => `[${n.trim()}]`).join(" ");
+  });
+}
+
+/**
  * Convert [1], [2] style citations to clickable links
  */
 function processNumberedCitations(
@@ -477,10 +489,15 @@ function processNumberedCitations(
 ): string {
   if (sources.size === 0) return text;
 
+  // First, expand any combined citations like [1, 2, 3] to [1] [2] [3]
+  let expandedText = expandCombinedCitations(text);
+
   // Replace [N] citations with clickable links (but not in the Sources section)
-  const sourcesIndex = text.search(/##\s*Sources/i);
-  const mainText = sourcesIndex > 0 ? text.substring(0, sourcesIndex) : text;
-  const sourcesSection = sourcesIndex > 0 ? text.substring(sourcesIndex) : "";
+  const sourcesIndex = expandedText.search(/##\s*Sources/i);
+  const mainText =
+    sourcesIndex > 0 ? expandedText.substring(0, sourcesIndex) : expandedText;
+  const sourcesSection =
+    sourcesIndex > 0 ? expandedText.substring(sourcesIndex) : "";
 
   let processedMain = mainText;
 

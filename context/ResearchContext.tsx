@@ -22,7 +22,7 @@ import {
 
 type ResearchAction =
   | { type: "START_RESEARCH"; query: string; depth: ResearchDepth }
-  | { type: "ADD_STEP"; stepType: ResearchStepType }
+  | { type: "ADD_STEP"; stepType: ResearchStepType; stepTitle?: string }
   | {
       type: "UPDATE_STEP_STATUS";
       stepType: ResearchStepType;
@@ -69,9 +69,13 @@ function researchReducer(
       };
 
     case "ADD_STEP":
+      const newStep = createStep(action.stepType, action.stepTitle);
+
+      newStep.startTime = Date.now();
+
       return {
         ...state,
-        steps: [...state.steps, createStep(action.stepType)],
+        steps: [...state.steps, newStep],
       };
 
     case "UPDATE_STEP_STATUS":
@@ -79,7 +83,12 @@ function researchReducer(
         ...state,
         steps: state.steps.map((step) =>
           step.type === action.stepType
-            ? { ...step, status: action.status }
+            ? {
+                ...step,
+                status: action.status,
+                endTime:
+                  action.status === "completed" ? Date.now() : step.endTime,
+              }
             : step,
         ),
       };
@@ -179,7 +188,11 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
         switch (event.type) {
           case "step_start":
             if (event.step) {
-              dispatch({ type: "ADD_STEP", stepType: event.step });
+              dispatch({
+                type: "ADD_STEP",
+                stepType: event.step,
+                stepTitle: event.stepTitle,
+              });
             }
             break;
 

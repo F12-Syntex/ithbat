@@ -1,8 +1,5 @@
-export type ResearchStepType =
-  | "understanding"
-  | "searching"
-  | "exploring"
-  | "synthesizing";
+// Dynamic step type - AI determines the steps, "understanding" is always first
+export type ResearchStepType = string;
 export type ResearchStepStatus =
   | "pending"
   | "in_progress"
@@ -25,6 +22,8 @@ export interface ResearchStep {
   status: ResearchStepStatus;
   title: string;
   content: string;
+  startTime?: number;
+  endTime?: number;
 }
 
 export interface ResearchState {
@@ -58,13 +57,15 @@ export interface ResearchStepEvent {
     | "error"
     | "done";
   step?: ResearchStepType;
+  stepTitle?: string;
   content?: string;
   source?: Source;
   crawlLink?: CrawledLink;
   error?: string;
 }
 
-export const STEP_TITLES: Record<ResearchStepType, string> = {
+// Default step titles for common steps (fallback)
+export const DEFAULT_STEP_TITLES: Record<string, string> = {
   understanding: "Understanding your question",
   searching: "Searching Islamic sources",
   exploring: "AI exploring relevant links",
@@ -86,30 +87,35 @@ export const DEPTH_CONFIG: Record<
     description: "Search pages only, no deep crawling",
     sourcesToFetch: 3,
     crawlDepth: 0,
-    maxPages: 3,
+    maxPages: 20,
   },
   standard: {
     label: "Standard",
     description: "Follow 1 level of links",
-    sourcesToFetch: 5,
+    sourcesToFetch: 8,
     crawlDepth: 1,
-    maxPages: 8,
+    maxPages: 40,
   },
   deep: {
     label: "Deep",
-    description: "Recursive crawling, 3 levels deep",
-    sourcesToFetch: 15,
+    description: "Thorough research with Google search",
+    sourcesToFetch: 20,
     crawlDepth: 3,
-    maxPages: 20,
+    maxPages: 60,
   },
 };
 
-export function createStep(type: ResearchStepType): ResearchStep {
+export function createStep(
+  type: ResearchStepType,
+  title?: string,
+): ResearchStep {
   return {
     id: `${type}-${Date.now()}`,
     type,
     status: "pending",
-    title: STEP_TITLES[type],
+    title: title || DEFAULT_STEP_TITLES[type] || type,
     content: "",
+    startTime: undefined,
+    endTime: undefined,
   };
 }

@@ -2,7 +2,7 @@
 
 import type { ResearchStep as ResearchStepType } from "@/types/research";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 
@@ -11,32 +11,74 @@ interface ResearchStepProps {
   defaultExpanded?: boolean;
 }
 
+function formatDuration(ms: number): string {
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+
+  return `${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
+}
+
 export function ResearchStep({
   step,
   defaultExpanded = false,
 }: ResearchStepProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const [elapsedTime, setElapsedTime] = useState(0);
   const isActive = step.status === "in_progress";
   const isCompleted = step.status === "completed";
 
+  // Update elapsed time every second when step is active
+  useEffect(() => {
+    if (isActive && step.startTime) {
+      const interval = setInterval(() => {
+        setElapsedTime(Date.now() - step.startTime!);
+      }, 1000);
+
+      // Set initial value immediately
+      setElapsedTime(Date.now() - step.startTime);
+
+      return () => clearInterval(interval);
+    } else if (isCompleted && step.startTime && step.endTime) {
+      setElapsedTime(step.endTime - step.startTime);
+    }
+  }, [isActive, isCompleted, step.startTime, step.endTime]);
+
   const getStatusIndicator = () => {
+    const timeDisplay = step.startTime ? (
+      <span className="text-neutral-500 dark:text-neutral-400 font-mono">
+        {formatDuration(elapsedTime)}
+      </span>
+    ) : null;
+
     if (isActive) {
       return (
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-          <span className="text-emerald-600 dark:text-emerald-400">
-            running
+        <span className="flex items-center gap-2">
+          {timeDisplay}
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+            <span className="text-emerald-600 dark:text-emerald-400">
+              running
+            </span>
           </span>
         </span>
       );
     }
     if (isCompleted) {
       return (
-        <span className="text-emerald-600 dark:text-emerald-400">done</span>
+        <span className="flex items-center gap-2">
+          {timeDisplay}
+          <span className="text-emerald-600 dark:text-emerald-400">done</span>
+        </span>
       );
     }
     if (step.status === "error") {
-      return <span className="text-red-500 dark:text-red-400">error</span>;
+      return (
+        <span className="flex items-center gap-2">
+          {timeDisplay}
+          <span className="text-red-500 dark:text-red-400">error</span>
+        </span>
+      );
     }
 
     return (

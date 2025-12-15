@@ -538,28 +538,50 @@ export async function deepSearch(
 }
 
 /**
+ * Get source config for a URL - returns generic config for unknown domains
+ */
+function getSourceConfig(url: string): typeof ISLAMIC_SOURCES.sunnah {
+  if (url.includes("islamqa.info")) {
+    return ISLAMIC_SOURCES.islamqa;
+  } else if (url.includes("quran.com")) {
+    return ISLAMIC_SOURCES.quran;
+  } else if (url.includes("sunnah.com")) {
+    return ISLAMIC_SOURCES.sunnah;
+  } else if (url.includes("daruliftaa.com")) {
+    return ISLAMIC_SOURCES.daruliftaa;
+  } else if (url.includes("askimam.org")) {
+    return ISLAMIC_SOURCES.askimam;
+  } else if (url.includes("seekersguidance.org")) {
+    return ISLAMIC_SOURCES.seekersguidance;
+  }
+
+  // Return generic config with the URL's base
+  try {
+    const urlObj = new URL(url);
+
+    return {
+      ...GENERIC_SOURCE,
+      name: urlObj.hostname.replace("www.", ""),
+      baseUrl: urlObj.origin,
+    };
+  } catch {
+    return {
+      ...GENERIC_SOURCE,
+      name: "Web",
+      baseUrl: "",
+    };
+  }
+}
+
+/**
  * Crawl a single URL - used for AI-directed exploration
+ * Works with any domain, not just predefined Islamic sources
  */
 export async function crawlUrl(
   url: string,
   onProgress?: (progress: CrawlProgress) => void,
 ): Promise<CrawledPage | null> {
-  // Determine which source config to use based on URL
-  let sourceConfig = ISLAMIC_SOURCES.sunnah; // default
-
-  if (url.includes("islamqa.info")) {
-    sourceConfig = ISLAMIC_SOURCES.islamqa;
-  } else if (url.includes("quran.com")) {
-    sourceConfig = ISLAMIC_SOURCES.quran;
-  } else if (url.includes("sunnah.com")) {
-    sourceConfig = ISLAMIC_SOURCES.sunnah;
-  } else if (url.includes("daruliftaa.com")) {
-    sourceConfig = ISLAMIC_SOURCES.daruliftaa;
-  } else if (url.includes("askimam.org")) {
-    sourceConfig = ISLAMIC_SOURCES.askimam;
-  } else if (url.includes("seekersguidance.org")) {
-    sourceConfig = ISLAMIC_SOURCES.seekersguidance;
-  }
+  const sourceConfig = getSourceConfig(url);
 
   onProgress?.({ type: "visiting", url, depth: 0 });
 
@@ -572,6 +594,88 @@ export async function crawlUrl(
   }
 
   return page;
+}
+
+/**
+ * Search Google for Islamic content and extract result URLs
+ */
+export async function googleSearch(
+  query: string,
+  onProgress?: (progress: CrawlProgress) => void,
+): Promise<CrawledPage[]> {
+  const pages: CrawledPage[] = [];
+
+  // Search Google with Islamic context
+  const searchQuery = `${query} islamic ruling fatwa hadith`;
+  const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}&num=20`;
+
+  onProgress?.({ type: "visiting", url: googleUrl, depth: 0 });
+
+  const response = await rateLimitedFetch(googleUrl);
+
+  if (!response || !response.ok) {
+    onProgress?.({
+      type: "error",
+      url: googleUrl,
+      message: "Google search failed",
+    });
+
+    return pages;
+  }
+
+  const html = await response.text();
+  const $ = cheerio.load(html);
+
+  // Extract search result URLs
+  const resultUrls: string[] = [];
+
+  // Google search result links
+  $("a[href]").each((_, el) => {
+    const href = $(el).attr("href");
+
+    if (href && href.startsWith("/url?q=")) {
+      const match = href.match(/\/url\?q=([^&]+)/);
+
+      if (match) {
+        try {
+          const decodedUrl = decodeURIComponent(match[1]);
+
+          // Filter out Google's own pages and unwanted domains
+          if (
+            !decodedUrl.includes("google.com") &&
+            !decodedUrl.includes("youtube.com") &&
+            !decodedUrl.includes("facebook.com") &&
+            !decodedUrl.includes("twitter.com") &&
+            decodedUrl.startsWith("http")
+          ) {
+            resultUrls.push(decodedUrl);
+          }
+        } catch {
+          // Invalid URL, skip
+        }
+      }
+    }
+  });
+
+  onProgress?.({
+    type: "found",
+    url: googleUrl,
+    title: `Google Search: Found ${resultUrls.length} results`,
+    depth: 0,
+  });
+
+  // Crawl the first few result pages
+  const urlsToCrawl = [...new Set(resultUrls)].slice(0, 8);
+
+  for (const url of urlsToCrawl) {
+    const page = await crawlUrl(url, onProgress);
+
+    if (page) {
+      pages.push(page);
+    }
+  }
+
+  return pages;
 }
 
 /**

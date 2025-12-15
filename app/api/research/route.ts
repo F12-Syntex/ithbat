@@ -4,6 +4,7 @@ import { getOpenRouterClient } from "@/lib/openrouter";
 import {
   ISLAMIC_RESEARCH_SYSTEM_PROMPT,
   UNDERSTANDING_PROMPT,
+  PLANNING_PROMPT,
   EXPLORATION_PROMPT,
   SYNTHESIS_PROMPT,
   buildPrompt,
@@ -12,12 +13,12 @@ import {
   initialSearch,
   crawlUrls,
   searchQuery,
+  googleSearch,
   getAllLinks,
   summarizeCrawledPages,
   formatAvailableLinks,
   formatCrawlResultsForAI,
   type CrawledPage,
-  type CrawlProgress,
 } from "@/lib/crawler";
 import {
   type ResearchDepth,
@@ -38,10 +39,20 @@ interface ResearchStepEvent {
     | "error"
     | "done";
   step?: string;
+  stepTitle?: string;
   content?: string;
   source?: Source;
   crawlLink?: CrawledLink;
   error?: string;
+}
+
+interface PlannedStep {
+  id: string;
+  title: string;
+}
+
+interface PlanningDecision {
+  steps: PlannedStep[];
 }
 
 interface ExplorationDecision {
@@ -49,11 +60,38 @@ interface ExplorationDecision {
   reasoning: string;
   linksToExplore: string[];
   alternativeQueries: string[];
+  useGoogleSearch?: boolean;
+  googleSearchQuery?: string;
   keyFindingsSoFar: string;
 }
 
 function encodeSSE(event: ResearchStepEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
+}
+
+function parsePlanningResponse(response: string): PlanningDecision {
+  try {
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+
+      if (parsed.steps && Array.isArray(parsed.steps)) {
+        return parsed;
+      }
+    }
+  } catch {
+    // If parsing fails, return default steps
+  }
+
+  // Default fallback steps
+  return {
+    steps: [
+      { id: "searching", title: "Searching Islamic sources" },
+      { id: "exploring", title: "Exploring relevant links" },
+      { id: "synthesizing", title: "Preparing your answer" },
+    ],
+  };
 }
 
 function parseExplorationResponse(response: string): ExplorationDecision {
@@ -69,10 +107,11 @@ function parseExplorationResponse(response: string): ExplorationDecision {
   }
 
   return {
-    hasEnoughInfo: true,
-    reasoning: "Could not parse AI response",
+    hasEnoughInfo: false, // Default to false to encourage more exploration
+    reasoning: "Could not parse AI response - continuing exploration",
     linksToExplore: [],
     alternativeQueries: [],
+    useGoogleSearch: false,
     keyFindingsSoFar: "",
   };
 }
@@ -99,65 +138,21 @@ export async function POST(request: NextRequest) {
       const client = getOpenRouterClient();
       const allCrawledPages: CrawledPage[] = [];
       let sourceId = 1;
-      const maxIterations = 5; // Maximum exploration iterations
-
-      // Helper to send crawl progress
-      const onCrawlProgress = (progress: CrawlProgress) => {
-        if (progress.type === "visiting") {
-          send({
-            type: "crawl_link",
-            crawlLink: {
-              url: progress.url!,
-              depth: progress.depth || 0,
-              status: "visiting",
-            },
-          });
-          send({
-            type: "step_content",
-            step: "searching",
-            content: `→ ${progress.url}\n`,
-          });
-        } else if (progress.type === "found") {
-          send({
-            type: "crawl_link",
-            crawlLink: {
-              url: progress.url!,
-              title: progress.title,
-              depth: progress.depth || 0,
-              status: "found",
-            },
-          });
-          send({
-            type: "step_content",
-            step: "searching",
-            content: `✓ Found: ${progress.title?.slice(0, 60) || "Page"}\n`,
-          });
-
-          const source: Source = {
-            id: sourceId++,
-            title: progress.title || "Page",
-            url: progress.url!,
-            domain: new URL(progress.url!).hostname.replace("www.", ""),
-            trusted: true,
-          };
-
-          send({ type: "source", source });
-        } else if (progress.type === "error") {
-          send({
-            type: "step_content",
-            step: "searching",
-            content: `✗ Failed: ${progress.url}\n`,
-          });
-        }
-      };
+      const maxIterations = 10; // Maximum exploration iterations - be thorough
 
       try {
-        // Step 1: Understanding
-        send({ type: "step_start", step: "understanding" });
+        // Step 1: Understanding (always first)
+        send({
+          type: "step_start",
+          step: "understanding",
+          stepTitle: "Understanding your question",
+        });
 
         const understandingPrompt = buildPrompt(UNDERSTANDING_PROMPT, {
           query,
         });
+
+        let understandingContent = "";
 
         for await (const chunk of client.streamChat(
           [
@@ -166,33 +161,126 @@ export async function POST(request: NextRequest) {
           ],
           "QUICK",
         )) {
+          understandingContent += chunk;
           send({ type: "step_content", step: "understanding", content: chunk });
         }
 
         send({ type: "step_complete", step: "understanding" });
 
-        // Step 2: Initial Search
-        send({ type: "step_start", step: "searching" });
+        // Step 2: Planning - AI determines the research steps
+        const planningPrompt = buildPrompt(PLANNING_PROMPT, {
+          query,
+          understanding: understandingContent,
+        });
+
+        let planningResponse = "";
+
+        for await (const chunk of client.streamChat(
+          [
+            {
+              role: "system",
+              content:
+                "You are a research planner. Respond ONLY with valid JSON.",
+            },
+            { role: "user", content: planningPrompt },
+          ],
+          "QUICK",
+        )) {
+          planningResponse += chunk;
+        }
+
+        const plan = parsePlanningResponse(planningResponse);
+
+        // Find searching, exploring, and synthesizing steps from the plan
+        const searchStep = plan.steps.find((s) => s.id.includes("search")) || {
+          id: "searching",
+          title: "Searching Islamic sources",
+        };
+        const exploreStep = plan.steps.find((s) => s.id.includes("explor")) || {
+          id: "exploring",
+          title: "Exploring relevant links",
+        };
+        const synthesizeStep = plan.steps.find((s) =>
+          s.id.includes("synthes"),
+        ) || { id: "synthesizing", title: "Preparing your answer" };
+
+        // Step 3: Initial Search (dynamic title)
+        send({
+          type: "step_start",
+          step: searchStep.id,
+          stepTitle: searchStep.title,
+        });
         send({
           type: "step_content",
-          step: "searching",
+          step: searchStep.id,
           content: `Searching for "${query}"...\n\n`,
         });
 
-        const initialPages = await initialSearch(query, onCrawlProgress);
+        const initialPages = await initialSearch(query, (progress) => {
+          if (progress.type === "visiting") {
+            send({
+              type: "crawl_link",
+              crawlLink: {
+                url: progress.url!,
+                depth: progress.depth || 0,
+                status: "visiting",
+              },
+            });
+            send({
+              type: "step_content",
+              step: searchStep.id,
+              content: `→ ${progress.url}\n`,
+            });
+          } else if (progress.type === "found") {
+            send({
+              type: "crawl_link",
+              crawlLink: {
+                url: progress.url!,
+                title: progress.title,
+                depth: progress.depth || 0,
+                status: "found",
+              },
+            });
+            send({
+              type: "step_content",
+              step: searchStep.id,
+              content: `✓ Found: ${progress.title?.slice(0, 60) || "Page"}\n`,
+            });
+
+            const source: Source = {
+              id: sourceId++,
+              title: progress.title || "Page",
+              url: progress.url!,
+              domain: new URL(progress.url!).hostname.replace("www.", ""),
+              trusted: true,
+            };
+
+            send({ type: "source", source });
+          } else if (progress.type === "error") {
+            send({
+              type: "step_content",
+              step: searchStep.id,
+              content: `✗ Failed: ${progress.url}\n`,
+            });
+          }
+        });
 
         allCrawledPages.push(...initialPages);
 
         send({
           type: "step_content",
-          step: "searching",
+          step: searchStep.id,
           content: `\n━━━ Initial search complete: ${initialPages.length} pages ━━━\n\n`,
         });
 
-        send({ type: "step_complete", step: "searching" });
+        send({ type: "step_complete", step: searchStep.id });
 
-        // Step 3: AI-Driven Exploration Loop
-        send({ type: "step_start", step: "exploring" });
+        // Step 4: AI-Driven Exploration Loop
+        send({
+          type: "step_start",
+          step: exploreStep.id,
+          stepTitle: exploreStep.title,
+        });
 
         let iteration = 0;
         let hasEnoughInfo = false;
@@ -202,7 +290,7 @@ export async function POST(request: NextRequest) {
 
           send({
             type: "step_content",
-            step: "exploring",
+            step: exploreStep.id,
             content: `\n🔍 Exploration round ${iteration}/${maxIterations}\n`,
           });
 
@@ -218,7 +306,7 @@ export async function POST(request: NextRequest) {
 
           send({
             type: "step_content",
-            step: "exploring",
+            step: exploreStep.id,
             content: `Analyzing ${allCrawledPages.length} pages, ${availableLinks.length} available links...\n`,
           });
 
@@ -243,7 +331,7 @@ export async function POST(request: NextRequest) {
 
           send({
             type: "step_content",
-            step: "exploring",
+            step: exploreStep.id,
             content: `\nAI Decision: ${decision.reasoning}\n`,
           });
 
@@ -251,14 +339,14 @@ export async function POST(request: NextRequest) {
             hasEnoughInfo = true;
             send({
               type: "step_content",
-              step: "exploring",
+              step: exploreStep.id,
               content: `✓ Sufficient information gathered\n`,
             });
 
             if (decision.keyFindingsSoFar) {
               send({
                 type: "step_content",
-                step: "exploring",
+                step: exploreStep.id,
                 content: `Key findings: ${decision.keyFindingsSoFar}\n`,
               });
             }
@@ -269,7 +357,7 @@ export async function POST(request: NextRequest) {
           if (decision.linksToExplore.length > 0) {
             send({
               type: "step_content",
-              step: "exploring",
+              step: exploreStep.id,
               content: `\nExploring ${decision.linksToExplore.length} links:\n`,
             });
 
@@ -279,13 +367,13 @@ export async function POST(request: NextRequest) {
                 if (progress.type === "visiting") {
                   send({
                     type: "step_content",
-                    step: "exploring",
+                    step: exploreStep.id,
                     content: `  → ${progress.url}\n`,
                   });
                 } else if (progress.type === "found") {
                   send({
                     type: "step_content",
-                    step: "exploring",
+                    step: exploreStep.id,
                     content: `  ✓ ${progress.title?.slice(0, 50) || "Page"}\n`,
                   });
 
@@ -305,7 +393,7 @@ export async function POST(request: NextRequest) {
             allCrawledPages.push(...newPages);
             send({
               type: "step_content",
-              step: "exploring",
+              step: exploreStep.id,
               content: `  Found ${newPages.length} new pages\n`,
             });
           }
@@ -318,7 +406,7 @@ export async function POST(request: NextRequest) {
             for (const altQuery of decision.alternativeQueries.slice(0, 2)) {
               send({
                 type: "step_content",
-                step: "exploring",
+                step: exploreStep.id,
                 content: `\nTrying alternative search: "${altQuery}"\n`,
               });
 
@@ -326,7 +414,7 @@ export async function POST(request: NextRequest) {
                 if (progress.type === "found") {
                   send({
                     type: "step_content",
-                    step: "exploring",
+                    step: exploreStep.id,
                     content: `  ✓ ${progress.title?.slice(0, 50) || "Page"}\n`,
                   });
 
@@ -346,11 +434,60 @@ export async function POST(request: NextRequest) {
             }
           }
 
+          // Try Google search if AI requests it
+          if (
+            decision.useGoogleSearch &&
+            decision.googleSearchQuery &&
+            allCrawledPages.length < depthConfig.maxPages
+          ) {
+            send({
+              type: "step_content",
+              step: exploreStep.id,
+              content: `\n🌐 Searching Google: "${decision.googleSearchQuery}"\n`,
+            });
+
+            const googlePages = await googleSearch(
+              decision.googleSearchQuery,
+              (progress) => {
+                if (progress.type === "visiting") {
+                  send({
+                    type: "step_content",
+                    step: exploreStep.id,
+                    content: `  → ${progress.url}\n`,
+                  });
+                } else if (progress.type === "found") {
+                  send({
+                    type: "step_content",
+                    step: exploreStep.id,
+                    content: `  ✓ ${progress.title?.slice(0, 50) || "Page"}\n`,
+                  });
+
+                  const source: Source = {
+                    id: sourceId++,
+                    title: progress.title || "Page",
+                    url: progress.url!,
+                    domain: new URL(progress.url!).hostname.replace("www.", ""),
+                    trusted: false, // Mark Google results as needing verification
+                  };
+
+                  send({ type: "source", source });
+                }
+              },
+            );
+
+            allCrawledPages.push(...googlePages);
+            send({
+              type: "step_content",
+              step: exploreStep.id,
+              content: `  Found ${googlePages.length} pages from Google\n`,
+            });
+          }
+
           // Check if we've hit the page limit
           if (allCrawledPages.length >= depthConfig.maxPages) {
             send({
               type: "step_content",
-              step: "exploring",
+              step: exploreStep.id,
               content: `\n⚠ Reached page limit (${depthConfig.maxPages})\n`,
             });
             break;
@@ -359,17 +496,21 @@ export async function POST(request: NextRequest) {
 
         send({
           type: "step_content",
-          step: "exploring",
+          step: exploreStep.id,
           content: `\n━━━ Exploration complete: ${allCrawledPages.length} total pages ━━━\n`,
         });
 
-        send({ type: "step_complete", step: "exploring" });
+        send({ type: "step_complete", step: exploreStep.id });
 
-        // Step 4: Synthesizing
-        send({ type: "step_start", step: "synthesizing" });
+        // Step 5: Synthesizing (dynamic title)
+        send({
+          type: "step_start",
+          step: synthesizeStep.id,
+          stepTitle: synthesizeStep.title,
+        });
         send({
           type: "step_content",
-          step: "synthesizing",
+          step: synthesizeStep.id,
           content: `Analyzing ${allCrawledPages.length} sources...\n`,
         });
 
@@ -380,7 +521,7 @@ export async function POST(request: NextRequest) {
           research: crawledContent,
         });
 
-        send({ type: "step_complete", step: "synthesizing" });
+        send({ type: "step_complete", step: synthesizeStep.id });
 
         // Start streaming the response
         send({ type: "response_start" });
