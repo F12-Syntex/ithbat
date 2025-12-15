@@ -26,7 +26,7 @@ export default function RootLayout({
           name="viewport"
         />
       </head>
-      <body className="min-h-screen antialiased">
+      <body className="min-h-screen antialiased" suppressHydrationWarning>
         <ThemeProvider enableSystem attribute="class" defaultTheme="dark">
           <HeroUIProvider>
             <AppThemeProvider>

@@ -17,6 +17,7 @@ const MAX_SESSIONS = 20;
 async function cleanupOldSessions(): Promise<void> {
   try {
     const supabase = createServerClient();
+    if (!supabase) return;
 
     // Get all unique sessions ordered by most recent activity
     const { data: sessions } = await supabase
@@ -64,6 +65,10 @@ export async function logConversation(
 ): Promise<void> {
   try {
     const supabase = createServerClient();
+    if (!supabase) {
+      console.warn("Supabase not configured, skipping conversation logging");
+      return;
+    }
 
     const { error } = await supabase.from("conversation_logs").insert({
       session_id: sessionId,
@@ -92,6 +97,10 @@ export async function getConversationLogs(
   offset: number = 0
 ): Promise<{ logs: ConversationLog[]; total: number }> {
   const supabase = createServerClient();
+  if (!supabase) {
+    console.warn("Supabase not configured");
+    return { logs: [], total: 0 };
+  }
 
   // Get total count
   const { count } = await supabase
@@ -129,6 +138,10 @@ export async function getConversationsBySession(
   sessionId: string
 ): Promise<ConversationLog[]> {
   const supabase = createServerClient();
+  if (!supabase) {
+    console.warn("Supabase not configured");
+    return [];
+  }
 
   const { data, error } = await supabase
     .from("conversation_logs")
