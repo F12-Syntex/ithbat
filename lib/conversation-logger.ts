@@ -1,6 +1,7 @@
 import type { ResearchStep, Source } from "@/types/research";
 
 import { createServerClient } from "./supabase";
+import { getCountryFromIP } from "./geolocation";
 
 export interface ConversationLog {
   id?: string;
@@ -14,12 +15,16 @@ export interface ConversationLog {
   ip_address?: string;
   user_agent?: string;
   device_type?: string;
+  country?: string;
+  country_code?: string;
 }
 
 export interface DeviceInfo {
   ip?: string;
   userAgent?: string;
   deviceType?: string;
+  country?: string;
+  countryCode?: string;
 }
 
 const MAX_SESSIONS = 20;
@@ -106,7 +111,28 @@ export async function logConversation(
     // Add device info if available
     if (deviceInfo?.ip) {
       insertData.ip_address = deviceInfo.ip;
+
+      // Get country info from IP (non-blocking, best effort)
+      try {
+        const geoInfo = await getCountryFromIP(deviceInfo.ip);
+
+        if (geoInfo) {
+          insertData.country = geoInfo.country;
+          insertData.country_code = geoInfo.countryCode;
+        }
+      } catch {
+        // Silently ignore geolocation errors
+      }
     }
+
+    // Add pre-fetched country info if available
+    if (deviceInfo?.country) {
+      insertData.country = deviceInfo.country;
+    }
+    if (deviceInfo?.countryCode) {
+      insertData.country_code = deviceInfo.countryCode;
+    }
+
     if (deviceInfo?.userAgent) {
       insertData.user_agent = deviceInfo.userAgent;
       insertData.device_type = parseDeviceType(deviceInfo.userAgent);
@@ -167,6 +193,8 @@ export async function getConversationLogs(
     ip_address: row.ip_address,
     user_agent: row.user_agent,
     device_type: row.device_type,
+    country: row.country,
+    country_code: row.country_code,
   }));
 
   return { logs, total: count || 0 };
@@ -254,5 +282,7 @@ export async function getConversationsBySession(
     ip_address: row.ip_address,
     user_agent: row.user_agent,
     device_type: row.device_type,
+    country: row.country,
+    country_code: row.country_code,
   }));
 }

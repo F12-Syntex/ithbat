@@ -29,6 +29,7 @@ type ResearchAction =
       previousQuery: string;
       previousResponse: string;
     }
+  | { type: "SET_SESSION_ID"; sessionId: string }
   | { type: "ADD_STEP"; stepType: ResearchStepType; stepTitle?: string }
   | {
       type: "UPDATE_STEP_STATUS";
@@ -56,7 +57,11 @@ interface ResearchContextValue {
   reset: () => void;
 }
 
-const initialState: ResearchState = {
+interface ExtendedResearchState extends ResearchState {
+  sessionId: string | null;
+}
+
+const initialState: ExtendedResearchState = {
   query: "",
   status: "idle",
   steps: [],
@@ -67,12 +72,13 @@ const initialState: ResearchState = {
   depth: "deep",
   conversationHistory: [],
   completedSessions: [],
+  sessionId: null,
 };
 
 function researchReducer(
-  state: ResearchState,
+  state: ExtendedResearchState,
   action: ResearchAction,
-): ResearchState {
+): ExtendedResearchState {
   switch (action.type) {
     case "START_RESEARCH":
       return {
@@ -80,6 +86,13 @@ function researchReducer(
         query: action.query,
         status: "researching",
         depth: action.depth,
+        sessionId: null, // Will be set by session_init event
+      };
+
+    case "SET_SESSION_ID":
+      return {
+        ...state,
+        sessionId: action.sessionId,
       };
 
     case "START_FOLLOWUP":
@@ -100,6 +113,7 @@ function researchReducer(
           { query: action.previousQuery, response: action.previousResponse },
         ],
         completedSessions: [...(state.completedSessions || []), currentSession],
+        sessionId: state.sessionId, // Preserve session ID for follow-ups
       };
 
     case "ADD_STEP":
@@ -238,8 +252,15 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
         abortControllerRef.current.signal,
         undefined,
         includeAISummary,
+        undefined, // No session ID for new research
       )) {
         switch (event.type) {
+          case "session_init":
+            if (event.sessionId) {
+              dispatch({ type: "SET_SESSION_ID", sessionId: event.sessionId });
+            }
+            break;
+
           case "step_start":
             if (event.step) {
               dispatch({
@@ -379,6 +400,9 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
       previousResponse,
     });
 
+    // Get current session ID to pass to follow-up
+    const currentSessionId = (state as ExtendedResearchState).sessionId;
+
     try {
       for await (const event of streamResearch(
         question,
@@ -386,8 +410,16 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
         abortControllerRef.current.signal,
         conversationHistory,
         includeAISummary,
+        currentSessionId || undefined, // Pass existing session ID for follow-ups
       )) {
         switch (event.type) {
+          case "session_init":
+            // For follow-ups, we already have the session ID, but update if server sends a new one
+            if (event.sessionId) {
+              dispatch({ type: "SET_SESSION_ID", sessionId: event.sessionId });
+            }
+            break;
+
           case "step_start":
             if (event.step) {
               dispatch({

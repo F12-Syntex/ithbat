@@ -36,6 +36,7 @@ import { logConversation } from "@/lib/conversation-logger";
 
 interface ResearchStepEvent {
   type:
+    | "session_init"
     | "step_start"
     | "step_content"
     | "step_complete"
@@ -45,6 +46,7 @@ interface ResearchStepEvent {
     | "response_content"
     | "error"
     | "done";
+  sessionId?: string;
   step?: string;
   stepTitle?: string;
   content?: string;
@@ -233,6 +235,9 @@ export async function POST(request: NextRequest) {
       const maxIterations = 5; // Reduced - AI now decides to stop when enough evidence found
 
       try {
+        // Send session ID to client immediately
+        send({ type: "session_init", sessionId });
+
         // Build conversation context for follow-up questions
         let conversationContextForUnderstanding = "";
 

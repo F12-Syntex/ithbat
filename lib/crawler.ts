@@ -135,6 +135,19 @@ const ISLAMIC_SOURCES = {
       links: 'a[href*="alim.org"]',
     },
   },
+  islamweb: {
+    name: "IslamWeb",
+    searchUrl: (q: string) =>
+      `https://www.islamweb.net/en/?page=websearch&srchsett=0&myRange=25&exact=0&extended=0&synonym=0&stxt=${encodeURIComponent(q)}&type=7`,
+    baseUrl: "https://www.islamweb.net",
+    selectors: {
+      results: ".fatwa-item, .search-result, .result-item, article, .content",
+      title: "h1, h2, .fatwa-title, .title",
+      content: ".fatwa-content, .answer, .content-body, article p, p",
+      links:
+        'a[href*="islamweb.net/en/fatwa/"], a[href*="islamweb.net/en/article/"]',
+    },
+  },
 };
 
 // Generic source config for unknown domains
@@ -263,6 +276,11 @@ function isDirectContentLink(url: string): boolean {
   // SeekersGuidance: answer links
   if (url.includes("seekersguidance.org")) {
     return url.includes("/answers/") && url.split("/").length > 5;
+  }
+
+  // IslamWeb: fatwa and article links
+  if (url.includes("islamweb.net")) {
+    return url.includes("/fatwa/") || url.includes("/article/");
   }
 
   return true;
@@ -612,6 +630,14 @@ function isSpecificContentUrl(url: string): boolean {
     return /quran\.com\/\d+\/\d+/.test(url);
   }
 
+  // IslamWeb: specific fatwas and articles
+  if (url.includes("islamweb.net")) {
+    return (
+      (url.includes("/fatwa/") || url.includes("/article/")) &&
+      /\/\d+/.test(url)
+    );
+  }
+
   // Other sites: must have meaningful path
   try {
     const path = new URL(url).pathname;
@@ -685,6 +711,8 @@ function getSourceConfig(url: string): typeof ISLAMIC_SOURCES.sunnah {
     return ISLAMIC_SOURCES.askimam;
   } else if (url.includes("seekersguidance.org")) {
     return ISLAMIC_SOURCES.seekersguidance;
+  } else if (url.includes("islamweb.net")) {
+    return ISLAMIC_SOURCES.islamweb;
   }
 
   // Return generic config with the URL's base

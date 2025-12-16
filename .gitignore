@@ -23,8 +23,10 @@ dist-ssr
 *.sw?
 .next
 
-
 pnpm-lock.yaml
 yarn.lock
 package-lock.json
 bun.lockb
+
+#broken files
+nul

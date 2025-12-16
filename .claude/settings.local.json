@@ -12,7 +12,8 @@
       "Bash(yarn remove:*)",
       "Bash(taskkill:*)",
       "Bash(yarn dev)",
-      "Bash(yarn build)"
+      "Bash(yarn build)",
+      "Bash(find:*)"
     ]
   }
 }

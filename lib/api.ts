@@ -10,6 +10,7 @@ export async function* streamResearch(
   signal?: AbortSignal,
   conversationHistory?: ConversationTurn[],
   includeAISummary?: boolean,
+  sessionId?: string,
 ): AsyncGenerator<ResearchStepEvent> {
   const response = await fetch("/api/research", {
     method: "POST",
@@ -21,6 +22,7 @@ export async function* streamResearch(
       depth,
       conversationHistory,
       includeAISummary,
+      sessionId,
     }),
     signal,
   });

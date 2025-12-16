@@ -60,6 +60,7 @@ export interface CrawledLink {
 
 export interface ResearchStepEvent {
   type:
+    | "session_init"
     | "step_start"
     | "step_content"
     | "step_complete"
@@ -69,6 +70,7 @@ export interface ResearchStepEvent {
     | "response_content"
     | "error"
     | "done";
+  sessionId?: string;
   step?: ResearchStepType;
   stepTitle?: string;
   content?: string;

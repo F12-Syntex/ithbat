@@ -79,6 +79,7 @@ export function ResearchContainer() {
     startResearch: baseStartResearch,
     askFollowUp: baseAskFollowUp,
     requestAIAnalysis,
+    cancelResearch,
     reset,
   } = useResearch();
   const { theme, setTheme, themes } = useTheme();
@@ -435,6 +436,7 @@ export function ResearchContainer() {
               <div className="flex-1">
                 <SearchInput
                   isLoading={isResearching}
+                  onCancel={cancelResearch}
                   onSearch={startResearch}
                 />
               </div>
