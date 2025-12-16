@@ -110,27 +110,64 @@ export function SearchInput({
       {/* Confirmation Dialog */}
       <AnimatePresence>
         {showConfirmDialog && (
-          <motion.div
-            animate={{ opacity: 1 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            exit={{ opacity: 0 }}
-            initial={{ opacity: 0 }}
-          >
+          <>
             {/* Backdrop */}
             <motion.div
               animate={{ opacity: 1 }}
-              className="absolute inset-0 bg-black/50"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
               exit={{ opacity: 0 }}
               initial={{ opacity: 0 }}
               onClick={handleCancelDialog}
             />
 
-            {/* Dialog */}
+            {/* Mobile: Bottom sheet */}
             <motion.div
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              className="relative bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-xl max-w-sm w-full overflow-hidden"
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ y: 0 }}
+              className="sm:hidden fixed inset-x-0 bottom-0 bg-white dark:bg-neutral-900 z-50 rounded-t-2xl shadow-2xl overflow-hidden"
+              exit={{ y: "100%" }}
+              initial={{ y: "100%" }}
+              transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+            >
+              {/* Drag handle */}
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1 bg-neutral-300 dark:bg-neutral-700 rounded-full" />
+              </div>
+
+              <div className="px-5 pt-2 pb-4">
+                <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+                  Start new search?
+                </h3>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                  This will stop the current research and discard any incomplete
+                  results.
+                </p>
+              </div>
+
+              <div className="px-5 pb-8 flex flex-col gap-2">
+                <button
+                  className="w-full py-3.5 text-base font-medium text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors"
+                  type="button"
+                  onClick={handleConfirm}
+                >
+                  Stop & Search
+                </button>
+                <button
+                  className="w-full py-3.5 text-base text-neutral-600 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-xl transition-colors"
+                  type="button"
+                  onClick={handleCancelDialog}
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+
+            {/* Desktop: Centered dialog */}
+            <motion.div
+              animate={{ opacity: 1, scale: 1 }}
+              className="hidden sm:block fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-neutral-900 z-50 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-2xl max-w-sm w-full overflow-hidden"
+              exit={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
             >
               <div className="p-5">
                 <h3 className="text-base font-medium text-neutral-900 dark:text-neutral-100 mb-2">
@@ -160,7 +197,7 @@ export function SearchInput({
                 </button>
               </div>
             </motion.div>
-          </motion.div>
+          </>
         )}
       </AnimatePresence>
     </>
