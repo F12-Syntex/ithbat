@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   BookOpen,
@@ -9,10 +9,42 @@ import {
   MessageSquare,
   ExternalLink,
   Search,
+  Globe,
 } from "lucide-react";
 import { VerifyClaimModal } from "./VerifyClaimModal";
 
 type QuoteType = "hadith" | "quran" | "scholar" | "general";
+
+/**
+ * Build a Google search URL to find the source of a quote
+ */
+function buildGoogleSearchUrl(text: string, type: QuoteType): string {
+  // Extract key phrases for search
+  let searchQuery = text
+    .replace(/["""'']/g, "") // Remove quotes
+    .replace(/\([^)]*\)/g, "") // Remove parenthetical notes
+    .replace(/\[[^\]]*\]/g, "") // Remove bracket references
+    .trim();
+
+  // Take first 100 chars or first sentence for search
+  const firstSentence = searchQuery.split(/[.!?]/)[0];
+  if (firstSentence.length > 20 && firstSentence.length < 150) {
+    searchQuery = firstSentence;
+  } else if (searchQuery.length > 100) {
+    searchQuery = searchQuery.slice(0, 100);
+  }
+
+  // Add type-specific keywords to improve search
+  const typeKeywords: Record<QuoteType, string> = {
+    hadith: "hadith sunnah",
+    quran: "quran verse",
+    scholar: "islamic scholar fatwa",
+    general: "",
+  };
+
+  const fullQuery = `${searchQuery} ${typeKeywords[type]}`.trim();
+  return `https://www.google.com/search?q=${encodeURIComponent(fullQuery)}`;
+}
 
 interface QuoteBlockProps {
   children: React.ReactNode;
@@ -166,6 +198,17 @@ export function QuoteBlock({
         </span>
 
         <div className="flex items-center gap-2">
+          {/* Find Source button - opens Google search */}
+          <a
+            href={buildGoogleSearchUrl(getTextContent(), type)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+          >
+            <Globe className="w-3 h-3" strokeWidth={2} />
+            <span>Find Source</span>
+          </a>
+
           {/* Verify button */}
           {canVerify && (
             <button
