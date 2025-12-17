@@ -18,6 +18,60 @@ interface VerificationResult {
 }
 
 /**
+ * Extract a meaningful title from URL path
+ */
+function extractTitleFromUrl(url: string, source: string): string {
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname;
+
+    // Sunnah.com: /bukhari:1 or /bukhari/1
+    if (source === "sunnah.com") {
+      const hadithMatch = path.match(/\/(bukhari|muslim|tirmidhi|abudawud|nasai|ibnmajah|malik|ahmad|nawawi40|riyadussalihin)[:/](\d+)/i);
+      if (hadithMatch) {
+        const collection = hadithMatch[1].charAt(0).toUpperCase() + hadithMatch[1].slice(1);
+        return `${collection} Hadith ${hadithMatch[2]}`;
+      }
+      // Try alternate format /collection/book/hadith
+      const altMatch = path.match(/\/([a-z]+)\/(\d+)\/(\d+)/i);
+      if (altMatch) {
+        return `${altMatch[1].charAt(0).toUpperCase() + altMatch[1].slice(1)} ${altMatch[2]}:${altMatch[3]}`;
+      }
+    }
+
+    // Quran.com: /2/255 or /2:255
+    if (source === "quran.com") {
+      const quranMatch = path.match(/\/(\d+)[:/](\d+)/);
+      if (quranMatch) {
+        return `Quran ${quranMatch[1]}:${quranMatch[2]}`;
+      }
+      const surahMatch = path.match(/\/(\d+)/);
+      if (surahMatch) {
+        return `Surah ${surahMatch[1]}`;
+      }
+    }
+
+    // IslamQA: /en/answers/12345
+    if (source === "islamqa.info") {
+      const answerMatch = path.match(/\/answers\/(\d+)/);
+      if (answerMatch) {
+        return `IslamQA Answer #${answerMatch[1]}`;
+      }
+    }
+
+    // Fallback: clean up the path
+    const cleanPath = path.replace(/^\//, "").replace(/\//g, " > ").replace(/-/g, " ");
+    if (cleanPath && cleanPath.length > 2) {
+      return cleanPath.slice(0, 60);
+    }
+
+    return source;
+  } catch {
+    return source;
+  }
+}
+
+/**
  * Build optimized search query based on claim type
  */
 function buildSearchQuery(query: string, claimType: string): string {
@@ -58,7 +112,8 @@ function parsePerplexityResponse(
 
   while ((match = linkPattern.exec(response)) !== null) {
     const title = match[1];
-    const url = match[2];
+    // Clean up URL: remove trailing citation markers like [1], [2]
+    const url = match[2].replace(/\[\d+\]$/, "");
 
     if (seenUrls.has(url)) continue;
     seenUrls.add(url);
@@ -100,7 +155,8 @@ function parsePerplexityResponse(
   // Also look for plain URLs
   const plainUrlPattern = /(?<!\()https?:\/\/[^\s\)]+/g;
   while ((match = plainUrlPattern.exec(response)) !== null) {
-    const url = match[0].replace(/[.,;!?]+$/, "");
+    // Clean up URL: remove trailing punctuation and citation markers like [1], [2]
+    const url = match[0].replace(/[.,;!?]+$/, "").replace(/\[\d+\]$/, "");
     if (seenUrls.has(url)) continue;
     seenUrls.add(url);
 
@@ -119,7 +175,7 @@ function parsePerplexityResponse(
 
     results.push({
       url,
-      title: source,
+      title: extractTitleFromUrl(url, source),
       content: "Source found by search",
       source,
       relevance: isTrusted ? "high" : "low",
