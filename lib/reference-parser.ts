@@ -11,15 +11,15 @@
 const SURAH_MAP: Record<string, { number: number; slug: string }> = {
   "al-fatiha": { number: 1, slug: "al-fatiha" },
   "al-fatihah": { number: 1, slug: "al-fatiha" },
-  "fatiha": { number: 1, slug: "al-fatiha" },
+  fatiha: { number: 1, slug: "al-fatiha" },
   "al-baqara": { number: 2, slug: "al-baqarah" },
   "al-baqarah": { number: 2, slug: "al-baqarah" },
-  "baqara": { number: 2, slug: "al-baqarah" },
+  baqara: { number: 2, slug: "al-baqarah" },
   "al-imran": { number: 3, slug: "ali-imran" },
   "ali-imran": { number: 3, slug: "ali-imran" },
   "al-nisa": { number: 4, slug: "an-nisa" },
   "an-nisa": { number: 4, slug: "an-nisa" },
-  "nisa": { number: 4, slug: "an-nisa" },
+  nisa: { number: 4, slug: "an-nisa" },
   "al-maida": { number: 5, slug: "al-maidah" },
   "al-maidah": { number: 5, slug: "al-maidah" },
   "al-anam": { number: 6, slug: "al-anam" },
@@ -27,21 +27,21 @@ const SURAH_MAP: Record<string, { number: number; slug: string }> = {
   "al-anfal": { number: 8, slug: "al-anfal" },
   "at-tawba": { number: 9, slug: "at-tawbah" },
   "at-tawbah": { number: 9, slug: "at-tawbah" },
-  "tawba": { number: 9, slug: "at-tawbah" },
-  "yunus": { number: 10, slug: "yunus" },
-  "hud": { number: 11, slug: "hud" },
-  "yusuf": { number: 12, slug: "yusuf" },
+  tawba: { number: 9, slug: "at-tawbah" },
+  yunus: { number: 10, slug: "yunus" },
+  hud: { number: 11, slug: "hud" },
+  yusuf: { number: 12, slug: "yusuf" },
   "ar-rad": { number: 13, slug: "ar-rad" },
-  "ibrahim": { number: 14, slug: "ibrahim" },
+  ibrahim: { number: 14, slug: "ibrahim" },
   "al-hijr": { number: 15, slug: "al-hijr" },
   "an-nahl": { number: 16, slug: "an-nahl" },
   "al-isra": { number: 17, slug: "al-isra" },
-  "isra": { number: 17, slug: "al-isra" },
+  isra: { number: 17, slug: "al-isra" },
   "al-kahf": { number: 18, slug: "al-kahf" },
-  "kahf": { number: 18, slug: "al-kahf" },
-  "maryam": { number: 19, slug: "maryam" },
+  kahf: { number: 18, slug: "al-kahf" },
+  maryam: { number: 19, slug: "maryam" },
   "ta-ha": { number: 20, slug: "ta-ha" },
-  "taha": { number: 20, slug: "ta-ha" },
+  taha: { number: 20, slug: "ta-ha" },
   "al-anbiya": { number: 21, slug: "al-anbiya" },
   "al-hajj": { number: 22, slug: "al-hajj" },
   "al-muminun": { number: 23, slug: "al-muminun" },
@@ -52,28 +52,28 @@ const SURAH_MAP: Record<string, { number: number; slug: string }> = {
   "al-qasas": { number: 28, slug: "al-qasas" },
   "al-ankabut": { number: 29, slug: "al-ankabut" },
   "ar-rum": { number: 30, slug: "ar-rum" },
-  "luqman": { number: 31, slug: "luqman" },
+  luqman: { number: 31, slug: "luqman" },
   "as-sajda": { number: 32, slug: "as-sajdah" },
   "as-sajdah": { number: 32, slug: "as-sajdah" },
   "al-ahzab": { number: 33, slug: "al-ahzab" },
-  "saba": { number: 34, slug: "saba" },
-  "fatir": { number: 35, slug: "fatir" },
+  saba: { number: 34, slug: "saba" },
+  fatir: { number: 35, slug: "fatir" },
   "ya-sin": { number: 36, slug: "ya-sin" },
-  "yasin": { number: 36, slug: "ya-sin" },
+  yasin: { number: 36, slug: "ya-sin" },
   "as-saffat": { number: 37, slug: "as-saffat" },
-  "sad": { number: 38, slug: "sad" },
+  sad: { number: 38, slug: "sad" },
   "az-zumar": { number: 39, slug: "az-zumar" },
-  "ghafir": { number: 40, slug: "ghafir" },
-  "fussilat": { number: 41, slug: "fussilat" },
+  ghafir: { number: 40, slug: "ghafir" },
+  fussilat: { number: 41, slug: "fussilat" },
   "ash-shura": { number: 42, slug: "ash-shuraa" },
   "az-zukhruf": { number: 43, slug: "az-zukhruf" },
   "ad-dukhan": { number: 44, slug: "ad-dukhan" },
   "al-jathiya": { number: 45, slug: "al-jathiyah" },
   "al-ahqaf": { number: 46, slug: "al-ahqaf" },
-  "muhammad": { number: 47, slug: "muhammad" },
+  muhammad: { number: 47, slug: "muhammad" },
   "al-fath": { number: 48, slug: "al-fath" },
   "al-hujurat": { number: 49, slug: "al-hujurat" },
-  "qaf": { number: 50, slug: "qaf" },
+  qaf: { number: 50, slug: "qaf" },
   "adh-dhariyat": { number: 51, slug: "adh-dhariyat" },
   "at-tur": { number: 52, slug: "at-tur" },
   "an-najm": { number: 53, slug: "an-najm" },
@@ -97,7 +97,7 @@ const SURAH_MAP: Record<string, { number: number; slug: string }> = {
   "al-haaqqa": { number: 69, slug: "al-haqqah" },
   "al-haqqah": { number: 69, slug: "al-haqqah" },
   "al-maarij": { number: 70, slug: "al-maarij" },
-  "nuh": { number: 71, slug: "nuh" },
+  nuh: { number: 71, slug: "nuh" },
   "al-jinn": { number: 72, slug: "al-jinn" },
   "al-muzzammil": { number: 73, slug: "al-muzzammil" },
   "al-muddaththir": { number: 74, slug: "al-muddaththir" },
@@ -107,7 +107,7 @@ const SURAH_MAP: Record<string, { number: number; slug: string }> = {
   "al-mursalat": { number: 77, slug: "al-mursalat" },
   "an-naba": { number: 78, slug: "an-naba" },
   "an-naziat": { number: 79, slug: "an-naziat" },
-  "abasa": { number: 80, slug: "abasa" },
+  abasa: { number: 80, slug: "abasa" },
   "at-takwir": { number: 81, slug: "at-takwir" },
   "al-infitar": { number: 82, slug: "al-infitar" },
   "al-mutaffifin": { number: 83, slug: "al-mutaffifin" },
@@ -140,7 +140,7 @@ const SURAH_MAP: Record<string, { number: number; slug: string }> = {
   "al-humaza": { number: 104, slug: "al-humazah" },
   "al-humazah": { number: 104, slug: "al-humazah" },
   "al-fil": { number: 105, slug: "al-fil" },
-  "quraysh": { number: 106, slug: "quraysh" },
+  quraysh: { number: 106, slug: "quraysh" },
   "al-maun": { number: 107, slug: "al-maun" },
   "al-kawthar": { number: 108, slug: "al-kawthar" },
   "al-kafirun": { number: 109, slug: "al-kafirun" },
@@ -153,26 +153,26 @@ const SURAH_MAP: Record<string, { number: number; slug: string }> = {
 
 // Hadith collection mappings
 const HADITH_COLLECTIONS: Record<string, string> = {
-  "bukhari": "bukhari",
+  bukhari: "bukhari",
   "sahih bukhari": "bukhari",
   "sahih al-bukhari": "bukhari",
-  "muslim": "muslim",
+  muslim: "muslim",
   "sahih muslim": "muslim",
-  "tirmidhi": "tirmidhi",
+  tirmidhi: "tirmidhi",
   "jami at-tirmidhi": "tirmidhi",
   "abu dawud": "abudawud",
   "abu dawood": "abudawud",
   "sunan abu dawud": "abudawud",
-  "nasai": "nasai",
+  nasai: "nasai",
   "sunan an-nasai": "nasai",
   "ibn majah": "ibnmajah",
   "sunan ibn majah": "ibnmajah",
-  "malik": "malik",
+  malik: "malik",
   "muwatta malik": "malik",
-  "ahmad": "ahmad",
+  ahmad: "ahmad",
   "musnad ahmad": "ahmad",
-  "darimi": "darimi",
-  "nawawi": "nawawi40",
+  darimi: "darimi",
+  nawawi: "nawawi40",
   "40 nawawi": "nawawi40",
   "nawawi 40": "nawawi40",
   "riyadh us saliheen": "riyadussalihin",
@@ -199,6 +199,7 @@ function parseQuranReference(text: string): ParsedReference | null {
   const numberedPattern = /quran\s+(\d+):(\d+)(?:-(\d+))?/gi;
 
   let match = bracketPattern.exec(text);
+
   if (match) {
     const surahName = match[1].toLowerCase();
     const chapter = match[2];
@@ -206,8 +207,10 @@ function parseQuranReference(text: string): ParsedReference | null {
     const endVerse = match[4];
 
     const surahInfo = SURAH_MAP[surahName];
+
     if (surahInfo) {
       const versePath = endVerse ? `${startVerse}-${endVerse}` : startVerse;
+
       return {
         original: match[0],
         url: `https://quran.com/${surahInfo.slug}/${versePath}`,
@@ -216,6 +219,7 @@ function parseQuranReference(text: string): ParsedReference | null {
     }
     // If surah name not found, use chapter number
     const versePath = endVerse ? `${startVerse}-${endVerse}` : startVerse;
+
     return {
       original: match[0],
       url: `https://quran.com/${chapter}/${versePath}`,
@@ -229,6 +233,7 @@ function parseQuranReference(text: string): ParsedReference | null {
     const startVerse = match[2];
     const endVerse = match[3];
     const versePath = endVerse ? `${startVerse}-${endVerse}` : startVerse;
+
     return {
       original: match[0],
       url: `https://quran.com/${chapter}/${versePath}`,
@@ -242,6 +247,7 @@ function parseQuranReference(text: string): ParsedReference | null {
     const startVerse = match[2];
     const endVerse = match[3];
     const versePath = endVerse ? `${startVerse}-${endVerse}` : startVerse;
+
     return {
       original: match[0],
       url: `https://quran.com/${chapter}/${versePath}`,
@@ -258,14 +264,17 @@ function parseQuranReference(text: string): ParsedReference | null {
  */
 function parseHadithReference(text: string): ParsedReference | null {
   // Pattern: Collection name followed by number
-  const pattern = /(sahih\s+al-bukhari|sahih\s+bukhari|sahih\s+muslim|bukhari|muslim|tirmidhi|jami\s+at-tirmidhi|abu\s+dawud|abu\s+dawood|sunan\s+abu\s+dawud|nasai|sunan\s+an-nasai|ibn\s+majah|sunan\s+ibn\s+majah|malik|muwatta\s+malik|ahmad|musnad\s+ahmad|darimi|nawawi|40\s+nawawi|nawawi\s+40|riyadh\s+us\s+saliheen|riyadh\s+al-salihin|riyad\s+as-salihin)\s+(\d+)/gi;
+  const pattern =
+    /(sahih\s+al-bukhari|sahih\s+bukhari|sahih\s+muslim|bukhari|muslim|tirmidhi|jami\s+at-tirmidhi|abu\s+dawud|abu\s+dawood|sunan\s+abu\s+dawud|nasai|sunan\s+an-nasai|ibn\s+majah|sunan\s+ibn\s+majah|malik|muwatta\s+malik|ahmad|musnad\s+ahmad|darimi|nawawi|40\s+nawawi|nawawi\s+40|riyadh\s+us\s+saliheen|riyadh\s+al-salihin|riyad\s+as-salihin)\s+(\d+)/gi;
 
   const match = pattern.exec(text);
+
   if (match) {
     const collectionName = match[1].toLowerCase();
     const hadithNumber = match[2];
 
     const collection = HADITH_COLLECTIONS[collectionName];
+
     if (collection) {
       return {
         original: match[0],
@@ -300,6 +309,7 @@ export function findAllReferences(text: string): ParsedReference[] {
     const versePath = endVerse ? `${startVerse}-${endVerse}` : startVerse;
 
     let url: string;
+
     if (surahInfo) {
       url = `https://quran.com/${surahInfo.slug}/${versePath}`;
     } else {
@@ -318,6 +328,7 @@ export function findAllReferences(text: string): ParsedReference[] {
 
   // Pattern: Quran number:verse
   const quranPattern = /quran\s+(\d+):(\d+)(?:-(\d+))?/gi;
+
   while ((match = quranPattern.exec(text)) !== null) {
     const chapter = match[1];
     const startVerse = match[2];
@@ -336,7 +347,8 @@ export function findAllReferences(text: string): ParsedReference[] {
   }
 
   // Find hadith references
-  const hadithPattern = /(sahih\s+al-bukhari|sahih\s+bukhari|sahih\s+muslim|bukhari|muslim|tirmidhi|jami\s+at-tirmidhi|abu\s+dawud|abu\s+dawood|sunan\s+abu\s+dawud|nasai|sunan\s+an-nasai|ibn\s+majah|sunan\s+ibn\s+majah|malik|muwatta\s+malik|ahmad|musnad\s+ahmad|darimi|nawawi|40\s+nawawi|nawawi\s+40|riyadh\s+us\s+saliheen|riyadh\s+al-salihin|riyad\s+as-salihin)\s+(\d+)/gi;
+  const hadithPattern =
+    /(sahih\s+al-bukhari|sahih\s+bukhari|sahih\s+muslim|bukhari|muslim|tirmidhi|jami\s+at-tirmidhi|abu\s+dawud|abu\s+dawood|sunan\s+abu\s+dawud|nasai|sunan\s+an-nasai|ibn\s+majah|sunan\s+ibn\s+majah|malik|muwatta\s+malik|ahmad|musnad\s+ahmad|darimi|nawawi|40\s+nawawi|nawawi\s+40|riyadh\s+us\s+saliheen|riyadh\s+al-salihin|riyad\s+as-salihin)\s+(\d+)/gi;
 
   while ((match = hadithPattern.exec(text)) !== null) {
     const collectionName = match[1].toLowerCase();
@@ -365,9 +377,9 @@ export function convertReferencesToLinks(text: string): string {
 
   // First, fix any broken/nested links like [[text](url)](url) or [text](url)(url)
   // Pattern: [[...](...)](...) -> [...](...)
-  result = result.replace(/\[\[([^\]]+)\]\(([^)]+)\)\]\([^)]+\)/g, '[$1]($2)');
+  result = result.replace(/\[\[([^\]]+)\]\(([^)]+)\)\]\([^)]+\)/g, "[$1]($2)");
   // Pattern: [...](...)(url) -> [...](...)
-  result = result.replace(/(\[[^\]]+\]\([^)]+\))\([^)]+\)/g, '$1');
+  result = result.replace(/(\[[^\]]+\]\([^)]+\))\([^)]+\)/g, "$1");
 
   // Find references that are NOT already inside markdown links
   const references = findAllReferences(result);
@@ -378,8 +390,11 @@ export function convertReferencesToLinks(text: string): string {
   for (const ref of references) {
     // Check if this reference is already a markdown link
     // Pattern: [reference](url) - if this pattern exists, skip it
-    const escapedOriginal = ref.original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const alreadyLinkedPattern = new RegExp(`\\[${escapedOriginal}\\]\\([^)]+\\)`, 'gi');
+    const escapedOriginal = ref.original.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const alreadyLinkedPattern = new RegExp(
+      `\\[${escapedOriginal}\\]\\([^)]+\\)`,
+      "gi",
+    );
 
     if (alreadyLinkedPattern.test(result)) {
       // This reference is already linked, skip it
@@ -391,7 +406,11 @@ export function convertReferencesToLinks(text: string): string {
 
     // Replace only standalone occurrences (not inside existing links)
     // Negative lookbehind for [ and negative lookahead for ]( ensures we don't match link text
-    const standalonePattern = new RegExp(`(?<!\\[)${escapedOriginal}(?!\\]\\()`, 'gi');
+    const standalonePattern = new RegExp(
+      `(?<!\\[)${escapedOriginal}(?!\\]\\()`,
+      "gi",
+    );
+
     result = result.replace(standalonePattern, link);
   }
 
@@ -401,17 +420,27 @@ export function convertReferencesToLinks(text: string): string {
 /**
  * Build a direct URL for a Quran verse
  */
-export function buildQuranUrl(surah: number | string, verse: number | string, endVerse?: number | string): string {
+export function buildQuranUrl(
+  surah: number | string,
+  verse: number | string,
+  endVerse?: number | string,
+): string {
   if (endVerse) {
     return `https://quran.com/${surah}/${verse}-${endVerse}`;
   }
+
   return `https://quran.com/${surah}/${verse}`;
 }
 
 /**
  * Build a direct URL for a hadith
  */
-export function buildHadithUrl(collection: string, number: number | string): string {
-  const normalizedCollection = HADITH_COLLECTIONS[collection.toLowerCase()] || collection.toLowerCase();
+export function buildHadithUrl(
+  collection: string,
+  number: number | string,
+): string {
+  const normalizedCollection =
+    HADITH_COLLECTIONS[collection.toLowerCase()] || collection.toLowerCase();
+
   return `https://sunnah.com/${normalizedCollection}:${number}`;
 }

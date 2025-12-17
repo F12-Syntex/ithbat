@@ -138,7 +138,11 @@ Return a JSON object with this EXACT structure:
 1. **HADITH**: Extract EVERY hadith mentioned, even if similar to others
    - Include the full text, not summaries
    - Identify the grade (sahih, hasan, daif) if mentioned
-   - Include collection and number (e.g., "Bukhari 1234")
+   - **CRITICAL - HADITH NUMBER**: Look VERY carefully for the actual number:
+     * Look for patterns like "Bukhari 1234", "Muslim:1468", "Hadith 567"
+     * Check the page URL for numbers like "/bukhari:1234" or "/muslim/1468"
+     * Look for reference numbers in the text like "(1234)" or "No. 567"
+     * If you find a number, use it. If NOT found, set number to null (don't guess!)
 
 2. **QURAN VERSES**: Extract ALL Quran verses referenced
    - Include surah number and ayah number
@@ -153,6 +157,19 @@ Return a JSON object with this EXACT structure:
 4. **FATWAS**: Extract fatwa rulings
    - Include the ruling (halal/haram/makruh/etc)
    - Include the explanation and evidence cited
+
+## HADITH NUMBER EXTRACTION - CRITICAL:
+
+**Where to find hadith numbers:**
+- In the text: "Sahih al-Bukhari 1894", "Muslim 1151", "(Hadith 234)"
+- In the URL: sunnah.com/bukhari:5063 → number is 5063
+- In references: "[Bukhari, Book 11, No. 578]" → number is 578
+- Grade markers often have numbers: "Sahih (Al-Bukhari) 1234"
+
+**If number is NOT found:**
+- Set "number": null
+- Do NOT make up a number or guess
+- A wrong number is worse than no number
 
 ## IMPORTANT:
 - Extract ALL evidence, not just 1-2 examples
@@ -170,15 +187,14 @@ export async function extractEvidenceFromPage(
   url: string,
   content: string,
   query: string,
-  onProgress?: (message: string) => void
+  onProgress?: (message: string) => void,
 ): Promise<Partial<ExtractedEvidence>> {
   const client = getOpenRouterClient();
 
   // Limit content length to avoid token limits
   const truncatedContent = content.slice(0, 15000);
 
-  const prompt = EXTRACTION_PROMPT
-    .replace("{url}", url)
+  const prompt = EXTRACTION_PROMPT.replace("{url}", url)
     .replace("{content}", truncatedContent)
     .replace("{query}", query);
 
@@ -189,19 +205,22 @@ export async function extractEvidenceFromPage(
       [
         {
           role: "system",
-          content: "You are an Islamic evidence extractor. Return ONLY valid JSON.",
+          content:
+            "You are an Islamic evidence extractor. Return ONLY valid JSON.",
         },
         { role: "user", content: prompt },
       ],
-      "QUICK"
+      "QUICK",
     )) {
       response += chunk;
     }
 
     // Parse the JSON response
     const jsonMatch = response.match(/\{[\s\S]*\}/);
+
     if (!jsonMatch) {
       onProgress?.(`⚠ Could not parse evidence from ${url}`);
+
       return { hadith: [], quranVerses: [], scholarlyOpinions: [], fatwas: [] };
     }
 
@@ -222,13 +241,15 @@ export async function extractEvidenceFromPage(
         url: buildQuranUrl(v.surah, v.ayahStart, v.ayahEnd),
         sourceUrl: url,
       })),
-      scholarlyOpinions: (extracted.scholarlyOpinions || []).map((o: any, i: number) => ({
-        ...o,
-        id: `scholar-${hashString(o.quote || "")}-${i}`,
-        source: extractSourceName(url),
-        url: url,
-        sourceUrl: url,
-      })),
+      scholarlyOpinions: (extracted.scholarlyOpinions || []).map(
+        (o: any, i: number) => ({
+          ...o,
+          id: `scholar-${hashString(o.quote || "")}-${i}`,
+          source: extractSourceName(url),
+          url: url,
+          sourceUrl: url,
+        }),
+      ),
       fatwas: (extracted.fatwas || []).map((f: any, i: number) => ({
         ...f,
         id: `fatwa-${hashString(f.title || "")}-${i}`,
@@ -247,13 +268,14 @@ export async function extractEvidenceFromPage(
 
     if (totalEvidence > 0) {
       onProgress?.(
-        `✓ Extracted ${result.hadith?.length || 0} hadith, ${result.quranVerses?.length || 0} verses, ${result.scholarlyOpinions?.length || 0} opinions`
+        `✓ Extracted ${result.hadith?.length || 0} hadith, ${result.quranVerses?.length || 0} verses, ${result.scholarlyOpinions?.length || 0} opinions`,
       );
     }
 
     return result;
   } catch (error) {
     onProgress?.(`⚠ Extraction error for ${url}: ${error}`);
+
     return { hadith: [], quranVerses: [], scholarlyOpinions: [], fatwas: [] };
   }
 }
@@ -333,7 +355,8 @@ export class EvidenceAccumulator {
   hasMinimumEvidence(): boolean {
     return (
       this.evidence.hadith.length >= 3 &&
-      (this.evidence.scholarlyOpinions.length >= 1 || this.evidence.fatwas.length >= 1)
+      (this.evidence.scholarlyOpinions.length >= 1 ||
+        this.evidence.fatwas.length >= 1)
     );
   }
 
@@ -342,7 +365,7 @@ export class EvidenceAccumulator {
    */
   getAuthenticHadith(): HadithEvidence[] {
     return this.evidence.hadith.filter(
-      (h) => h.grade === "sahih" || h.grade === "hasan"
+      (h) => h.grade === "sahih" || h.grade === "hasan",
     );
   }
 
@@ -356,12 +379,35 @@ export class EvidenceAccumulator {
     if (this.evidence.hadith.length > 0) {
       output += "## HADITH EVIDENCE\n\n";
       for (const h of this.evidence.hadith) {
-        output += `### ${h.collection} ${h.number}\n`;
+        // Check if we have a valid number
+        const hasValidNumber =
+          h.number &&
+          h.number !== "null" &&
+          h.number !== "undefined" &&
+          h.number.trim() !== "" &&
+          /\d/.test(h.number);
+
+        const hadithRef = hasValidNumber
+          ? `${h.collection} ${h.number}`
+          : h.collection;
+
+        output += `### ${hadithRef}\n`;
         output += `**Grade:** ${h.grade}\n`;
         if (h.narrator) output += `**Narrator:** ${h.narrator}\n`;
         if (h.arabicText) output += `**Arabic:** ${h.arabicText}\n`;
         output += `**Text:** ${h.text}\n`;
-        output += `**URL:** ${h.url}\n\n`;
+
+        // URL handling - CRITICAL: Only include if we have a verified number
+        if (hasValidNumber && h.url && h.url.includes(":")) {
+          // URL has format like sunnah.com/bukhari:1234
+          output += `**URL:** ${h.url}\n`;
+          output += `**HAS_VERIFIED_LINK:** YES\n`;
+        } else {
+          // NO verified number - explicitly tell AI not to create a link
+          output += `**Source:** ${h.collection}\n`;
+          output += `**HAS_VERIFIED_LINK:** NO - Do NOT create a sunnah.com link for this hadith. Just cite the collection name.\n`;
+        }
+        output += "\n";
       }
     }
 
@@ -372,10 +418,12 @@ export class EvidenceAccumulator {
         const ref = v.ayahEnd
           ? `${v.surah}:${v.ayahStart}-${v.ayahEnd}`
           : `${v.surah}:${v.ayahStart}`;
+
         output += `### Quran ${ref}${v.surahName ? ` (${v.surahName})` : ""}\n`;
         if (v.arabicText) output += `**Arabic:** ${v.arabicText}\n`;
         output += `**Translation:** ${v.translation}\n`;
-        if (v.translationSource) output += `**Source:** ${v.translationSource}\n`;
+        if (v.translationSource)
+          output += `**Source:** ${v.translationSource}\n`;
         output += `**URL:** ${v.url}\n\n`;
       }
     }
@@ -417,55 +465,90 @@ export class EvidenceAccumulator {
 function normalizeGrade(grade: string | undefined): HadithEvidence["grade"] {
   if (!grade) return "unknown";
   const lower = grade.toLowerCase();
+
   if (lower.includes("sahih") || lower === "authentic") return "sahih";
   if (lower.includes("hasan") || lower === "good") return "hasan";
   if (lower.includes("daif") || lower.includes("weak")) return "daif";
   if (lower.includes("mawdu") || lower.includes("fabricated")) return "mawdu";
+
   return "unknown";
 }
 
-function buildHadithUrl(collection: string | undefined, number: string | undefined): string {
-  if (!collection || !number) return "";
+function buildHadithUrl(
+  collection: string | undefined,
+  number: string | undefined,
+): string {
+  // Return empty if no collection
+  if (!collection) return "";
+
+  // Check if number is actually valid (not null, undefined, empty, or the string "null")
+  const hasValidNumber =
+    number &&
+    number !== "null" &&
+    number !== "undefined" &&
+    number.trim() !== "" &&
+    /\d/.test(number); // Must contain at least one digit
 
   const collectionMap: Record<string, string> = {
     "sahih bukhari": "bukhari",
-    "bukhari": "bukhari",
+    bukhari: "bukhari",
     "sahih muslim": "muslim",
-    "muslim": "muslim",
-    "tirmidhi": "tirmidhi",
+    muslim: "muslim",
+    tirmidhi: "tirmidhi",
     "jami at-tirmidhi": "tirmidhi",
     "abu dawud": "abudawud",
     "sunan abu dawud": "abudawud",
-    "nasai": "nasai",
+    nasai: "nasai",
     "sunan an-nasai": "nasai",
     "ibn majah": "ibnmajah",
     "sunan ibn majah": "ibnmajah",
-    "malik": "malik",
+    malik: "malik",
     "muwatta malik": "malik",
-    "ahmad": "ahmad",
+    ahmad: "ahmad",
     "musnad ahmad": "ahmad",
-    "nawawi": "nawawi40",
+    nawawi: "nawawi40",
     "riyadh al-salihin": "riyadussalihin",
     "riyadh us saliheen": "riyadussalihin",
+    darimi: "darimi",
+    baihaqi: "mishkat", // Baihaqi often in Mishkat
+    mishkat: "mishkat",
   };
 
-  const slug = collectionMap[collection.toLowerCase()] || collection.toLowerCase().replace(/\s+/g, "");
-  return `https://sunnah.com/${slug}:${number}`;
+  const slug =
+    collectionMap[collection.toLowerCase()] ||
+    collection.toLowerCase().replace(/\s+/g, "");
+
+  // If no valid number, return EMPTY - do NOT create a link to wrong hadith
+  if (!hasValidNumber) {
+    return ""; // No link is better than wrong link
+  }
+
+  // Extract just the numeric part if there's extra text
+  const numericPart = number.match(/\d+/)?.[0] || number;
+
+  return `https://sunnah.com/${slug}:${numericPart}`;
 }
 
-function buildQuranUrl(surah: number, ayahStart: number, ayahEnd?: number): string {
+function buildQuranUrl(
+  surah: number,
+  ayahStart: number,
+  ayahEnd?: number,
+): string {
   if (ayahEnd) {
     return `https://quran.com/${surah}/${ayahStart}-${ayahEnd}`;
   }
+
   return `https://quran.com/${surah}/${ayahStart}`;
 }
 
 function extractSourceName(url: string): string {
   try {
     const hostname = new URL(url).hostname.replace("www.", "");
+
     if (hostname.includes("islamqa")) return "IslamQA";
     if (hostname.includes("sunnah")) return "Sunnah.com";
     if (hostname.includes("quran")) return "Quran.com";
+
     return hostname;
   } catch {
     return "Unknown";
@@ -474,15 +557,19 @@ function extractSourceName(url: string): string {
 
 function extractQuestionNumber(url: string): string | undefined {
   const match = url.match(/answers\/(\d+)/);
+
   return match ? match[1] : undefined;
 }
 
 function hashString(str: string): string {
   let hash = 0;
+
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
+
     hash = (hash << 5) - hash + char;
     hash = hash & hash;
   }
+
   return Math.abs(hash).toString(36);
 }

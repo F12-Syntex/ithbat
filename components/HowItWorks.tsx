@@ -11,6 +11,7 @@ import {
   ChevronDown,
   type LucideIcon,
 } from "lucide-react";
+
 import { getTrustedSitesForUI } from "@/lib/trusted-sites";
 
 const steps: { icon: LucideIcon; title: string; description: string }[] = [

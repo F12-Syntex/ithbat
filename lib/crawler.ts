@@ -1,5 +1,7 @@
 // Local web crawler for Islamic sources
 // IMPORTANT: Only searches sites defined in lib/traverser/sites/*.json
+import type { SiteTraversal, RenderingConfig } from "./traverser/types";
+
 import * as cheerio from "cheerio";
 import puppeteer, { type Browser, type Page } from "puppeteer-core";
 
@@ -16,7 +18,6 @@ import {
   isTrustedSource,
   getSearchUrl,
 } from "./traverser";
-import type { SiteTraversal, RenderingConfig } from "./traverser/types";
 
 export interface CrawledPage {
   url: string;
@@ -142,8 +143,8 @@ async function crawlWithPuppeteer(
 
   // Get wait times from config or use defaults
   const waitTime = isSearchPage
-    ? renderingConfig?.searchWaitTime ?? renderingConfig?.waitTime ?? 3000
-    : renderingConfig?.waitTime ?? 2000;
+    ? (renderingConfig?.searchWaitTime ?? renderingConfig?.waitTime ?? 3000)
+    : (renderingConfig?.waitTime ?? 2000);
   const waitForSelector = renderingConfig?.waitForSelector;
 
   try {
@@ -169,7 +170,9 @@ async function crawlWithPuppeteer(
         await page.waitForSelector(waitForSelector, { timeout: waitTime });
       } catch {
         // Selector not found, continue with time-based wait
-        console.log(`[Puppeteer] Selector ${waitForSelector} not found, using time-based wait`);
+        console.log(
+          `[Puppeteer] Selector ${waitForSelector} not found, using time-based wait`,
+        );
       }
     }
 
@@ -220,6 +223,7 @@ async function smartCrawl(
   // For JS-heavy sites, go straight to Puppeteer
   if (requiresJS) {
     console.log(`[Puppeteer] ${config?.domain} requires JavaScript rendering`);
+
     return await crawlWithPuppeteer(url, config?.rendering, isSearchPage);
   }
 
@@ -244,7 +248,11 @@ async function smartCrawl(
       console.log(
         `[Puppeteer fallback] ${url} - fetch got only ${bodyText.length} chars`,
       );
-      const puppeteerResult = await crawlWithPuppeteer(url, config?.rendering, isSearchPage);
+      const puppeteerResult = await crawlWithPuppeteer(
+        url,
+        config?.rendering,
+        isSearchPage,
+      );
 
       if (puppeteerResult && puppeteerResult.html.length > html.length) {
         return puppeteerResult;
@@ -464,6 +472,7 @@ async function crawlPage(
   // Only crawl trusted sites with traverser configs
   if (!config) {
     console.warn(`[Crawler] Skipping untrusted domain: ${domain}`);
+
     return null;
   }
 
@@ -520,6 +529,7 @@ export async function* crawlIslamicSources(
   if (siteConfigs.length === 0) {
     console.warn("[Crawler] No site configs found in lib/traverser/sites/");
     yield { type: "complete" };
+
     return {
       pages: [],
       visitedUrls: [],
@@ -531,6 +541,7 @@ export async function* crawlIslamicSources(
   // Add search pages from all trusted sources to queue
   for (const config of siteConfigs) {
     const searchUrl = getSearchUrl(query, config);
+
     queue.push({ url: searchUrl, depth: 0, domain: config.domain });
   }
 
@@ -807,6 +818,7 @@ export async function quickSearch(
 
   for (const config of siteConfigs) {
     const searchUrl = getSearchUrl(query, config);
+
     visitedUrls.push(searchUrl);
 
     const page = await crawlPage(searchUrl, 0);
@@ -859,6 +871,7 @@ export async function crawlUrl(
       url,
       message: `Skipping untrusted domain: ${domain}`,
     });
+
     return null;
   }
 
@@ -1106,6 +1119,7 @@ export async function initialSearch(
 
   if (siteConfigs.length === 0) {
     console.warn("[Crawler] No site configs found in lib/traverser/sites/");
+
     return pages;
   }
 

@@ -22,15 +22,26 @@ export function SearchInput({
   const [query, setQuery] = useState("");
   const lastSubmittedQuery = useRef<string | null>(null);
 
+  // Use refs for callbacks to avoid triggering the effect when they change
+  const onSearchRef = useRef(onSearch);
+  const onSuggestedQueryAppliedRef = useRef(onSuggestedQueryApplied);
+
+  // Keep refs up to date
+  useEffect(() => {
+    onSearchRef.current = onSearch;
+    onSuggestedQueryAppliedRef.current = onSuggestedQueryApplied;
+  }, [onSearch, onSuggestedQueryApplied]);
+
   // Apply suggested query when it changes and submit it
   useEffect(() => {
     if (suggestedQuery && suggestedQuery !== lastSubmittedQuery.current) {
       lastSubmittedQuery.current = suggestedQuery;
       setQuery(suggestedQuery);
-      onSearch(suggestedQuery);
-      onSuggestedQueryApplied?.();
+      // Use refs to avoid re-running this effect when callbacks change
+      onSearchRef.current(suggestedQuery);
+      onSuggestedQueryAppliedRef.current?.();
     }
-  }, [suggestedQuery, onSuggestedQueryApplied, onSearch]);
+  }, [suggestedQuery]); // Only depend on suggestedQuery, not the callbacks
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingQuery, setPendingQuery] = useState("");

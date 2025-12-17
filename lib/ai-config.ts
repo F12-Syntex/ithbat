@@ -1,4 +1,4 @@
-export type ModelTier = "QUICK" | "HIGH" | "REASONING";
+export type ModelTier = "QUICK" | "HIGH" | "REASONING" | "SEARCH";
 
 export interface AIModel {
   id: string;
@@ -38,7 +38,7 @@ export const aiConfig: AIConfig = {
       temperature: 0.7,
     },
     REASONING: {
-      id: "google/gemini-2.0-flash-lite-001",
+    id: "google/gemini-2.0-flash-lite-001",
       name: "Gemini 2.5 Flash",
       description:
         "Deep research with built-in web search for comprehensive Islamic sources",
@@ -46,6 +46,15 @@ export const aiConfig: AIConfig = {
       supportsWebSearch: true,
       maxTokens: 8192,
       temperature: 0.7,
+    },
+    SEARCH: {
+      id: "perplexity/sonar",
+      name: "Perplexity Sonar",
+      description: "Model optimized for web search and retrieval",
+      supportsStreaming: true,
+      supportsWebSearch: true,
+      maxTokens: 4096,
+      temperature: 0.5,
     },
   },
   defaultTier: "HIGH",

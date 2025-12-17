@@ -23,13 +23,15 @@ export interface TrustedSite {
  * All trusted sites - dynamically loaded from traverser configs
  * ONLY these sites should be searched
  */
-export const TRUSTED_SITES: TrustedSite[] = loadAllSiteConfigs().map((config) => ({
-  domain: config.domain,
-  name: config.name,
-  description: config.description,
-  evidenceTypes: config.evidenceTypes,
-  searchUrl: (q: string) => getSearchUrl(q, config),
-}));
+export const TRUSTED_SITES: TrustedSite[] = loadAllSiteConfigs().map(
+  (config) => ({
+    domain: config.domain,
+    name: config.name,
+    description: config.description,
+    evidenceTypes: config.evidenceTypes,
+    searchUrl: (q: string) => getSearchUrl(q, config),
+  }),
+);
 
 /**
  * Get display info for UI components
@@ -53,6 +55,7 @@ function getTypeLabel(evidenceType: string): string {
     scholarly_opinion: "Scholarly",
     fiqh: "Fiqh",
   };
+
   return labels[evidenceType] || evidenceType;
 }
 
@@ -66,6 +69,8 @@ export function isTrustedUrl(url: string): boolean {
 /**
  * Get trusted site config by domain
  */
-export function getTrustedSiteByDomain(domain: string): TrustedSite | undefined {
+export function getTrustedSiteByDomain(
+  domain: string,
+): TrustedSite | undefined {
   return TRUSTED_SITES.find((site) => domain.includes(site.domain));
 }

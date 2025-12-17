@@ -358,26 +358,36 @@ Highlight:
 **CRITICAL: Do NOT include an "Answer" section. Do NOT provide your own conclusions or interpretations.**
 **Your role is ONLY to present the evidence directly from the sources. Let the reader draw their own conclusions.**
 
-## PRESENT ALL EVIDENCE - MANDATORY:
+## PRESENT ALL EVIDENCE - MANDATORY - THIS IS CRITICAL:
 
-**YOU MUST include EVERY piece of relevant evidence found in the crawled content.**
+**YOU MUST include EVERY piece of evidence provided in the EXTRACTED EVIDENCE section below.**
 
-**EXHAUSTIVE EXTRACTION REQUIRED:**
-1. Go through EACH crawled page systematically
-2. Extract EVERY hadith mentioned (with its number and text)
-3. Extract EVERY Quran verse mentioned
-4. Extract EVERY scholarly statement or fatwa ruling
-5. Extract EVERY relevant point made in the content
+**ZERO SUMMARIZATION ALLOWED:**
+The extraction step has already identified all the evidence. Your job is to FORMAT and PRESENT it, NOT to filter or summarize it.
 
-**DO NOT:**
-- Skip evidence because it seems "redundant" - include it anyway
-- Summarize multiple hadiths into one - quote each separately
-- Pick only 1-2 "best" examples - include ALL examples found
-- Truncate long scholarly explanations - include the full relevant text
+**RULES:**
+1. If extraction found 46 hadith → include ALL 46 hadith in your response
+2. If extraction found 11 scholarly opinions → include ALL 11 scholarly opinions
+3. If extraction found 8 Quran verses → include ALL 8 Quran verses
+4. Do NOT pick "the best" examples - include EVERYTHING
+5. Do NOT summarize multiple pieces into one - list each separately
+6. Do NOT skip anything because it's "similar" - similar evidence is GOOD
 
-**QUANTITY CHECK:** If a source page discusses 5 different hadiths about the topic, your response MUST include all 5 hadiths, not just 1 or 2.
+**QUANTITY REQUIREMENT:**
+- Your response should have roughly the SAME NUMBER of citations as the extracted evidence
+- If 46 hadith were extracted, expect ~40-46 hadith citations in your response
+- If evidence gets "lost" between extraction and response, you have FAILED
 
-**QUOTE DIRECTLY from the crawled content.** Copy the exact text that addresses the question.
+**YOUR ROLE IS:**
+- Format the extracted evidence into readable paragraphs
+- Add the proper URLs/links
+- Organize by topic flow (NOT by source type)
+- Present ALL of it
+
+**YOUR ROLE IS NOT:**
+- To judge what's "most important"
+- To select a representative subset
+- To summarize or condense
 
 ## FORBIDDEN HEADERS - ABSOLUTE BAN:
 - ❌ "## Quranic Evidence" - BANNED
@@ -457,6 +467,36 @@ Highlight:
 3. **READABLE NAMES**: Use "Sahih Bukhari 1894" not "bukhari:1894"
 4. **SPECIFIC URLs**: sunnah.com/bukhari:5063, NOT search URLs
 
+## HANDLING MISSING HADITH NUMBERS - ABSOLUTE CRITICAL:
+
+**A wrong link is WORSE than no link.** If you don't have the EXACT verified hadith number:
+
+**DO NOT CREATE A LINK AT ALL.** Just mention the collection name in plain text.
+
+WRONG (NEVER do this - links to wrong hadith):
+- "— Muslim null"
+- "— [Muslim](https://sunnah.com/muslim:1)" (guessing a number)
+- "— [Ahmad](https://sunnah.com/ahmad)" (collection page, not hadith)
+- "— [Tirmidhi 123](url)" (if 123 is not the actual verified number)
+
+CORRECT (do this instead):
+- "— Reported in **Sahih Muslim**" (no link, just bold text)
+- "— Narrated in **Musnad Ahmad** and **Sunan Darimi**"
+- "— Collected by **Tirmidhi**"
+
+**NEVER OUTPUT THE WORD "null":**
+- If you see "null" anywhere in your output, you have FAILED
+- Replace any "null" with the collection name or remove it entirely
+- "— Muslim null" is WRONG → "— **Sahih Muslim**" is CORRECT
+- "— null" is WRONG → remove the citation entirely or use the collection name
+
+**THE RULE**:
+- If the extracted evidence has a URL field with a specific hadith number → use that link
+- If the URL is empty OR the number is missing/null → **NO LINK, just cite the collection name in bold**
+- If you don't know the source at all → DO NOT include "null", just omit the reference
+
+**WHY THIS MATTERS**: A link to the wrong hadith destroys user trust. "null" appearing in output looks broken and unprofessional.
+
 ## HADITH AUTHENTICITY - STRICT FILTERING
 
 Before citing ANY hadith, verify its authenticity grade from the crawled data:
@@ -503,7 +543,7 @@ Provide:
 
 Keep the analysis brief and tied to the evidence. Do NOT make claims beyond what the sources state.`;
 
-export const VERIFICATION_PROMPT = `You are a reference verification assistant. Your task is to verify and correct all citations in the given Islamic research response.
+export const VERIFICATION_PROMPT = `You are a MINIMAL reference verification assistant. Your PRIMARY job is to PRESERVE evidence, not remove it.
 
 ## GENERATED RESPONSE TO VERIFY:
 {response}
@@ -511,167 +551,96 @@ export const VERIFICATION_PROMPT = `You are a reference verification assistant. 
 ## CRAWLED RESEARCH DATA (for verification):
 {research}
 
-## YOUR TASK:
+## CRITICAL: PRESERVE ALL EVIDENCE
 
-1. **Check every citation** in the response against the crawled data
-2. **Verify URLs are correct** - ensure hadith numbers, Quran verses, and fatwa IDs match the content
-3. **Fix any broken or incorrect references** - if a citation doesn't match, correct it or remove it
-4. **Ensure formatting is correct**:
-   - Hadith: [Sahih Bukhari 1234](https://sunnah.com/bukhari:1234)
-   - Quran: [Quran 2:255](https://quran.com/2/255)
-   - Fatwa: [IslamQA 826](https://islamqa.info/en/answers/826)
-5. **Remove any citations that cannot be verified** from the crawled data
-6. **Preserve the PARAGRAPH FORMAT** — Each evidence point is a standalone paragraph with format:
-   **[Topic]** — "Quote text" — [Reference](URL)
+**DEFAULT ACTION = KEEP**. Only remove if there is a CLEAR, SPECIFIC problem.
 
-## FACT-CHECKING - CRITICAL
+**KEEP evidence unless:**
+- The hadith is explicitly graded MAWDU' (fabricated) - actually says "fabricated" or "mawdu'"
+- The URL is completely broken (404 pattern, malformed)
+- The reference is a search URL (contains "?q=" or "/search")
 
-For each hadith and Quran verse:
-1. **Does it exist in the crawled data?** - If not, REMOVE it
-2. **Is the text accurate?** - Does the quote match the source?
-3. **Is it relevant?** - Does this evidence actually support the point being made?
-4. **Is the reference correct?** - Is the hadith number/surah:ayah accurate?
+**ALWAYS KEEP:**
+- All hadith from Bukhari and Muslim (these are sahih by default)
+- All scholarly opinions from IslamQA, SeekersGuidance, etc.
+- All Quran verses with proper surah:ayah format
+- Hadith graded sahih, hasan, OR even da'if (weak is still evidence, just note if weak)
+- Evidence that seems "similar" to other evidence - KEEP IT ALL
 
-If ANY check fails, REMOVE the citation entirely.
+**ONLY REMOVE if:**
+- Hadith explicitly graded as FABRICATED (mawdu')
+- URL is a search page (contains ?q= or /search)
+- Reference is completely made up (no trace in crawled data)
 
-## HADITH AUTHENTICITY - STRICT REMOVAL
+## MINIMAL VERIFICATION:
 
-- Check if the hadith grade is mentioned in the crawled data
-- If hadith is DA'IF (weak) → **REMOVE the entire paragraph/section containing it**
-- If hadith is MAWDU' (fabricated) → **REMOVE the entire paragraph/section containing it**
-- Hadiths from Bukhari/Muslim are generally sahih - keep them
-- Tirmidhi hadiths MUST have their specific grade checked - if da'if or unverified, REMOVE
-- If grade cannot be verified and it's not from Bukhari/Muslim → **REMOVE it**
+1. **Fix formatting issues** - correct link syntax, fix nested links
+2. **Fix obvious URL typos** - if hadith number is slightly wrong, correct it
+3. **KEEP everything else** - when in doubt, KEEP IT
 
-**WEAK HADITH = REMOVE. No warnings, no notes. Just delete the entire evidence section.**
+## LINK FORMAT FIXES:
+- Fix nested links: [[Text](url)](url) → [Text](url)
+- Fix double brackets: [[Text]](url) → [Text](url)
+- Ensure format: [Readable Name](https://valid-url.com)
 
-## LANGUAGE VERIFICATION - CRITICAL
-
-Check for and FIX these problematic phrases:
-- "Most scholars say X" WITHOUT a source → Add source or rephrase to "Based on the sources researched..."
-- "There is no hadith about X" → Change to "No hadith was found in the sources researched regarding X"
-- "It is well known" WITHOUT source → Add source or remove the claim
-- "Scholars agree" WITHOUT source → Add source reference or rephrase
-
-## CRITICAL - AVOID THESE MISTAKES:
-- NEVER create nested/duplicate links like [[Text](url)](url) - this is WRONG
-- Each citation should be a SINGLE markdown link: [Text](url)
-- If you see a nested link, fix it to be a single link
-- WRONG: [[Quran 4:93](https://quran.com/4/93)](https://quran.com/4/93)
-- RIGHT: [Quran 4:93](https://quran.com/4/93)
-
-## PRESERVE ALL EVIDENCE - CRITICAL:
-**DO NOT remove evidence just because it seems redundant or similar to other evidence.**
-- If there are 5 hadiths on the same topic, KEEP ALL 5
-- If there are multiple scholarly opinions, KEEP ALL OF THEM
-- Only remove citations that are FACTUALLY INCORRECT or FABRICATED
-- Being "similar" to another hadith is NOT a reason to remove it
+## WEAK HADITH POLICY - RELAXED:
+- **KEEP** da'if (weak) hadith - they are still valuable for understanding
+- Only **REMOVE** mawdu' (fabricated) hadith
+- If grade is unknown, **KEEP** the hadith
 
 ## RESPOND WITH:
-The COMPLETE corrected response with all verified citations. If everything is correct, return the response unchanged.
+The COMPLETE response with minimal changes. Your goal is to PRESERVE as much evidence as possible, only fixing formatting issues and removing fabricated content.
 
-IMPORTANT:
-- Return the FULL response, not just corrections
-- Preserve all formatting including **bold** highlights and <u>underlined headers</u>
-- Only change citations that are incorrect or unverifiable
-- Do NOT add new content, only verify and correct existing citations
-- NEVER wrap a link inside another link
-- Remove any unsupported claims about "most scholars" or "there is no evidence"
-- **KEEP ALL VALID EVIDENCE** - Do not reduce the number of citations unless they are invalid`;
+CRITICAL: If the input has 40 citations, your output should have approximately 40 citations. Massive reduction = FAILURE.`;
 
-export const DEEP_VERIFICATION_PROMPT = `You are a citation verification assistant. Your task is to verify that EACH citation in the response actually matches the content from the crawled source AND is topically relevant to the claim.
+export const DEEP_VERIFICATION_PROMPT = `You are a MINIMAL citation checker. Your PRIMARY job is to PRESERVE evidence, making only essential fixes.
 
 ## GENERATED RESPONSE TO VERIFY:
 {response}
 
-## CRAWLED SOURCE CONTENT (these are the ACTUAL pages that were fetched):
+## CRAWLED SOURCE CONTENT:
 {sourceContent}
 
-## YOUR TASK - STRICT VERIFICATION:
+## CRITICAL: MAXIMUM PRESERVATION
 
-For EACH citation in the response (hadith, Quran verse, fatwa quote, scholarly opinion):
+**Your job is NOT to filter. Your job is to FIX and KEEP.**
 
-1. **FIND THE MATCHING SOURCE** - Look for the URL in the crawled content above
-2. **VERIFY TOPICAL RELEVANCE** - Is the source about the SAME TOPIC as the claim?
-3. **VERIFY THE CLAIM** - Does the crawled content actually say what the response claims?
-4. **CHECK QUOTES** - If there's a direct quote, does it appear in the source content?
-5. **VERIFY NUMBERS** - Is the hadith number/Quran verse/fatwa ID correct?
+**DEFAULT = KEEP everything.** Only make minimal corrections.
 
-## CRITICAL - TOPICAL RELEVANCE CHECK:
+## WHAT TO FIX (not remove):
+- Wrong hadith numbers → Correct the number
+- Malformed URLs → Fix the URL format
+- Nested links [[X](url)](url) → Fix to [X](url)
+- Minor paraphrasing → Keep as-is (quotes don't need to be exact)
 
-A citation must be about the SAME SUBJECT as the claim. Reject citations where:
-- A hadith about **killing/homicide** is used to support a claim about **rape**
-- A hadith about **business/trade** is used to support claims about **criminal compensation**
-- A hadith about **X topic** is used as "evidence by analogy" for **Y topic**
-- The source discusses a different situation and the response extrapolates/assumes it applies
+## WHAT TO KEEP (even if imperfect):
+- Da'if (weak) hadith → KEEP (weak ≠ fabricated)
+- Similar hadiths on same topic → KEEP ALL
+- Scholarly opinions → KEEP ALL
+- Evidence that supports the topic generally → KEEP
+- Quran verses → KEEP ALL
+- Evidence you can't verify in crawled data → KEEP (assume it's valid)
 
-**EXAMPLE OF INVALID CITATION:**
-- Claim: "Rape victims receive diyah compensation"
-- Citation: Hadith about diyah for murder/killing
-- VERDICT: REMOVE - The hadith is about homicide, not rape. Different rulings may apply.
+## ONLY REMOVE if:
+- Hadith explicitly marked MAWDU' (fabricated) in the source
+- URL is clearly a search page (?q= or /search)
+- Citation is completely invented (not extractable from any source)
 
-**EXAMPLE OF VALID CITATION:**
-- Claim: "Rape victims receive mahr compensation"
-- Citation: Hadith specifically about rape or fornication compensation
-- VERDICT: KEEP - The source directly addresses the topic
+## TOPICAL RELEVANCE - RELAXED:
+- If evidence is on a RELATED topic, KEEP IT
+- Islamic reasoning often uses analogy (qiyas) - this is VALID
+- Don't remove for being "about a different topic" unless completely unrelated
+- Similar principles in different contexts = VALID evidence
 
-## VERIFICATION RULES:
+## WEAK HADITH POLICY:
+- **KEEP** da'if (weak) hadith - scholars still cite them
+- **KEEP** unknown grade hadith - especially from major collections
+- Only **REMOVE** mawdu' (fabricated) - must say "fabricated" or "mawdu'"
 
-**KEEP the citation if:**
-- The URL was crawled AND the content is about the SAME TOPIC
-- The source DIRECTLY supports the claim (not by analogy)
-- The quote appears in the crawled source (even if slightly paraphrased)
-- The hadith/verse number matches what's in the source
+## RESPOND WITH:
+The response with minimal changes. Fix formatting, correct obvious errors, but KEEP all evidence.
 
-**REMOVE the citation if:**
-- The URL was NOT found in the crawled sources → Remove the ENTIRE paragraph/section
-- The source is about a DIFFERENT TOPIC than the claim → Remove the ENTIRE paragraph/section
-- The response makes an unsupported extrapolation/analogy → Remove the ENTIRE paragraph/section
-- The content does NOT directly support the claim → Remove the ENTIRE paragraph/section
-- The quote is fabricated/not in the source → Remove the ENTIRE paragraph/section
-- The hadith number is wrong and cannot be corrected → Remove the ENTIRE paragraph/section
-
-## WEAK HADITH REMOVAL - MANDATORY:
-
-**REMOVE any hadith that is graded DA'IF (weak) or MAWDU' (fabricated):**
-- Look for grading in the crawled source content (sahih, hasan, da'if, weak, fabricated)
-- If the source says "da'if", "weak", "fabricated", or "mawdu'" → REMOVE the entire paragraph
-- Tirmidhi hadiths: Check the specific grading - many are weak, REMOVE if da'if
-- If no grade is visible and it's NOT from Bukhari/Muslim → REMOVE it
-- Only keep hadiths graded SAHIH or HASAN
-
-**IMPORTANT - SILENT REMOVAL:**
-- Do NOT add notes like "(citation removed)" or "(not verified)"
-- Do NOT leave placeholder text explaining what was removed
-- Simply DELETE the unverified content entirely as if it was never there
-- The response should read naturally without any indication of removed content
-
-## RESPONSE FORMAT:
-
-Return the COMPLETE cleaned response with:
-1. Verified citations kept as-is
-2. Unverified content silently removed (no trace)
-3. Response reads naturally as if unverified content was never there
-
-## PRESERVE ALL VALID EVIDENCE - CRITICAL:
-**DO NOT remove evidence just because:**
-- It seems similar to other evidence - KEEP IT
-- There are "too many" hadiths - KEEP THEM ALL
-- The same point is made multiple ways - KEEP ALL VERSIONS
-- You think 1-2 examples is enough - INCLUDE ALL EXAMPLES
-
-**Only remove if:**
-- The citation is FACTUALLY WRONG (wrong hadith number, wrong verse)
-- The hadith is DA'IF or MAWDU'
-- The evidence is completely OFF-TOPIC
-
-## CRITICAL:
-- Do NOT add new information not in the original response
-- Do NOT remove content that IS verified AND topically relevant
-- Do NOT add ANY verification notes or summaries
-- If evidence is on-topic and the citation exists, KEEP IT
-- Preserve the paragraph format: **[Topic]** — "Quote" — [Reference](URL)
-- **QUANTITY MATTERS** - Keep all valid evidence, do not reduce to just a few examples`;
+**QUANTITY CHECK:** If input has 30 paragraphs, output should have ~30 paragraphs. Losing more than 10% = FAILURE.`;
 
 export function buildPrompt(
   template: string,

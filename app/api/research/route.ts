@@ -10,7 +10,6 @@ import {
   AI_SUMMARY_ADDENDUM,
   VERIFICATION_PROMPT,
   DEEP_VERIFICATION_PROMPT,
-  BATCH_CONTENT_ANALYSIS_PROMPT,
   ROUND_ANALYSIS_PROMPT,
   buildPrompt,
   extractUrlsFromMarkdown,
@@ -434,14 +433,19 @@ export async function POST(request: NextRequest) {
 
             const extractions = await Promise.all(
               batch.map((page) =>
-                extractEvidenceFromPage(page.url, page.content, query, (msg) => {
-                  send({
-                    type: "step_content",
-                    step: extractStep.id,
-                    content: `  ${msg}\n`,
-                  });
-                })
-              )
+                extractEvidenceFromPage(
+                  page.url,
+                  page.content,
+                  query,
+                  (msg) => {
+                    send({
+                      type: "step_content",
+                      step: extractStep.id,
+                      content: `  ${msg}\n`,
+                    });
+                  },
+                ),
+              ),
             );
 
             // Add to accumulator
@@ -642,8 +646,9 @@ export async function POST(request: NextRequest) {
                 const extracted = await extractEvidenceFromPage(
                   page.url,
                   page.content,
-                  query
+                  query,
                 );
+
                 evidenceAccumulator.addEvidence(extracted, page.url);
               }
               send({
@@ -693,8 +698,9 @@ export async function POST(request: NextRequest) {
                 const extracted = await extractEvidenceFromPage(
                   page.url,
                   page.content,
-                  query
+                  query,
                 );
+
                 evidenceAccumulator.addEvidence(extracted, page.url);
               }
             }
@@ -753,8 +759,9 @@ export async function POST(request: NextRequest) {
               const extracted = await extractEvidenceFromPage(
                 page.url,
                 page.content,
-                query
+                query,
               );
+
               evidenceAccumulator.addEvidence(extracted, page.url);
             }
           }
@@ -763,7 +770,8 @@ export async function POST(request: NextRequest) {
           const evidence = evidenceAccumulator.getEvidence();
           const hadithCount = evidence.hadith.length;
           const quranCount = evidence.quranVerses.length;
-          const scholarCount = evidence.scholarlyOpinions.length + evidence.fatwas.length;
+          const scholarCount =
+            evidence.scholarlyOpinions.length + evidence.fatwas.length;
 
           send({
             type: "step_content",
@@ -1062,7 +1070,7 @@ export async function POST(request: NextRequest) {
         send({
           type: "step_content",
           step: synthesizeStep.id,
-          content: `Generated initial response, verifying references...\n`,
+          content: `Finalizing response...\n`,
         });
 
         // Step 6: Verification - validate all references
@@ -1090,25 +1098,11 @@ export async function POST(request: NextRequest) {
         // Clean up any nested/duplicate links that slipped through
         let cleanedResponse = cleanupNestedLinks(verifiedResponse);
 
+        // Continue finalizing in synthesize step (verification runs silently)
         send({
           type: "step_content",
           step: synthesizeStep.id,
-          content: `✓ Initial verification complete\n`,
-        });
-
-        send({ type: "step_complete", step: synthesizeStep.id });
-
-        // Step 7: Deep Verification - Crawl referenced URLs and verify claims
-        send({
-          type: "step_start",
-          step: "verifying",
-          stepTitle: "Verifying citations",
-        });
-
-        send({
-          type: "step_content",
-          step: "verifying",
-          content: `Crawling cited sources...\n`,
+          content: `Verifying citations...\n`,
         });
 
         // Extract URLs from the response
@@ -1118,97 +1112,39 @@ export async function POST(request: NextRequest) {
         const quranRefs = extractQuranReferences(cleanedResponse);
 
         if (citedUrls.length > 0 || quranRefs.length > 0) {
-          const totalToVerify = citedUrls.length + quranRefs.length;
-
-          send({
-            type: "step_content",
-            step: "verifying",
-            content: `Found ${totalToVerify} citations to verify${quranRefs.length > 0 ? ` (including ${quranRefs.length} Quran verse${quranRefs.length > 1 ? "s" : ""})` : ""}\n\n`,
-          });
-
-          // Crawl the cited URLs (limit to 10 to avoid too much delay)
+          // Crawl cited URLs silently (limit to 10)
           const urlsToCrawl = citedUrls.slice(0, 10);
           const verificationPages: CrawledPage[] = [];
           const fetchedUrls: string[] = [];
           const failedUrls: string[] = [];
 
           for (const url of urlsToCrawl) {
-            send({
-              type: "step_content",
-              step: "verifying",
-              content: `  → ${url.slice(0, 55)}...`,
-            });
-
             try {
               const pages = await crawlUrls([url]);
 
               if (pages.length > 0) {
                 verificationPages.push(...pages);
                 fetchedUrls.push(url);
-                send({
-                  type: "step_content",
-                  step: "verifying",
-                  content: ` ✓\n`,
-                });
               } else {
                 failedUrls.push(url);
-                send({
-                  type: "step_content",
-                  step: "verifying",
-                  content: ` ✗\n`,
-                });
               }
             } catch {
               failedUrls.push(url);
-              send({
-                type: "step_content",
-                step: "verifying",
-                content: ` ✗\n`,
-              });
             }
           }
 
-          // Fetch tafsir for Quran verses (limit to 5 to avoid too much delay)
+          // Fetch tafsir for Quran verses silently (limit to 5)
           const tafsirPages: CrawledPage[] = [];
 
-          if (quranRefs.length > 0) {
-            send({
-              type: "step_content",
-              step: "verifying",
-              content: `\nFetching tafsir (Ibn Kathir) for ${quranRefs.length} verse${quranRefs.length > 1 ? "s" : ""}...\n`,
-            });
+          for (const ref of quranRefs.slice(0, 5)) {
+            try {
+              const pages = await crawlUrls([ref.tafsirUrl]);
 
-            for (const ref of quranRefs.slice(0, 5)) {
-              send({
-                type: "step_content",
-                step: "verifying",
-                content: `  → Quran ${ref.surah}:${ref.ayah}...`,
-              });
-
-              try {
-                const pages = await crawlUrls([ref.tafsirUrl]);
-
-                if (pages.length > 0) {
-                  tafsirPages.push(...pages);
-                  send({
-                    type: "step_content",
-                    step: "verifying",
-                    content: ` ✓\n`,
-                  });
-                } else {
-                  send({
-                    type: "step_content",
-                    step: "verifying",
-                    content: ` ✗\n`,
-                  });
-                }
-              } catch {
-                send({
-                  type: "step_content",
-                  step: "verifying",
-                  content: ` ✗\n`,
-                });
+              if (pages.length > 0) {
+                tafsirPages.push(...pages);
               }
+            } catch {
+              // Silent fail
             }
           }
 
@@ -1216,12 +1152,6 @@ export async function POST(request: NextRequest) {
           const allVerificationPages = [...verificationPages, ...tafsirPages];
 
           if (allVerificationPages.length > 0) {
-            send({
-              type: "step_content",
-              step: "verifying",
-              content: `\nCross-checking ${allVerificationPages.length} sources against claims...\n`,
-            });
-
             // Format the crawled source content for verification
             const sourceContent = allVerificationPages
               .map(
@@ -1282,13 +1212,13 @@ export async function POST(request: NextRequest) {
               if (removed > 0) {
                 send({
                   type: "step_content",
-                  step: "verifying",
+                  step: synthesizeStep.id,
                   content: `\n✗ Removed ${removed} unverified citation${removed > 1 ? "s" : ""}\n`,
                 });
               }
               send({
                 type: "step_content",
-                step: "verifying",
+                step: synthesizeStep.id,
                 content: `✓ ${citationsAfter} citation${citationsAfter !== 1 ? "s" : ""} verified\n`,
               });
 
@@ -1298,18 +1228,18 @@ export async function POST(request: NextRequest) {
               const needsMoreResearch = citationsAfter < 2 || removalRate > 0.5;
 
               if (needsMoreResearch && citationsBefore > 0) {
-                send({ type: "step_complete", step: "verifying" });
+                send({ type: "step_complete", step: synthesizeStep.id });
 
                 // Start re-research step
                 send({
                   type: "step_start",
-                  step: "re-researching",
+                  step: synthesizeStep.id,
                   stepTitle: "Finding more evidence",
                 });
 
                 send({
                   type: "step_content",
-                  step: "re-researching",
+                  step: synthesizeStep.id,
                   content: `Insufficient verified evidence (${citationsAfter} citations). Searching for more specific sources...\n\n`,
                 });
 
@@ -1325,7 +1255,7 @@ export async function POST(request: NextRequest) {
                 for (const specificQuery of specificQueries.slice(0, 2)) {
                   send({
                     type: "step_content",
-                    step: "re-researching",
+                    step: synthesizeStep.id,
                     content: `→ Searching: "${specificQuery}"\n`,
                   });
 
@@ -1335,7 +1265,7 @@ export async function POST(request: NextRequest) {
                       if (progress.type === "found") {
                         send({
                           type: "step_content",
-                          step: "re-researching",
+                          step: synthesizeStep.id,
                           content: `  ✓ ${progress.title?.slice(0, 50) || "Page"}\n`,
                         });
 
@@ -1363,7 +1293,7 @@ export async function POST(request: NextRequest) {
 
                   send({
                     type: "step_content",
-                    step: "re-researching",
+                    step: synthesizeStep.id,
                     content: `\nFound ${additionalPages.length} additional sources. Re-synthesizing...\n`,
                   });
 
@@ -1428,46 +1358,29 @@ export async function POST(request: NextRequest) {
 
                     send({
                       type: "step_content",
-                      step: "re-researching",
+                      step: synthesizeStep.id,
                       content: `✓ Re-synthesis complete with ${newCitations} citations\n`,
                     });
                   }
                 } else {
                   send({
                     type: "step_content",
-                    step: "re-researching",
+                    step: synthesizeStep.id,
                     content: `⚠ No additional sources found. Using best available evidence.\n`,
                   });
                 }
-
-                send({ type: "step_complete", step: "re-researching" });
-              } else {
-                send({ type: "step_complete", step: "verifying" });
               }
-            } else {
-              send({
-                type: "step_content",
-                step: "verifying",
-                content: `✓ Verification complete\n`,
-              });
-              send({ type: "step_complete", step: "verifying" });
             }
-          } else {
-            send({
-              type: "step_content",
-              step: "verifying",
-              content: `⚠ Could not fetch sources for verification\n`,
-            });
-            send({ type: "step_complete", step: "verifying" });
           }
-        } else {
-          send({
-            type: "step_content",
-            step: "verifying",
-            content: `No external citations to verify\n`,
-          });
-          send({ type: "step_complete", step: "verifying" });
         }
+
+        // Done with synthesis
+        send({
+          type: "step_content",
+          step: synthesizeStep.id,
+          content: `✓ Complete\n`,
+        });
+        send({ type: "step_complete", step: synthesizeStep.id });
 
         // Post-process: Convert any remaining references to clickable links
         // This handles cases like [al-Isra 17:23-24] -> [al-Isra 17:23-24](https://quran.com/...)

@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  initialSearch,
-  type CrawledPage,
-} from "@/lib/crawler";
-import { loadAllSiteConfigs, getSearchUrl } from "@/lib/traverser";
+
+import { initialSearch } from "@/lib/crawler";
 
 interface VerifyRequest {
   query: string;
@@ -25,12 +22,16 @@ interface VerificationResult {
 function calculateRelevance(
   claim: string,
   content: string,
-  title: string
+  title: string,
 ): "high" | "medium" | "low" {
-  const claimWords = claim.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+  const claimWords = claim
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w.length > 3);
   const contentLower = (content + " " + title).toLowerCase();
 
   let matchCount = 0;
+
   for (const word of claimWords) {
     if (contentLower.includes(word)) {
       matchCount++;
@@ -41,6 +42,7 @@ function calculateRelevance(
 
   if (matchRatio > 0.5) return "high";
   if (matchRatio > 0.25) return "medium";
+
   return "low";
 }
 
@@ -48,7 +50,10 @@ function calculateRelevance(
  * Extract the most relevant snippet from content
  */
 function extractRelevantSnippet(content: string, query: string): string {
-  const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+  const words = query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w.length > 3);
   const contentLower = content.toLowerCase();
 
   // Find the best starting position
@@ -58,6 +63,7 @@ function extractRelevantSnippet(content: string, query: string): string {
   for (let i = 0; i < content.length - 200; i += 50) {
     const window = contentLower.slice(i, i + 300);
     let score = 0;
+
     for (const word of words) {
       if (window.includes(word)) score++;
     }
@@ -102,6 +108,7 @@ function buildSearchQuery(query: string, claimType: string): string {
       }
       break;
   }
+
   return query;
 }
 
@@ -111,20 +118,21 @@ export async function POST(request: NextRequest) {
     const { query, claimType, originalClaim } = body;
 
     if (!query || query.trim().length < 3) {
-      return NextResponse.json(
-        { error: "Query too short" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Query too short" }, { status: 400 });
     }
 
     // Build optimized search query
     const searchQuery = buildSearchQuery(query.trim(), claimType);
 
-    console.log(`[Verify] Searching for: "${searchQuery}" (type: ${claimType})`);
+    console.log(
+      `[Verify] Searching for: "${searchQuery}" (type: ${claimType})`,
+    );
 
     // Search trusted sources
     const pages = await initialSearch(searchQuery, (progress) => {
-      console.log(`[Verify] ${progress.type}: ${progress.url || progress.message || ""}`);
+      console.log(
+        `[Verify] ${progress.type}: ${progress.url || progress.message || ""}`,
+      );
     });
 
     // Process results
@@ -135,7 +143,11 @@ export async function POST(request: NextRequest) {
       if (!page.content || page.content.length < 100) continue;
 
       // Calculate relevance
-      const relevance = calculateRelevance(originalClaim, page.content, page.title);
+      const relevance = calculateRelevance(
+        originalClaim,
+        page.content,
+        page.title,
+      );
 
       // Extract relevant snippet
       const snippet = extractRelevantSnippet(page.content, query);
@@ -152,6 +164,7 @@ export async function POST(request: NextRequest) {
     // Sort by relevance (high first)
     results.sort((a, b) => {
       const order = { high: 0, medium: 1, low: 2 };
+
       return order[a.relevance] - order[b.relevance];
     });
 
@@ -167,9 +180,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("[Verify] Error:", error);
-    return NextResponse.json(
-      { error: "Verification failed" },
-      { status: 500 }
-    );
+
+    return NextResponse.json({ error: "Verification failed" }, { status: 500 });
   }
 }

@@ -43,7 +43,10 @@ export function VerifyClaimModal({
   const extractSearchQuery = useCallback((text: string): string => {
     // Remove common prefixes and clean up
     let query = text
-      .replace(/^(the prophet|messenger of allah|he|she|it)\s+(said|stated|mentioned|reported)/gi, "")
+      .replace(
+        /^(the prophet|messenger of allah|he|she|it)\s+(said|stated|mentioned|reported)/gi,
+        "",
+      )
       .replace(/^(narrated|reported|related)\s+(by|from)\s+\w+\s*:?\s*/gi, "")
       .replace(/\([^)]*\)/g, "") // Remove parenthetical notes
       .replace(/\[[^\]]*\]/g, "") // Remove bracket notes
@@ -51,6 +54,7 @@ export function VerifyClaimModal({
 
     // Take first 100 chars or first sentence
     const firstSentence = query.split(/[.!?]/)[0];
+
     if (firstSentence.length > 20) {
       query = firstSentence;
     }
@@ -65,6 +69,7 @@ export function VerifyClaimModal({
 
   const handleVerify = useCallback(async () => {
     const query = searchQuery || extractSearchQuery(claimText);
+
     if (!query) return;
 
     setIsSearching(true);
@@ -87,6 +92,7 @@ export function VerifyClaimModal({
       }
 
       const data = await response.json();
+
       setResults(data.results || []);
 
       if (data.results.length === 0) {
@@ -104,6 +110,7 @@ export function VerifyClaimModal({
   const handleOpen = useCallback(() => {
     if (isOpen && results.length === 0 && !isSearching) {
       const query = extractSearchQuery(claimText);
+
       setSearchQuery(query);
       // Don't auto-search, let user confirm
     }
@@ -118,13 +125,19 @@ export function VerifyClaimModal({
 
   if (!isOpen) return null;
 
-  const typeIcon = claimType === "quran" ? (
-    <BookOpen className="w-4 h-4" />
-  ) : (
-    <FileText className="w-4 h-4" />
-  );
+  const typeIcon =
+    claimType === "quran" ? (
+      <BookOpen className="w-4 h-4" />
+    ) : (
+      <FileText className="w-4 h-4" />
+    );
 
-  const typeLabel = claimType === "quran" ? "Quran verse" : claimType === "hadith" ? "Hadith" : "Claim";
+  const typeLabel =
+    claimType === "quran"
+      ? "Quran verse"
+      : claimType === "hadith"
+        ? "Hadith"
+        : "Claim";
 
   return (
     <AnimatePresence>
@@ -132,19 +145,19 @@ export function VerifyClaimModal({
         <>
           {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
-            initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
             exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
             onClick={onClose}
           />
 
           {/* Modal */}
           <motion.div
-            className="fixed inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-2xl sm:max-h-[80vh] bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col"
-            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
+            className="fixed inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-2xl sm:max-h-[80vh] bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col"
             exit={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             transition={{ type: "spring", duration: 0.3 }}
           >
             {/* Header */}
@@ -163,8 +176,8 @@ export function VerifyClaimModal({
                 </div>
               </div>
               <button
-                onClick={onClose}
                 className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                onClick={onClose}
               >
                 <X className="w-5 h-5 text-neutral-500" />
               </button>
@@ -177,7 +190,8 @@ export function VerifyClaimModal({
                   {typeIcon}
                 </span>
                 <p className="text-sm text-neutral-700 dark:text-neutral-300 line-clamp-3">
-                  {claimText.slice(0, 300)}{claimText.length > 300 ? "..." : ""}
+                  {claimText.slice(0, 300)}
+                  {claimText.length > 300 ? "..." : ""}
                 </p>
               </div>
             </div>
@@ -187,19 +201,19 @@ export function VerifyClaimModal({
               <div className="flex gap-2">
                 <div className="flex-1 relative">
                   <input
+                    className="w-full px-4 py-2.5 pr-10 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-sm text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-accent-500/50 focus:border-accent-500"
+                    placeholder="Search query..."
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleVerify()}
-                    placeholder="Search query..."
-                    className="w-full px-4 py-2.5 pr-10 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-sm text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-accent-500/50 focus:border-accent-500"
                   />
                   <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
                 </div>
                 <button
-                  onClick={handleVerify}
-                  disabled={isSearching || !searchQuery.trim()}
                   className="px-4 py-2.5 rounded-lg bg-accent-600 hover:bg-accent-700 disabled:bg-neutral-300 dark:disabled:bg-neutral-700 text-white text-sm font-medium transition-colors flex items-center gap-2"
+                  disabled={isSearching || !searchQuery.trim()}
+                  onClick={handleVerify}
                 >
                   {isSearching ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -228,24 +242,27 @@ export function VerifyClaimModal({
               {error && !isSearching && (
                 <div className="flex items-center gap-3 p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
                   <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-                  <p className="text-sm text-amber-700 dark:text-amber-300">{error}</p>
+                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                    {error}
+                  </p>
                 </div>
               )}
 
               {!isSearching && results.length > 0 && (
                 <div className="space-y-3">
                   <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                    Found {results.length} result{results.length !== 1 ? "s" : ""}
+                    Found {results.length} result
+                    {results.length !== 1 ? "s" : ""}
                   </p>
                   {results.map((result, index) => (
                     <motion.a
                       key={index}
-                      href={result.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block p-4 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:border-accent-300 dark:hover:border-accent-700 hover:bg-accent-50/50 dark:hover:bg-accent-900/20 transition-all group"
-                      initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
+                      className="block p-4 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:border-accent-300 dark:hover:border-accent-700 hover:bg-accent-50/50 dark:hover:bg-accent-900/20 transition-all group"
+                      href={result.url}
+                      initial={{ opacity: 0, y: 10 }}
+                      rel="noopener noreferrer"
+                      target="_blank"
                       transition={{ delay: index * 0.05 }}
                     >
                       <div className="flex items-start justify-between gap-3">

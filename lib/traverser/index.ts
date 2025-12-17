@@ -398,9 +398,11 @@ export function extractSearchResults(
   if (links.length === 0) {
     $("a[href]").each((_, el) => {
       const href = $(el).attr("href");
+
       if (!href) return;
 
       let fullUrl: string;
+
       try {
         if (href.startsWith("http")) {
           fullUrl = href;
@@ -593,7 +595,10 @@ export function getConfigForDomain(domain: string): SiteTraversal | null {
  */
 export function isSearchPage(url: string, config: SiteTraversal): boolean {
   const searchUrlBase = config.search.urlTemplate.split("{query}")[0];
-  return url.includes(searchUrlBase.replace("https://", "").replace("http://", ""));
+
+  return url.includes(
+    searchUrlBase.replace("https://", "").replace("http://", ""),
+  );
 }
 
 // Re-export types

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import { motion } from "framer-motion";
@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { QuoteBlock } from "./response/QuoteBlock";
 import { InlineCitation } from "./response/CitationBadge";
 import { SourceCitationCard } from "./response/SourceCitationCard";
+import { EvidenceParagraph } from "./response/VerifyEvidence";
 
 import { extractReferences } from "@/lib/references";
 
@@ -51,6 +52,25 @@ function getTextFragmentUrl(href: string, linkText: string): string {
 interface ResearchResponseProps {
   content: string;
   isStreaming?: boolean;
+}
+
+// Helper to extract text from React children
+function extractTextContent(children: ReactNode): string {
+  if (typeof children === "string") return children;
+  if (typeof children === "number") return String(children);
+  if (!children) return "";
+
+  if (Array.isArray(children)) {
+    return children.map(extractTextContent).join("");
+  }
+
+  if (typeof children === "object" && "props" in children) {
+    return extractTextContent(
+      (children as { props?: { children?: ReactNode } }).props?.children,
+    );
+  }
+
+  return String(children);
 }
 
 // Helper to detect quote type from content
@@ -308,6 +328,17 @@ export function ResearchResponse({
               const quoteType = detectQuoteType(textContent);
 
               return <QuoteBlock type={quoteType}>{children}</QuoteBlock>;
+            },
+            // Paragraph with verify button for evidence
+            p: ({ children }) => {
+              // Extract text content for evidence detection
+              const textContent = extractTextContent(children);
+
+              return (
+                <EvidenceParagraph evidenceText={textContent}>
+                  {children}
+                </EvidenceParagraph>
+              );
             },
           }}
           rehypePlugins={[rehypeRaw]}
