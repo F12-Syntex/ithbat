@@ -1,0 +1,488 @@
+/**
+ * Evidence Extractor
+ *
+ * Extracts structured evidence from crawled pages using AI.
+ * This creates a standardized data structure for all evidence types.
+ */
+
+import { getOpenRouterClient } from "./openrouter";
+
+// ============================================
+// EVIDENCE DATA TYPES
+// ============================================
+
+export interface HadithEvidence {
+  id: string; // Unique ID for deduplication
+  collection: string; // "Sahih Bukhari", "Sahih Muslim", etc.
+  number: string; // Hadith number
+  text: string; // English text
+  arabicText?: string; // Arabic text if available
+  grade: "sahih" | "hasan" | "daif" | "mawdu" | "unknown";
+  narrator?: string; // Chain of narration summary
+  chapter?: string; // Book/chapter name
+  url: string; // Direct URL to hadith
+  sourceUrl: string; // URL of page where this was found
+}
+
+export interface QuranEvidence {
+  id: string; // Unique ID (surah:ayah)
+  surah: number;
+  surahName?: string; // "Al-Baqarah", etc.
+  ayahStart: number;
+  ayahEnd?: number; // For verse ranges
+  arabicText?: string;
+  translation: string;
+  translationSource?: string; // "Sahih International", etc.
+  url: string; // quran.com URL
+  sourceUrl: string;
+}
+
+export interface ScholarlyOpinion {
+  id: string; // Hash of quote for deduplication
+  scholar?: string; // "Ibn Baz", "Ibn Uthaymeen", etc.
+  quote: string; // The actual quote
+  context?: string; // Context around the quote
+  source: string; // "IslamQA", "Dar al-Ifta", etc.
+  questionNumber?: string; // Fatwa/question number
+  url: string;
+  sourceUrl: string;
+}
+
+export interface FatwaRuling {
+  id: string;
+  title: string;
+  question?: string;
+  ruling: string; // "permissible", "prohibited", "recommended", etc.
+  explanation: string;
+  evidence?: string[]; // Evidence cited in the fatwa
+  source: string;
+  questionNumber?: string;
+  url: string;
+  sourceUrl: string;
+}
+
+export interface ExtractedEvidence {
+  hadith: HadithEvidence[];
+  quranVerses: QuranEvidence[];
+  scholarlyOpinions: ScholarlyOpinion[];
+  fatwas: FatwaRuling[];
+  // Metadata
+  sourcesProcessed: string[];
+  extractionErrors: string[];
+}
+
+// ============================================
+// EXTRACTION PROMPT
+// ============================================
+
+const EXTRACTION_PROMPT = `You are an Islamic evidence extractor. Extract ALL relevant Islamic evidence from this page content.
+
+## PAGE URL:
+{url}
+
+## PAGE CONTENT:
+{content}
+
+## RESEARCH QUESTION:
+{query}
+
+## YOUR TASK:
+
+Extract EVERY piece of Islamic evidence from this page. Be EXHAUSTIVE - do not skip anything.
+
+Return a JSON object with this EXACT structure:
+
+{
+  "hadith": [
+    {
+      "collection": "Sahih Bukhari",
+      "number": "1234",
+      "text": "The Prophet (ﷺ) said: '...'",
+      "arabicText": "قال النبي صلى الله عليه وسلم...",
+      "grade": "sahih",
+      "narrator": "Narrated by Abu Hurairah",
+      "chapter": "Book of Prayer"
+    }
+  ],
+  "quranVerses": [
+    {
+      "surah": 2,
+      "surahName": "Al-Baqarah",
+      "ayahStart": 255,
+      "ayahEnd": null,
+      "arabicText": "اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ...",
+      "translation": "Allah - there is no deity except Him...",
+      "translationSource": "Sahih International"
+    }
+  ],
+  "scholarlyOpinions": [
+    {
+      "scholar": "Ibn Baz",
+      "quote": "The ruling on this matter is...",
+      "context": "When asked about..."
+    }
+  ],
+  "fatwas": [
+    {
+      "title": "Ruling on XYZ",
+      "question": "What is the ruling on...",
+      "ruling": "permissible",
+      "explanation": "This is permissible because...",
+      "evidence": ["Based on hadith...", "The Quran says..."]
+    }
+  ]
+}
+
+## EXTRACTION RULES:
+
+1. **HADITH**: Extract EVERY hadith mentioned, even if similar to others
+   - Include the full text, not summaries
+   - Identify the grade (sahih, hasan, daif) if mentioned
+   - Include collection and number (e.g., "Bukhari 1234")
+
+2. **QURAN VERSES**: Extract ALL Quran verses referenced
+   - Include surah number and ayah number
+   - Include both Arabic and translation if available
+   - For verse ranges, specify ayahStart and ayahEnd
+
+3. **SCHOLARLY OPINIONS**: Extract ALL scholar quotes/statements
+   - Include the scholar's name if mentioned
+   - Quote their exact words
+   - Note the context
+
+4. **FATWAS**: Extract fatwa rulings
+   - Include the ruling (halal/haram/makruh/etc)
+   - Include the explanation and evidence cited
+
+## IMPORTANT:
+- Extract ALL evidence, not just 1-2 examples
+- Use EXACT text from the content, do not paraphrase
+- If no evidence of a type is found, use empty array []
+- Return ONLY valid JSON, no other text
+
+JSON:`;
+
+// ============================================
+// EXTRACTION FUNCTION
+// ============================================
+
+export async function extractEvidenceFromPage(
+  url: string,
+  content: string,
+  query: string,
+  onProgress?: (message: string) => void
+): Promise<Partial<ExtractedEvidence>> {
+  const client = getOpenRouterClient();
+
+  // Limit content length to avoid token limits
+  const truncatedContent = content.slice(0, 15000);
+
+  const prompt = EXTRACTION_PROMPT
+    .replace("{url}", url)
+    .replace("{content}", truncatedContent)
+    .replace("{query}", query);
+
+  try {
+    let response = "";
+
+    for await (const chunk of client.streamChat(
+      [
+        {
+          role: "system",
+          content: "You are an Islamic evidence extractor. Return ONLY valid JSON.",
+        },
+        { role: "user", content: prompt },
+      ],
+      "QUICK"
+    )) {
+      response += chunk;
+    }
+
+    // Parse the JSON response
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      onProgress?.(`⚠ Could not parse evidence from ${url}`);
+      return { hadith: [], quranVerses: [], scholarlyOpinions: [], fatwas: [] };
+    }
+
+    const extracted = JSON.parse(jsonMatch[0]);
+
+    // Process and add URLs/IDs
+    const result: Partial<ExtractedEvidence> = {
+      hadith: (extracted.hadith || []).map((h: any, i: number) => ({
+        ...h,
+        id: `${h.collection?.toLowerCase().replace(/\s+/g, "-")}-${h.number || i}`,
+        grade: normalizeGrade(h.grade),
+        url: buildHadithUrl(h.collection, h.number),
+        sourceUrl: url,
+      })),
+      quranVerses: (extracted.quranVerses || []).map((v: any) => ({
+        ...v,
+        id: `${v.surah}:${v.ayahStart}${v.ayahEnd ? `-${v.ayahEnd}` : ""}`,
+        url: buildQuranUrl(v.surah, v.ayahStart, v.ayahEnd),
+        sourceUrl: url,
+      })),
+      scholarlyOpinions: (extracted.scholarlyOpinions || []).map((o: any, i: number) => ({
+        ...o,
+        id: `scholar-${hashString(o.quote || "")}-${i}`,
+        source: extractSourceName(url),
+        url: url,
+        sourceUrl: url,
+      })),
+      fatwas: (extracted.fatwas || []).map((f: any, i: number) => ({
+        ...f,
+        id: `fatwa-${hashString(f.title || "")}-${i}`,
+        source: extractSourceName(url),
+        questionNumber: extractQuestionNumber(url),
+        url: url,
+        sourceUrl: url,
+      })),
+    };
+
+    const totalEvidence =
+      (result.hadith?.length || 0) +
+      (result.quranVerses?.length || 0) +
+      (result.scholarlyOpinions?.length || 0) +
+      (result.fatwas?.length || 0);
+
+    if (totalEvidence > 0) {
+      onProgress?.(
+        `✓ Extracted ${result.hadith?.length || 0} hadith, ${result.quranVerses?.length || 0} verses, ${result.scholarlyOpinions?.length || 0} opinions`
+      );
+    }
+
+    return result;
+  } catch (error) {
+    onProgress?.(`⚠ Extraction error for ${url}: ${error}`);
+    return { hadith: [], quranVerses: [], scholarlyOpinions: [], fatwas: [] };
+  }
+}
+
+// ============================================
+// EVIDENCE ACCUMULATOR
+// ============================================
+
+export class EvidenceAccumulator {
+  private evidence: ExtractedEvidence = {
+    hadith: [],
+    quranVerses: [],
+    scholarlyOpinions: [],
+    fatwas: [],
+    sourcesProcessed: [],
+    extractionErrors: [],
+  };
+
+  private seenIds = new Set<string>();
+
+  /**
+   * Add extracted evidence, deduplicating by ID
+   */
+  addEvidence(extracted: Partial<ExtractedEvidence>, sourceUrl: string): void {
+    this.evidence.sourcesProcessed.push(sourceUrl);
+
+    // Add hadith (deduplicate)
+    for (const h of extracted.hadith || []) {
+      if (!this.seenIds.has(h.id)) {
+        this.seenIds.add(h.id);
+        this.evidence.hadith.push(h);
+      }
+    }
+
+    // Add Quran verses (deduplicate)
+    for (const v of extracted.quranVerses || []) {
+      if (!this.seenIds.has(v.id)) {
+        this.seenIds.add(v.id);
+        this.evidence.quranVerses.push(v);
+      }
+    }
+
+    // Add scholarly opinions (deduplicate by quote hash)
+    for (const o of extracted.scholarlyOpinions || []) {
+      if (!this.seenIds.has(o.id)) {
+        this.seenIds.add(o.id);
+        this.evidence.scholarlyOpinions.push(o);
+      }
+    }
+
+    // Add fatwas
+    for (const f of extracted.fatwas || []) {
+      if (!this.seenIds.has(f.id)) {
+        this.seenIds.add(f.id);
+        this.evidence.fatwas.push(f);
+      }
+    }
+  }
+
+  /**
+   * Get all accumulated evidence
+   */
+  getEvidence(): ExtractedEvidence {
+    return this.evidence;
+  }
+
+  /**
+   * Get evidence summary
+   */
+  getSummary(): string {
+    return `${this.evidence.hadith.length} hadith, ${this.evidence.quranVerses.length} Quran verses, ${this.evidence.scholarlyOpinions.length} scholarly opinions, ${this.evidence.fatwas.length} fatwas`;
+  }
+
+  /**
+   * Check if we have minimum evidence
+   */
+  hasMinimumEvidence(): boolean {
+    return (
+      this.evidence.hadith.length >= 3 &&
+      (this.evidence.scholarlyOpinions.length >= 1 || this.evidence.fatwas.length >= 1)
+    );
+  }
+
+  /**
+   * Get only sahih/hasan hadith
+   */
+  getAuthenticHadith(): HadithEvidence[] {
+    return this.evidence.hadith.filter(
+      (h) => h.grade === "sahih" || h.grade === "hasan"
+    );
+  }
+
+  /**
+   * Format evidence for AI synthesis
+   */
+  formatForSynthesis(): string {
+    let output = "# EXTRACTED EVIDENCE\n\n";
+
+    // Hadith
+    if (this.evidence.hadith.length > 0) {
+      output += "## HADITH EVIDENCE\n\n";
+      for (const h of this.evidence.hadith) {
+        output += `### ${h.collection} ${h.number}\n`;
+        output += `**Grade:** ${h.grade}\n`;
+        if (h.narrator) output += `**Narrator:** ${h.narrator}\n`;
+        if (h.arabicText) output += `**Arabic:** ${h.arabicText}\n`;
+        output += `**Text:** ${h.text}\n`;
+        output += `**URL:** ${h.url}\n\n`;
+      }
+    }
+
+    // Quran verses
+    if (this.evidence.quranVerses.length > 0) {
+      output += "## QURAN VERSES\n\n";
+      for (const v of this.evidence.quranVerses) {
+        const ref = v.ayahEnd
+          ? `${v.surah}:${v.ayahStart}-${v.ayahEnd}`
+          : `${v.surah}:${v.ayahStart}`;
+        output += `### Quran ${ref}${v.surahName ? ` (${v.surahName})` : ""}\n`;
+        if (v.arabicText) output += `**Arabic:** ${v.arabicText}\n`;
+        output += `**Translation:** ${v.translation}\n`;
+        if (v.translationSource) output += `**Source:** ${v.translationSource}\n`;
+        output += `**URL:** ${v.url}\n\n`;
+      }
+    }
+
+    // Scholarly opinions
+    if (this.evidence.scholarlyOpinions.length > 0) {
+      output += "## SCHOLARLY OPINIONS\n\n";
+      for (const o of this.evidence.scholarlyOpinions) {
+        output += `### ${o.scholar || "Scholar"} (${o.source})\n`;
+        if (o.context) output += `**Context:** ${o.context}\n`;
+        output += `**Quote:** "${o.quote}"\n`;
+        output += `**URL:** ${o.url}\n\n`;
+      }
+    }
+
+    // Fatwas
+    if (this.evidence.fatwas.length > 0) {
+      output += "## FATWA RULINGS\n\n";
+      for (const f of this.evidence.fatwas) {
+        output += `### ${f.title} (${f.source}${f.questionNumber ? ` #${f.questionNumber}` : ""})\n`;
+        if (f.question) output += `**Question:** ${f.question}\n`;
+        output += `**Ruling:** ${f.ruling}\n`;
+        output += `**Explanation:** ${f.explanation}\n`;
+        if (f.evidence && f.evidence.length > 0) {
+          output += `**Evidence cited:** ${f.evidence.join("; ")}\n`;
+        }
+        output += `**URL:** ${f.url}\n\n`;
+      }
+    }
+
+    return output;
+  }
+}
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+function normalizeGrade(grade: string | undefined): HadithEvidence["grade"] {
+  if (!grade) return "unknown";
+  const lower = grade.toLowerCase();
+  if (lower.includes("sahih") || lower === "authentic") return "sahih";
+  if (lower.includes("hasan") || lower === "good") return "hasan";
+  if (lower.includes("daif") || lower.includes("weak")) return "daif";
+  if (lower.includes("mawdu") || lower.includes("fabricated")) return "mawdu";
+  return "unknown";
+}
+
+function buildHadithUrl(collection: string | undefined, number: string | undefined): string {
+  if (!collection || !number) return "";
+
+  const collectionMap: Record<string, string> = {
+    "sahih bukhari": "bukhari",
+    "bukhari": "bukhari",
+    "sahih muslim": "muslim",
+    "muslim": "muslim",
+    "tirmidhi": "tirmidhi",
+    "jami at-tirmidhi": "tirmidhi",
+    "abu dawud": "abudawud",
+    "sunan abu dawud": "abudawud",
+    "nasai": "nasai",
+    "sunan an-nasai": "nasai",
+    "ibn majah": "ibnmajah",
+    "sunan ibn majah": "ibnmajah",
+    "malik": "malik",
+    "muwatta malik": "malik",
+    "ahmad": "ahmad",
+    "musnad ahmad": "ahmad",
+    "nawawi": "nawawi40",
+    "riyadh al-salihin": "riyadussalihin",
+    "riyadh us saliheen": "riyadussalihin",
+  };
+
+  const slug = collectionMap[collection.toLowerCase()] || collection.toLowerCase().replace(/\s+/g, "");
+  return `https://sunnah.com/${slug}:${number}`;
+}
+
+function buildQuranUrl(surah: number, ayahStart: number, ayahEnd?: number): string {
+  if (ayahEnd) {
+    return `https://quran.com/${surah}/${ayahStart}-${ayahEnd}`;
+  }
+  return `https://quran.com/${surah}/${ayahStart}`;
+}
+
+function extractSourceName(url: string): string {
+  try {
+    const hostname = new URL(url).hostname.replace("www.", "");
+    if (hostname.includes("islamqa")) return "IslamQA";
+    if (hostname.includes("sunnah")) return "Sunnah.com";
+    if (hostname.includes("quran")) return "Quran.com";
+    return hostname;
+  } catch {
+    return "Unknown";
+  }
+}
+
+function extractQuestionNumber(url: string): string | undefined {
+  const match = url.match(/answers\/(\d+)/);
+  return match ? match[1] : undefined;
+}
+
+function hashString(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(36);
+}

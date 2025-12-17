@@ -16,6 +16,11 @@ import {
   extractUrlsFromMarkdown,
   extractQuranReferences,
 } from "@/lib/prompts";
+import { convertReferencesToLinks } from "@/lib/reference-parser";
+import {
+  EvidenceAccumulator,
+  extractEvidenceFromPage,
+} from "@/lib/evidence-extractor";
 import {
   initialSearch,
   crawlUrls,
@@ -234,6 +239,7 @@ export async function POST(request: NextRequest) {
       const allCrawledPages: CrawledPage[] = [];
       const allSources: Source[] = [];
       const allSteps: ResearchStep[] = [];
+      const evidenceAccumulator = new EvidenceAccumulator(); // Structured evidence storage
       let sourceId = 1;
       const maxIterations = 5; // Reduced - AI now decides to stop when enough evidence found
 
@@ -393,73 +399,55 @@ export async function POST(request: NextRequest) {
           content: `\n━━━ Initial search complete: ${initialPages.length} pages ━━━\n`,
         });
 
-        // AI Content Analysis - analyze what evidence we have so far
+        // STRUCTURED EVIDENCE EXTRACTION - Extract evidence from each page
         if (initialPages.length > 0) {
           send({
             type: "step_content",
             step: searchStep.id,
-            content: `\n🤖 AI analyzing content for evidence...\n`,
+            content: `\n🔬 Extracting structured evidence from ${initialPages.length} pages...\n`,
           });
 
-          const pageSummaries = initialPages
-            .map(
-              (page, i) =>
-                `[${i + 1}] ${page.source} - ${page.title}\nURL: ${page.url}\nContent preview: ${page.content.slice(0, 500)}...`,
-            )
-            .join("\n\n");
+          // Extract evidence from each page in parallel (batch of 3)
+          for (let i = 0; i < initialPages.length; i += 3) {
+            const batch = initialPages.slice(i, i + 3);
+            const extractions = await Promise.all(
+              batch.map((page) =>
+                extractEvidenceFromPage(page.url, page.content, query, (msg) => {
+                  send({
+                    type: "step_content",
+                    step: searchStep.id,
+                    content: `  ${msg}\n`,
+                  });
+                })
+              )
+            );
 
-          const analysisPrompt = buildPrompt(BATCH_CONTENT_ANALYSIS_PROMPT, {
-            query,
-            pageSummaries,
-          });
-
-          let analysisResponse = "";
-
-          for await (const chunk of client.streamChat(
-            [
-              {
-                role: "system",
-                content:
-                  "You are an Islamic content analyzer. Identify evidence types in crawled pages. Return ONLY valid JSON.",
-              },
-              { role: "user", content: analysisPrompt },
-            ],
-            "QUICK",
-          )) {
-            analysisResponse += chunk;
+            // Add to accumulator
+            for (let j = 0; j < batch.length; j++) {
+              evidenceAccumulator.addEvidence(extractions[j], batch[j].url);
+            }
           }
 
-          try {
-            const jsonMatch = analysisResponse.match(/\{[\s\S]*\}/);
+          // Report extraction results
+          send({
+            type: "step_content",
+            step: searchStep.id,
+            content: `\n📊 Evidence extracted: ${evidenceAccumulator.getSummary()}\n`,
+          });
 
-            if (jsonMatch) {
-              const analysis = JSON.parse(jsonMatch[0]);
-
-              // Report high-relevance pages
-              const highRelevance =
-                analysis.pageRankings?.filter(
-                  (p: { relevance: string }) => p.relevance === "high",
-                ) || [];
-
-              if (highRelevance.length > 0) {
-                send({
-                  type: "step_content",
-                  step: searchStep.id,
-                  content: `✓ Found ${highRelevance.length} highly relevant pages\n`,
-                });
-              }
-
-              // Report evidence gaps
-              if (analysis.evidenceGaps && analysis.evidenceGaps.length > 0) {
-                send({
-                  type: "step_content",
-                  step: searchStep.id,
-                  content: `⚠ Evidence gaps: ${analysis.evidenceGaps.slice(0, 3).join(", ")}\n`,
-                });
-              }
-            }
-          } catch {
-            // Analysis parsing failed, continue anyway
+          // Check if we have minimum evidence
+          if (evidenceAccumulator.hasMinimumEvidence()) {
+            send({
+              type: "step_content",
+              step: searchStep.id,
+              content: `✓ Minimum evidence requirements met\n`,
+            });
+          } else {
+            send({
+              type: "step_content",
+              step: searchStep.id,
+              content: `⚠ Need more evidence - continuing search\n`,
+            });
           }
         }
 
@@ -586,6 +574,23 @@ export async function POST(request: NextRequest) {
               step: exploreStep.id,
               content: `  Found ${newPages.length} new pages\n`,
             });
+
+            // Extract evidence from new pages
+            if (newPages.length > 0) {
+              for (const page of newPages) {
+                const extracted = await extractEvidenceFromPage(
+                  page.url,
+                  page.content,
+                  query
+                );
+                evidenceAccumulator.addEvidence(extracted, page.url);
+              }
+              send({
+                type: "step_content",
+                step: exploreStep.id,
+                content: `  📊 Total evidence: ${evidenceAccumulator.getSummary()}\n`,
+              });
+            }
           }
 
           // Try alternative queries if suggested
@@ -621,6 +626,16 @@ export async function POST(request: NextRequest) {
               });
 
               allCrawledPages.push(...altPages);
+
+              // Extract evidence from altPages
+              for (const page of altPages) {
+                const extracted = await extractEvidenceFromPage(
+                  page.url,
+                  page.content,
+                  query
+                );
+                evidenceAccumulator.addEvidence(extracted, page.url);
+              }
             }
           }
 
@@ -671,16 +686,43 @@ export async function POST(request: NextRequest) {
               step: exploreStep.id,
               content: `  Found ${googlePages.length} pages from Google\n`,
             });
+
+            // Extract evidence from Google pages
+            for (const page of googlePages) {
+              const extracted = await extractEvidenceFromPage(
+                page.url,
+                page.content,
+                query
+              );
+              evidenceAccumulator.addEvidence(extracted, page.url);
+            }
           }
 
-          // AI Round Analysis - analyze all pages crawled so far
-          if (allCrawledPages.length > 0) {
+          // Check evidence status using our structured accumulator
+          const evidence = evidenceAccumulator.getEvidence();
+          const hadithCount = evidence.hadith.length;
+          const quranCount = evidence.quranVerses.length;
+          const scholarCount = evidence.scholarlyOpinions.length + evidence.fatwas.length;
+
+          send({
+            type: "step_content",
+            step: exploreStep.id,
+            content: `\n📊 Evidence status: ${hadithCount} hadith, ${quranCount} Quran, ${scholarCount} scholarly\n`,
+          });
+
+          // Check if we have enough based on structured evidence
+          if (evidenceAccumulator.hasMinimumEvidence()) {
+            hasEnoughInfo = true;
             send({
               type: "step_content",
               step: exploreStep.id,
-              content: `\n🤖 AI analyzing ${allCrawledPages.length} pages for evidence...\n`,
+              content: `✓ Sufficient evidence gathered!\n`,
             });
+            break;
+          }
 
+          // Only continue the old round analysis for link suggestions
+          if (allCrawledPages.length > 0 && !hasEnoughInfo) {
             const pagesForAnalysis = formatPagesForAIAnalysis(allCrawledPages);
             const roundAnalysisPrompt = buildPrompt(ROUND_ANALYSIS_PROMPT, {
               query,
@@ -694,7 +736,7 @@ export async function POST(request: NextRequest) {
                 {
                   role: "system",
                   content:
-                    "You are an Islamic evidence analyzer. Extract hadith, Quran verses, and scholar quotes from pages. Return ONLY valid JSON.",
+                    "You are an Islamic evidence analyzer. Suggest links to explore. Return ONLY valid JSON.",
                 },
                 { role: "user", content: roundAnalysisPrompt },
               ],
@@ -906,13 +948,19 @@ export async function POST(request: NextRequest) {
           step: synthesizeStep.id,
           stepTitle: synthesizeStep.title,
         });
+        // Format structured evidence for synthesis
+        const structuredEvidence = evidenceAccumulator.formatForSynthesis();
+        const evidenceSummary = evidenceAccumulator.getSummary();
+
         send({
           type: "step_content",
           step: synthesizeStep.id,
-          content: `Analyzing ${allCrawledPages.length} sources...\n`,
+          content: `Compiling ${evidenceSummary} from ${allCrawledPages.length} sources...\n`,
         });
 
-        const crawledContent = formatCrawlResultsForAI(allCrawledPages);
+        // Also include raw content for context (but structured evidence takes priority)
+        const rawContent = formatCrawlResultsForAI(allCrawledPages);
+        const combinedResearch = `${structuredEvidence}\n\n# RAW SOURCE CONTENT (for additional context)\n\n${rawContent}`;
 
         // Build conversation context for follow-up questions
         let conversationContext = "";
@@ -934,7 +982,7 @@ export async function POST(request: NextRequest) {
 
         const synthesisPrompt = buildPrompt(baseSynthesisPrompt, {
           query: history.length > 0 ? `[Follow-up Question] ${query}` : query,
-          research: crawledContent + conversationContext,
+          research: combinedResearch + conversationContext,
         });
 
         // Collect the initial synthesis response
@@ -959,7 +1007,7 @@ export async function POST(request: NextRequest) {
         // Step 6: Verification - validate all references
         const verificationPrompt = buildPrompt(VERIFICATION_PROMPT, {
           response: synthesisResponse,
-          research: crawledContent,
+          research: combinedResearch,
         });
 
         let verifiedResponse = "";
@@ -1359,6 +1407,10 @@ export async function POST(request: NextRequest) {
           });
           send({ type: "step_complete", step: "verifying" });
         }
+
+        // Post-process: Convert any remaining references to clickable links
+        // This handles cases like [al-Isra 17:23-24] -> [al-Isra 17:23-24](https://quran.com/...)
+        cleanedResponse = convertReferencesToLinks(cleanedResponse);
 
         // Stream the cleaned response
         send({ type: "response_start" });

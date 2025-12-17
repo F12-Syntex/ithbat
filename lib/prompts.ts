@@ -223,10 +223,16 @@ Even if no DIRECT ruling exists on this exact topic, you MUST:
 ## FACT-CHECKING REQUIREMENTS - CRITICAL
 
 Before including ANY hadith or Quran verse:
-1. **VERIFY IT EXISTS** - Only cite hadiths/verses that appear in the crawled data
-2. **CHECK RELEVANCE** - Is this hadith/verse actually relevant to the question?
-3. **VERIFY AUTHENTICITY** - For hadith, check the grading (sahih, hasan, da'if)
-4. **CHECK ACCURACY** - Does the text match what's in the source?
+1. **VERIFY IT EXISTS IN CRAWLED DATA** - Only cite hadiths/verses that ACTUALLY appear in the crawled content
+2. **USE EXACT TEXT FROM SOURCE** - Copy the EXACT text from the crawled data. DO NOT paraphrase or use memorized text.
+3. **CHECK RELEVANCE** - Is this hadith/verse actually about the same topic?
+4. **VERIFY AUTHENTICITY** - For hadith, check the grading (sahih, hasan, da'if)
+5. **NO DUPLICATES** - Do NOT cite the same hadith/verse twice
+
+**CRITICAL - USE SOURCE TEXT ONLY:**
+- If the crawled content shows "The Prophet (ﷺ) said: 'Actions are by intentions...'" then quote EXACTLY that
+- DO NOT rewrite or paraphrase hadith text from memory
+- If you can't find the exact text in the crawled data, DO NOT quote it
 
 If a hadith or verse doesn't pass these checks, DO NOT include it.
 
@@ -287,15 +293,22 @@ CORRECT (do this):
 - QURAN: https://quran.com/SURAH/AYAH (e.g., https://quran.com/4/93)
 - WRONG: https://sunnah.com/search?q=... (NEVER use search URLs)
 
-## QURAN CITATION FORMAT
+## QURAN CITATION FORMAT - CRITICAL
 
 When citing Quran verses, use this format:
 [Quran SURAH:AYAH](https://quran.com/SURAH/AYAH)
 
+**CRITICAL: Use ONLY the translation text from the crawled content, NOT memorized text.**
+
 Examples:
-- "Allah says: '**And whoever kills a believer intentionally...**' [Quran 4:93](https://quran.com/4/93)"
+- "Allah says: '**[EXACT TEXT FROM CRAWLED CONTENT]**' [Quran 4:93](https://quran.com/4/93)"
 - "As stated in [Quran 2:255](https://quran.com/2/255), the Ayatul Kursi..."
 - "The verse [Quran 99:7-8](https://quran.com/99/7) warns about the Day of Judgment"
+
+**ALL REFERENCES MUST BE CLICKABLE:**
+- Every Quran reference like [al-Isra 17:23-24] MUST become a clickable link
+- Format: [al-Isra 17:23-24](https://quran.com/al-isra/23-24)
+- For verse ranges: [Quran 2:255-256](https://quran.com/2/255-256)
 
 IMPORTANT: When asked about Quran verses (scary, warning, etc.), you MUST cite ACTUAL Quran verses with quran.com links, not just hadith about verses!
 
@@ -345,16 +358,43 @@ Highlight:
 **CRITICAL: Do NOT include an "Answer" section. Do NOT provide your own conclusions or interpretations.**
 **Your role is ONLY to present the evidence directly from the sources. Let the reader draw their own conclusions.**
 
-**PRESENT ALL EVIDENCE** - Include EVERY relevant piece of evidence found in the crawled content. Do not summarize or skip anything.
+## PRESENT ALL EVIDENCE - MANDATORY:
+
+**YOU MUST include EVERY piece of relevant evidence found in the crawled content.**
+
+**EXHAUSTIVE EXTRACTION REQUIRED:**
+1. Go through EACH crawled page systematically
+2. Extract EVERY hadith mentioned (with its number and text)
+3. Extract EVERY Quran verse mentioned
+4. Extract EVERY scholarly statement or fatwa ruling
+5. Extract EVERY relevant point made in the content
+
+**DO NOT:**
+- Skip evidence because it seems "redundant" - include it anyway
+- Summarize multiple hadiths into one - quote each separately
+- Pick only 1-2 "best" examples - include ALL examples found
+- Truncate long scholarly explanations - include the full relevant text
+
+**QUANTITY CHECK:** If a source page discusses 5 different hadiths about the topic, your response MUST include all 5 hadiths, not just 1 or 2.
 
 **QUOTE DIRECTLY from the crawled content.** Copy the exact text that addresses the question.
 
-## FORBIDDEN HEADERS - DO NOT USE:
-- ❌ "## Quranic Evidence"
-- ❌ "## Hadith Evidence"
-- ❌ "## Scholarly Statements"
-- ❌ "## Scholar Evidence"
-- ❌ Any category-based headers
+## FORBIDDEN HEADERS - ABSOLUTE BAN:
+- ❌ "## Quranic Evidence" - BANNED
+- ❌ "## Hadith Evidence" - BANNED
+- ❌ "## Scholarly Statements" - BANNED
+- ❌ "## Scholar Evidence" - BANNED
+- ❌ "## Evidence" - BANNED
+- ❌ Any header that categorizes by source TYPE
+- ❌ Any header with the word "Evidence" in it
+
+**If you use ANY of these headers, the response is INVALID.**
+
+## NO DUPLICATE EVIDENCE - CRITICAL:
+- Each hadith should appear ONLY ONCE in the response
+- Each Quran verse should appear ONLY ONCE
+- If the same evidence supports multiple points, cite it once and refer back
+- Check your response before finishing to remove any duplicates
 
 ## REQUIRED FORMAT - Use descriptive topic headers only:
 
@@ -505,6 +545,13 @@ Check for and FIX these problematic phrases:
 - WRONG: [[Quran 4:93](https://quran.com/4/93)](https://quran.com/4/93)
 - RIGHT: [Quran 4:93](https://quran.com/4/93)
 
+## PRESERVE ALL EVIDENCE - CRITICAL:
+**DO NOT remove evidence just because it seems redundant or similar to other evidence.**
+- If there are 5 hadiths on the same topic, KEEP ALL 5
+- If there are multiple scholarly opinions, KEEP ALL OF THEM
+- Only remove citations that are FACTUALLY INCORRECT or FABRICATED
+- Being "similar" to another hadith is NOT a reason to remove it
+
 ## RESPOND WITH:
 The COMPLETE corrected response with all verified citations. If everything is correct, return the response unchanged.
 
@@ -514,7 +561,8 @@ IMPORTANT:
 - Only change citations that are incorrect or unverifiable
 - Do NOT add new content, only verify and correct existing citations
 - NEVER wrap a link inside another link
-- Remove any unsupported claims about "most scholars" or "there is no evidence"`;
+- Remove any unsupported claims about "most scholars" or "there is no evidence"
+- **KEEP ALL VALID EVIDENCE** - Do not reduce the number of citations unless they are invalid`;
 
 export const DEEP_VERIFICATION_PROMPT = `You are a citation verification assistant. Your task is to verify that EACH citation in the response actually matches the content from the crawled source AND is topically relevant to the claim.
 
@@ -590,13 +638,25 @@ Return the COMPLETE cleaned response with:
 2. Unverified content silently removed (no trace)
 3. Response reads naturally as if unverified content was never there
 
+## PRESERVE ALL VALID EVIDENCE - CRITICAL:
+**DO NOT remove evidence just because:**
+- It seems similar to other evidence - KEEP IT
+- There are "too many" hadiths - KEEP THEM ALL
+- The same point is made multiple ways - KEEP ALL VERSIONS
+- You think 1-2 examples is enough - INCLUDE ALL EXAMPLES
+
+**Only remove if:**
+- The citation is FACTUALLY WRONG (wrong hadith number, wrong verse)
+- The hadith is DA'IF or MAWDU'
+- The evidence is completely OFF-TOPIC
+
 ## CRITICAL:
 - Do NOT add new information not in the original response
 - Do NOT remove content that IS verified AND topically relevant
 - Do NOT add ANY verification notes or summaries
-- If unsure about topical relevance, REMOVE it (be strict)
+- If evidence is on-topic and the citation exists, KEEP IT
 - Preserve all formatting (bold, headers, links)
-- The final response should contain ONLY verified, directly-relevant, sourced information`;
+- **QUANTITY MATTERS** - Keep all valid evidence, do not reduce to just a few examples`;
 
 export function buildPrompt(
   template: string,
