@@ -2,15 +2,31 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  Search,
+  Clipboard,
+  Copy,
+  ClipboardPaste,
+  Sun,
+  Moon,
+  Settings,
+  RefreshCw,
+  Lightbulb,
+  ChevronDown,
+} from "lucide-react";
 
 import { SearchInput } from "./SearchInput";
 import { ResearchStep } from "./ResearchStep";
 import { ResearchResponse } from "./ResearchResponse";
 import { FollowUpInput } from "./FollowUpInput";
+import { ResearchPipeline } from "./pipeline";
+import { SourceFlow } from "./sources";
+import { ResearchLog } from "./ResearchLog";
 
 import { ContextMenu } from "@/components/ContextMenu";
 import { SettingsPanel } from "@/components/SettingsPanel";
 import { IntroModal } from "@/components/IntroModal";
+import { HowItWorks } from "@/components/HowItWorks";
 import { useResearch } from "@/hooks/useResearch";
 import { useTheme } from "@/context/ThemeContext";
 
@@ -140,60 +156,18 @@ export function ResearchContainer() {
   const contextMenuItems = [
     {
       label: "New Search",
-      icon: (
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          viewBox="0 0 24 24"
-        >
-          <path
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      ),
+      icon: <Search className="w-4 h-4" strokeWidth={2} />,
       onClick: reset,
     },
     {
       label: "Paste & Search",
-      icon: (
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          viewBox="0 0 24 24"
-        >
-          <path
-            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      ),
+      icon: <Clipboard className="w-4 h-4" strokeWidth={2} />,
       onClick: handlePasteAndSearch,
     },
     { divider: true as const },
     {
       label: "Copy",
-      icon: (
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          viewBox="0 0 24 24"
-        >
-          <path
-            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      ),
+      icon: <Copy className="w-4 h-4" strokeWidth={2} />,
       onClick: () => {
         const selection = window.getSelection()?.toString();
 
@@ -204,21 +178,7 @@ export function ResearchContainer() {
     },
     {
       label: "Paste",
-      icon: (
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          viewBox="0 0 24 24"
-        >
-          <path
-            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m0 0v4m0 4v4m-4-4h4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      ),
+      icon: <ClipboardPaste className="w-4 h-4" strokeWidth={2} />,
       onClick: async () => {
         try {
           const text = await navigator.clipboard.readText();
@@ -247,21 +207,7 @@ export function ResearchContainer() {
     { divider: true as const },
     {
       label: "Copy Response",
-      icon: (
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          viewBox="0 0 24 24"
-        >
-          <path
-            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      ),
+      icon: <Copy className="w-4 h-4" strokeWidth={2} />,
       onClick: () => {
         if (state.response) {
           navigator.clipboard.writeText(state.response);
@@ -271,21 +217,7 @@ export function ResearchContainer() {
     },
     {
       label: "Copy Query",
-      icon: (
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          viewBox="0 0 24 24"
-        >
-          <path
-            d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      ),
+      icon: <Copy className="w-4 h-4" strokeWidth={2} />,
       onClick: () => {
         if (state.query) {
           navigator.clipboard.writeText(state.query);
@@ -296,73 +228,23 @@ export function ResearchContainer() {
     { divider: true as const },
     {
       label: theme.mode === "dark" ? "Light Mode" : "Dark Mode",
-      icon: (
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          viewBox="0 0 24 24"
-        >
-          {theme.mode === "dark" ? (
-            <path
-              d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          ) : (
-            <path
-              d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          )}
-        </svg>
-      ),
+      icon:
+        theme.mode === "dark" ? (
+          <Sun className="w-4 h-4" strokeWidth={2} />
+        ) : (
+          <Moon className="w-4 h-4" strokeWidth={2} />
+        ),
       onClick: toggleDarkMode,
     },
     {
       label: "Settings",
-      icon: (
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          viewBox="0 0 24 24"
-        >
-          <path
-            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      ),
+      icon: <Settings className="w-4 h-4" strokeWidth={2} />,
       onClick: () => setSettingsOpen(true),
     },
     { divider: true as const },
     {
       label: "Reload Page",
-      icon: (
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          viewBox="0 0 24 24"
-        >
-          <path
-            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      ),
+      icon: <RefreshCw className="w-4 h-4" strokeWidth={2} />,
       onClick: () => window.location.reload(),
     },
   ];
@@ -379,24 +261,7 @@ export function ResearchContainer() {
           className="hidden sm:flex fixed top-4 right-4 z-40 w-10 h-10 rounded-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 items-center justify-center shadow-sm hover:shadow-md hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
           onClick={() => setSettingsOpen(true)}
         >
-          <svg
-            className="w-5 h-5 text-neutral-500 dark:text-neutral-400"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.5}
-            viewBox="0 0 24 24"
-          >
-            <path
-              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <Settings className="w-5 h-5 text-neutral-500 dark:text-neutral-400" strokeWidth={1.5} />
         </button>
 
         {/* Settings Panel */}
@@ -458,24 +323,7 @@ export function ResearchContainer() {
                 className="sm:hidden flex-shrink-0 px-4 py-3 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
                 onClick={() => setSettingsOpen(true)}
               >
-                <svg
-                  className="w-8 h-8 text-neutral-500 dark:text-neutral-400"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={1.5}
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+                <Settings className="w-8 h-8 text-neutral-500 dark:text-neutral-400" strokeWidth={1.5} />
               </button>
             </div>
 
@@ -501,6 +349,21 @@ export function ResearchContainer() {
                       {example}
                     </motion.button>
                   ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* How it Works */}
+            <AnimatePresence mode="popLayout">
+              {!hasResults && !isResearching && (
+                <motion.div
+                  animate={{ opacity: 1 }}
+                  className="mt-6 sm:mt-8 flex justify-center"
+                  exit={{ opacity: 0 }}
+                  initial={{ opacity: 0 }}
+                  transition={{ delay: 0.3, duration: 0.2 }}
+                >
+                  <HowItWorks />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -555,19 +418,7 @@ export function ResearchContainer() {
                             <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
                               Progress ({session.steps.length} steps)
                             </span>
-                            <svg
-                              className="w-3 h-3 text-neutral-400 transition-transform group-open:rotate-180"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth={2}
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                d="M19 9l-7 7-7-7"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
+                            <ChevronDown className="w-3 h-3 text-neutral-400 transition-transform group-open:rotate-180" strokeWidth={2} />
                           </summary>
                           <div className="divide-y divide-neutral-100 dark:divide-neutral-800 border-t border-neutral-100 dark:border-neutral-800">
                             {session.steps.map((step, stepIndex) => (
@@ -616,29 +467,55 @@ export function ResearchContainer() {
                         </span>
                       </div>
 
-                      {/* Current Research Progress */}
+                      {/* Research Pipeline - Horizontal Flow */}
                       <motion.div
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-white dark:bg-neutral-900 rounded-lg sm:rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden mb-3 sm:mb-4"
+                        className="bg-white dark:bg-neutral-900 rounded-lg sm:rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden mb-3"
                         initial={{ opacity: 0, y: 20 }}
                         transition={{ delay: 0.1 }}
                       >
-                        <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-neutral-100 dark:border-neutral-800">
-                          <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                            Progress
-                          </span>
-                        </div>
-                        <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
-                          {state.steps.map((step, index) => (
-                            <ResearchStep
-                              key={step.id}
-                              defaultExpanded={false}
-                              index={index}
-                              step={step}
-                            />
-                          ))}
-                        </div>
+                        <ResearchPipeline
+                          isCompact={false}
+                          showDetails={false}
+                          steps={state.steps}
+                        />
                       </motion.div>
+
+                      {/* Research Log - Separate content display */}
+                      {state.steps.some((s) => s.content) && (
+                        <motion.div
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mb-4"
+                          initial={{ opacity: 0, y: 10 }}
+                          transition={{ delay: 0.15 }}
+                        >
+                          <ResearchLog steps={state.steps} />
+                        </motion.div>
+                      )}
+
+                      {/* Source Flow - Connected Nodes */}
+                      {state.sources.length > 0 && (
+                        <motion.div
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mb-4"
+                          initial={{ opacity: 0, y: 20 }}
+                          transition={{ delay: 0.15 }}
+                        >
+                          <SourceFlow
+                            isLoading={
+                              isResearching && state.sources.length === 0
+                            }
+                            sources={state.sources.map((source, index) => ({
+                              id: `source-${source.id || index}`,
+                              type: "unknown" as const,
+                              title: source.title,
+                              url: source.url,
+                              domain: source.domain,
+                              trusted: source.trusted,
+                            }))}
+                          />
+                        </motion.div>
+                      )}
 
                       {/* Current Response */}
                       {(state.response || isStreaming) && (
@@ -687,19 +564,7 @@ export function ResearchContainer() {
                                 </>
                               ) : (
                                 <>
-                                  <svg
-                                    className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth={2}
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    />
-                                  </svg>
+                                  <Lightbulb className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" strokeWidth={2} />
                                   <span className="text-amber-700 dark:text-amber-400">
                                     Request AI Analysis
                                   </span>
@@ -757,7 +622,7 @@ export function ResearchContainer() {
         <div className="flex-shrink-0 py-2 sm:py-3 text-center border-t border-neutral-200/50 dark:border-neutral-800/50">
           <div className="flex items-center justify-center gap-2">
             <span className="text-[10px] text-neutral-400 dark:text-neutral-600">
-              ithbat v0.1
+              ithbat v0.2
             </span>
             <span className="text-neutral-300 dark:text-neutral-700">·</span>
             <a

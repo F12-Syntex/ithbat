@@ -5,6 +5,10 @@ import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import { motion } from "framer-motion";
 
+import { QuoteBlock } from "./response/QuoteBlock";
+import { InlineCitation } from "./response/CitationBadge";
+import { SourceCitationCard } from "./response/SourceCitationCard";
+
 import { extractReferences } from "@/lib/references";
 
 // Sites that support text fragment highlighting
@@ -49,15 +53,136 @@ interface ResearchResponseProps {
   isStreaming?: boolean;
 }
 
+// Helper to detect quote type from content
+function detectQuoteType(
+  text: string,
+): "hadith" | "quran" | "scholar" | "general" {
+  const lowerText = text.toLowerCase();
+
+  // Check for Quran indicators
+  if (
+    /quran|surah|ayah|verse\s*\d+:\d+|^\d+:\d+/.test(lowerText) ||
+    /al-baqarah|an-nisa|al-imran|al-maidah/.test(lowerText)
+  ) {
+    return "quran";
+  }
+
+  // Check for Hadith indicators
+  if (
+    /hadith|bukhari|muslim|tirmidhi|abu dawud|nasai|ibn majah|sunnah|narrated|prophet.*said|messenger.*said/.test(
+      lowerText,
+    )
+  ) {
+    return "hadith";
+  }
+
+  // Check for Scholar indicators
+  if (
+    /sheikh|imam|scholar|ibn taymiyyah|ibn qayyim|al-nawawi|fatwa|ruling|opinion/.test(
+      lowerText,
+    )
+  ) {
+    return "scholar";
+  }
+
+  return "general";
+}
+
+// Helper to extract source info from URL
+function extractSourceInfo(url: string): {
+  domain: string;
+  reference?: string;
+} {
+  try {
+    const urlObj = new URL(url);
+    const domain = urlObj.hostname.replace("www.", "");
+
+    // Extract reference from path for known sites
+    if (domain.includes("quran.com")) {
+      const pathMatch = urlObj.pathname.match(/\/(\d+)\/(\d+)/);
+
+      if (pathMatch) {
+        return { domain, reference: `${pathMatch[1]}:${pathMatch[2]}` };
+      }
+    }
+
+    if (domain.includes("sunnah.com")) {
+      const pathMatch = urlObj.pathname.match(/\/([^/:]+):?(\d+)?/);
+
+      if (pathMatch) {
+        return {
+          domain,
+          reference: pathMatch[2]
+            ? `${pathMatch[1]} ${pathMatch[2]}`
+            : pathMatch[1],
+        };
+      }
+    }
+
+    return { domain };
+  } catch {
+    return { domain: "source" };
+  }
+}
+
+// Parse sources from content for the citation card
+function parseSourcesFromContent(
+  text: string,
+): Array<{ number: number; title: string; url: string; domain: string }> {
+  const sources: Array<{
+    number: number;
+    title: string;
+    url: string;
+    domain: string;
+  }> = [];
+
+  // Find Sources section
+  const sourcesMatch = text.match(/##\s*Sources[\s\S]*$/i);
+
+  if (!sourcesMatch) return sources;
+
+  const sourcesSection = sourcesMatch[0];
+
+  // Pattern for [N] Title - URL or [N] [Title](URL)
+  const patterns = [
+    /\[(\d+)\]\s*\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+    /\[(\d+)\]\s*([^-\[\]\n]+?)\s*-\s*(https?:\/\/[^\s\n)]+)/g,
+  ];
+
+  for (const pattern of patterns) {
+    let match;
+
+    while ((match = pattern.exec(sourcesSection)) !== null) {
+      const num = parseInt(match[1], 10);
+
+      if (!sources.find((s) => s.number === num)) {
+        const url = match[3].replace(/[)\].,;]+$/, "");
+        const { domain } = extractSourceInfo(url);
+
+        sources.push({
+          number: num,
+          title: match[2].trim() || "Source",
+          url,
+          domain,
+        });
+      }
+    }
+  }
+
+  // Sort by number
+  return sources.sort((a, b) => a.number - b.number);
+}
+
 export function ResearchResponse({
   content,
   isStreaming,
 }: ResearchResponseProps) {
-  const { processedContent } = useMemo(() => {
-    if (!content) return { processedContent: "" };
+  const { processedContent, sources } = useMemo(() => {
+    if (!content) return { processedContent: "", sources: [] };
     const result = extractReferences(content);
+    const parsedSources = parseSourcesFromContent(content);
 
-    return { processedContent: result.processedText };
+    return { processedContent: result.processedText, sources: parsedSources };
   }, [content]);
 
   if (!content) return null;
@@ -177,6 +302,13 @@ export function ResearchResponse({
                 {children}
               </h2>
             ),
+            // Enhanced blockquote with type detection
+            blockquote: ({ children }) => {
+              const textContent = String(children);
+              const quoteType = detectQuoteType(textContent);
+
+              return <QuoteBlock type={quoteType}>{children}</QuoteBlock>;
+            },
           }}
           rehypePlugins={[rehypeRaw]}
         >
@@ -190,6 +322,14 @@ export function ResearchResponse({
           />
         )}
       </article>
+
+      {/* Sources Citation Card - shown at the bottom when not streaming */}
+      {!isStreaming && sources.length > 0 && (
+        <SourceCitationCard sources={sources} />
+      )}
     </motion.div>
   );
 }
+
+// Export InlineCitation for potential use elsewhere
+export { InlineCitation };

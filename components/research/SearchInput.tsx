@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, useEffect, useRef, type FormEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { ArrowRight, Square } from "lucide-react";
 
 interface SearchInputProps {
   onSearch: (query: string) => void;
@@ -19,15 +20,18 @@ export function SearchInput({
   onSuggestedQueryApplied,
 }: SearchInputProps) {
   const [query, setQuery] = useState("");
+  const lastSubmittedQuery = useRef<string | null>(null);
 
   // Apply suggested query when it changes and submit it
   useEffect(() => {
-    if (suggestedQuery) {
+    if (suggestedQuery && suggestedQuery !== lastSubmittedQuery.current) {
+      lastSubmittedQuery.current = suggestedQuery;
       setQuery(suggestedQuery);
       onSearch(suggestedQuery);
       onSuggestedQueryApplied?.();
     }
   }, [suggestedQuery, onSuggestedQueryApplied, onSearch]);
+
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingQuery, setPendingQuery] = useState("");
 
@@ -87,9 +91,7 @@ export function SearchInput({
               type="button"
               onClick={handleStopClick}
             >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <rect height="12" rx="1" width="12" x="6" y="6" />
-              </svg>
+              <Square className="w-4 h-4" fill="currentColor" />
             </button>
           ) : (
             // Submit button when not loading
@@ -102,19 +104,7 @@ export function SearchInput({
               disabled={!query.trim()}
               type="submit"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  d="M5 12h14M12 5l7 7-7 7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <ArrowRight className="w-4 h-4" strokeWidth={2} />
             </button>
           )}
         </div>

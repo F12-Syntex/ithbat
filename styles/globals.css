@@ -213,6 +213,118 @@ textarea:focus {
   background-size: 200% 100%;
 }
 
+/* Pipeline and Source Flow Animations */
+@keyframes dash {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+@keyframes draw-line {
+  from {
+    stroke-dashoffset: var(--line-length, 100);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes node-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px var(--glow-color, var(--accent-500));
+  }
+  50% {
+    box-shadow: 0 0 20px var(--glow-color, var(--accent-500)), 0 0 30px var(--glow-color, var(--accent-500));
+  }
+}
+
+@keyframes connection-pulse {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes orbit {
+  from {
+    transform: rotate(0deg) translateX(var(--orbit-radius, 100px)) rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg) translateX(var(--orbit-radius, 100px)) rotate(-360deg);
+  }
+}
+
+.animate-dash {
+  animation: dash 0.5s linear infinite;
+}
+
+.animate-draw-line {
+  animation: draw-line 1s ease-out forwards;
+}
+
+.animate-node-glow {
+  animation: node-glow 2s ease-in-out infinite;
+}
+
+.animate-connection-pulse {
+  animation: connection-pulse 2s ease-in-out infinite;
+}
+
+.animate-orbit {
+  animation: orbit var(--orbit-duration, 20s) linear infinite;
+}
+
+/* Gradient border utilities for source cards */
+.gradient-border-hadith {
+  background: linear-gradient(135deg, #f59e0b, #ea580c);
+}
+
+.gradient-border-quran {
+  background: linear-gradient(135deg, #38bdf8, #2563eb);
+}
+
+.gradient-border-scholar {
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+}
+
+.gradient-border-fatwa {
+  background: linear-gradient(135deg, #34d399, #10b981);
+}
+
+/* Source card glow effects */
+.card-glow-amber {
+  box-shadow: 0 0 20px theme('colors.amber.500 / 20%');
+}
+
+.card-glow-sky {
+  box-shadow: 0 0 20px theme('colors.sky.500 / 20%');
+}
+
+.card-glow-purple {
+  box-shadow: 0 0 20px theme('colors.purple.500 / 20%');
+}
+
+.card-glow-emerald {
+  box-shadow: 0 0 20px theme('colors.emerald.500 / 20%');
+}
+
+/* Source node hover effect */
+.source-node {
+  @apply transition-all duration-300;
+}
+
+.source-node:hover {
+  @apply -translate-y-1;
+  box-shadow: 0 10px 40px -10px var(--glow-color, theme('colors.accent.500 / 30%'));
+}
+
+/* Arabic font support */
+.font-arabic {
+  font-family: 'Amiri', 'Traditional Arabic', 'Scheherazade', serif;
+}
+
 /* Glass effect utilities */
 .glass {
   @apply bg-white/80 dark:bg-neutral-900/80;
@@ -262,11 +374,13 @@ textarea:focus {
 }
 
 /* Hide scrollbar but allow scrolling */
-.no-scrollbar {
+.no-scrollbar,
+.scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 
-.no-scrollbar::-webkit-scrollbar {
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
