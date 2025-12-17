@@ -278,12 +278,6 @@ function VerticalStepRow({
     return `${minutes}:${(seconds % 60).toString().padStart(2, "0")}`;
   };
 
-  const handleClick = () => {
-    if (hasContent) {
-      onToggle();
-    }
-  };
-
   return (
     <motion.div
       animate={{ opacity: 1 }}
@@ -291,16 +285,16 @@ function VerticalStepRow({
       transition={{ delay: index * 0.05 }}
     >
       {/* Header row */}
-      <div
-        className={`w-full flex items-center gap-4 px-4 py-3 transition-colors ${
-          hasContent ? "cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50" : ""
+      <button
+        className={`w-full flex items-center gap-4 px-4 py-3 transition-colors text-left ${
+          hasContent ? "cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50" : "cursor-default"
         }`}
-        role={hasContent ? "button" : undefined}
-        tabIndex={hasContent ? 0 : undefined}
-        onClick={handleClick}
-        onKeyDown={(e) => {
-          if (hasContent && (e.key === "Enter" || e.key === " ")) {
-            e.preventDefault();
+        disabled={!hasContent}
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (hasContent) {
             onToggle();
           }
         }}
@@ -401,7 +395,7 @@ function VerticalStepRow({
             </motion.div>
           )}
         </div>
-      </div>
+      </button>
 
       {/* Expandable content */}
       <AnimatePresence initial={false}>

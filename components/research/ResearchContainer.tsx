@@ -469,7 +469,7 @@ export function ResearchContainer() {
                       >
                         <ResearchPipeline
                           isCompact={false}
-                          showDetails={false}
+                          showDetails={true}
                           steps={state.steps}
                         />
                       </motion.div>
