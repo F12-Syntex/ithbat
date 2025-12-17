@@ -157,27 +157,32 @@ export const EXPLORATION_PROMPT = `You are analyzing crawled web content to answ
 
 ## DECISION CRITERIA - When to STOP searching (hasEnoughInfo = true):
 
-Set hasEnoughInfo = TRUE if you have:
-- At least ONE of: Quran verse, specific hadith with numbers, or scholarly fatwa
-- AND at least one scholarly fatwa/opinion with reasoning (from IslamQA, etc.)
-- Enough content to answer the question
+**MINIMUM REQUIREMENTS (ALL must be met):**
+- At least 3 specific hadith with numbers (e.g., Bukhari 1234, Muslim 5678) - THIS IS MANDATORY
+- At least 1 scholarly fatwa/opinion with reasoning (from IslamQA, etc.)
 
-**BALANCED EVIDENCE IS IMPORTANT:**
-- Try to find Quran verses when relevant - they are PRIMARY evidence
-- Try to find hadith to support Quranic evidence
-- Always look for scholarly opinions that explain the ruling
+**IDEAL (try to achieve):**
+- Quranic ayah with reference when relevant to the topic
+- Multiple scholarly opinions explaining the ruling
+- Hadith from different collections (Bukhari, Muslim, etc.)
 
-Set hasEnoughInfo = FALSE only if:
-- You have NO relevant content at all
+Set hasEnoughInfo = TRUE only if you have:
+- 3+ specific hadith with numbers
+- AND at least 1 scholarly opinion/fatwa
+
+Set hasEnoughInfo = FALSE if:
+- You have fewer than 3 hadith - KEEP SEARCHING
+- You have scholarly opinion but NO hadith - KEEP SEARCHING (1 scholarly opinion alone is NOT enough)
 - The content is completely off-topic
 - You found search results but no actual content
-- You have hadith but NO scholarly interpretation/context
+
+**IMPORTANT:** 1 scholarly opinion with 0 hadith is NOT sufficient. You MUST have at least 3 hadith.
 
 ## IMPORTANT - DON'T OVER-SEARCH:
-- Quality over quantity - 2-3 good sources is enough
-- If you have hadith/Quran/fatwa content, STOP and let AI synthesize
+- Once you have 3+ hadith AND 1+ scholarly opinion, you can stop
+- If you have the minimum requirements met AND Quran verses, that's ideal - STOP
 - The AI can deduce answers from related principles - you don't need exact matches
-- After 2-3 rounds of searching, you likely have enough
+- After 3-4 rounds of searching, you should have enough if the sources are good
 
 ## RESPOND IN THIS EXACT JSON FORMAT:
 {
@@ -710,3 +715,150 @@ export function extractExternalUrls(text: string): string[] {
 
   return [...new Set(urls)]; // Remove duplicates
 }
+
+// Prompt for AI-powered content extraction from crawled pages
+export const CONTENT_EXTRACTION_PROMPT = `Analyze this crawled page content and extract ONLY the Islamic evidence that is relevant to the research question.
+
+## RESEARCH QUESTION:
+{query}
+
+## PAGE URL:
+{url}
+
+## PAGE CONTENT:
+{content}
+
+## YOUR TASK:
+
+Extract and return a JSON object with the following structure:
+
+{
+  "relevance": "high" | "medium" | "low" | "none",
+  "hadith": [
+    {
+      "collection": "Bukhari/Muslim/etc",
+      "number": "hadith number",
+      "grade": "sahih/hasan/daif/unknown",
+      "text": "the actual hadith text",
+      "url": "direct URL to this hadith"
+    }
+  ],
+  "quranVerses": [
+    {
+      "surah": number,
+      "ayah": number,
+      "text": "verse text/translation",
+      "url": "quran.com URL"
+    }
+  ],
+  "scholarlyQuotes": [
+    {
+      "scholar": "scholar name if mentioned",
+      "quote": "the actual quote",
+      "source": "IslamQA/SeekersGuidance/etc",
+      "url": "direct URL"
+    }
+  ],
+  "rulings": [
+    {
+      "ruling": "permissible/prohibited/recommended/etc",
+      "explanation": "brief explanation",
+      "evidence": "what the ruling is based on"
+    }
+  ],
+  "summary": "2-3 sentence summary of what this page says about the topic"
+}
+
+## RULES:
+1. Only extract content that is DIRECTLY relevant to the research question
+2. For hadith, try to identify the grade (sahih, hasan, daif) from the page content
+3. For Quran verses, include the surah and ayah numbers
+4. For scholarly quotes, include the scholar's name if mentioned
+5. If the page has NO relevant content, set relevance to "none" and return empty arrays
+6. Return ONLY valid JSON, no other text`;
+
+// Prompt for batch analysis of multiple pages
+export const BATCH_CONTENT_ANALYSIS_PROMPT = `Analyze these crawled pages and identify which ones contain the MOST relevant evidence for the research question.
+
+## RESEARCH QUESTION:
+{query}
+
+## PAGES (with summaries):
+{pageSummaries}
+
+## YOUR TASK:
+
+Return a JSON object ranking the pages by relevance and identifying what evidence they contain:
+
+{
+  "pageRankings": [
+    {
+      "index": page_number,
+      "relevance": "high" | "medium" | "low",
+      "reason": "why this page is relevant",
+      "evidenceTypes": ["hadith", "quran", "scholarly_opinion", "fatwa"]
+    }
+  ],
+  "evidenceGaps": ["what types of evidence are still missing"],
+  "suggestedSearches": ["additional search queries to find missing evidence"]
+}
+
+Focus on finding pages with:
+1. At least 3 hadith with numbers (REQUIRED)
+2. Quranic evidence when relevant
+3. Scholarly opinions with clear attribution
+
+Return ONLY valid JSON.`;
+
+// Prompt for AI to analyze pages at each exploration round and extract evidence
+export const ROUND_ANALYSIS_PROMPT = `You are analyzing crawled Islamic source pages to extract evidence for a research question.
+
+## RESEARCH QUESTION:
+{query}
+
+## CRAWLED PAGES THIS ROUND:
+{pagesContent}
+
+## YOUR TASK:
+
+Analyze each page and extract:
+1. **Hadith found**: List ANY hadith mentioned with collection name and number if available
+2. **Quran verses found**: List ANY verses mentioned with surah:ayah
+3. **Scholar quotes found**: List ANY scholarly statements with attribution
+4. **Overall relevance**: Rate each page as "high", "medium", "low", or "none"
+
+Return a JSON object:
+
+{
+  "analysis": [
+    {
+      "pageIndex": 1,
+      "relevance": "high" | "medium" | "low" | "none",
+      "hadithFound": [
+        {"collection": "Bukhari", "number": "1234", "topic": "brief topic"}
+      ],
+      "quranFound": [
+        {"surah": 2, "ayah": 255, "topic": "brief topic"}
+      ],
+      "scholarsFound": [
+        {"name": "Ibn Baz", "topic": "brief topic"}
+      ],
+      "keyContent": "2-3 sentences of the most relevant content"
+    }
+  ],
+  "totalHadith": number,
+  "totalQuran": number,
+  "totalScholarQuotes": number,
+  "hasEnoughEvidence": true/false,
+  "missingEvidence": ["what's still needed"],
+  "linksToExplore": ["URLs from pages that look promising for more evidence"],
+  "suggestedSearches": ["alternative search queries if evidence is lacking"]
+}
+
+## IMPORTANT:
+- Look for hadith numbers like "Bukhari 1234", "Muslim 567", "Tirmidhi 89"
+- Look for Quran references like "Quran 4:93", "Surah Al-Baqarah verse 255"
+- Look for scholar names like "Ibn Baz", "Ibn Uthaymeen", "al-Nawawi"
+- Mark hasEnoughEvidence=true ONLY if you found 3+ hadith AND 1+ scholarly opinion
+
+Return ONLY valid JSON.`;

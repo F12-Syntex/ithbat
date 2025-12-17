@@ -10,6 +10,8 @@ import {
   AI_SUMMARY_ADDENDUM,
   VERIFICATION_PROMPT,
   DEEP_VERIFICATION_PROMPT,
+  BATCH_CONTENT_ANALYSIS_PROMPT,
+  ROUND_ANALYSIS_PROMPT,
   buildPrompt,
   extractUrlsFromMarkdown,
   extractQuranReferences,
@@ -23,6 +25,7 @@ import {
   summarizeCrawledPages,
   formatAvailableLinks,
   formatCrawlResultsForAI,
+  formatPagesForAIAnalysis,
   type CrawledPage,
 } from "@/lib/crawler";
 import {
@@ -387,8 +390,81 @@ export async function POST(request: NextRequest) {
         send({
           type: "step_content",
           step: searchStep.id,
-          content: `\n━━━ Initial search complete: ${initialPages.length} pages ━━━\n\n`,
+          content: `\n━━━ Initial search complete: ${initialPages.length} pages ━━━\n`,
         });
+
+        // AI Content Analysis - analyze what evidence we have so far
+        if (initialPages.length > 0) {
+          send({
+            type: "step_content",
+            step: searchStep.id,
+            content: `\n🤖 AI analyzing content for evidence...\n`,
+          });
+
+          const pageSummaries = initialPages
+            .map(
+              (page, i) =>
+                `[${i + 1}] ${page.source} - ${page.title}\nURL: ${page.url}\nContent preview: ${page.content.slice(0, 500)}...`,
+            )
+            .join("\n\n");
+
+          const analysisPrompt = buildPrompt(BATCH_CONTENT_ANALYSIS_PROMPT, {
+            query,
+            pageSummaries,
+          });
+
+          let analysisResponse = "";
+
+          for await (const chunk of client.streamChat(
+            [
+              {
+                role: "system",
+                content:
+                  "You are an Islamic content analyzer. Identify evidence types in crawled pages. Return ONLY valid JSON.",
+              },
+              { role: "user", content: analysisPrompt },
+            ],
+            "QUICK",
+          )) {
+            analysisResponse += chunk;
+          }
+
+          try {
+            const jsonMatch = analysisResponse.match(/\{[\s\S]*\}/);
+
+            if (jsonMatch) {
+              const analysis = JSON.parse(jsonMatch[0]);
+
+              // Report high-relevance pages
+              const highRelevance =
+                analysis.pageRankings?.filter(
+                  (p: { relevance: string }) => p.relevance === "high",
+                ) || [];
+
+              if (highRelevance.length > 0) {
+                send({
+                  type: "step_content",
+                  step: searchStep.id,
+                  content: `✓ Found ${highRelevance.length} highly relevant pages\n`,
+                });
+              }
+
+              // Report evidence gaps
+              if (
+                analysis.evidenceGaps &&
+                analysis.evidenceGaps.length > 0
+              ) {
+                send({
+                  type: "step_content",
+                  step: searchStep.id,
+                  content: `⚠ Evidence gaps: ${analysis.evidenceGaps.slice(0, 3).join(", ")}\n`,
+                });
+              }
+            }
+          } catch {
+            // Analysis parsing failed, continue anyway
+          }
+        }
 
         send({ type: "step_complete", step: searchStep.id });
 
@@ -598,6 +674,171 @@ export async function POST(request: NextRequest) {
               step: exploreStep.id,
               content: `  Found ${googlePages.length} pages from Google\n`,
             });
+          }
+
+          // AI Round Analysis - analyze all pages crawled so far
+          if (allCrawledPages.length > 0) {
+            send({
+              type: "step_content",
+              step: exploreStep.id,
+              content: `\n🤖 AI analyzing ${allCrawledPages.length} pages for evidence...\n`,
+            });
+
+            const pagesForAnalysis = formatPagesForAIAnalysis(allCrawledPages);
+            const roundAnalysisPrompt = buildPrompt(ROUND_ANALYSIS_PROMPT, {
+              query,
+              pagesContent: pagesForAnalysis,
+            });
+
+            let roundAnalysisResponse = "";
+
+            for await (const chunk of client.streamChat(
+              [
+                {
+                  role: "system",
+                  content:
+                    "You are an Islamic evidence analyzer. Extract hadith, Quran verses, and scholar quotes from pages. Return ONLY valid JSON.",
+                },
+                { role: "user", content: roundAnalysisPrompt },
+              ],
+              "QUICK",
+            )) {
+              roundAnalysisResponse += chunk;
+            }
+
+            try {
+              const jsonMatch = roundAnalysisResponse.match(/\{[\s\S]*\}/);
+
+              if (jsonMatch) {
+                const roundAnalysis = JSON.parse(jsonMatch[0]);
+
+                // Report what evidence was found
+                const hadithCount = roundAnalysis.totalHadith || 0;
+                const quranCount = roundAnalysis.totalQuran || 0;
+                const scholarCount = roundAnalysis.totalScholarQuotes || 0;
+
+                send({
+                  type: "step_content",
+                  step: exploreStep.id,
+                  content: `📊 Evidence found: ${hadithCount} hadith, ${quranCount} Quran verses, ${scholarCount} scholar quotes\n`,
+                });
+
+                // Check if we have enough evidence based on AI analysis
+                if (roundAnalysis.hasEnoughEvidence && hadithCount >= 3) {
+                  hasEnoughInfo = true;
+                  send({
+                    type: "step_content",
+                    step: exploreStep.id,
+                    content: `✓ Sufficient evidence gathered!\n`,
+                  });
+                  break;
+                }
+
+                // Report what's missing
+                if (
+                  roundAnalysis.missingEvidence &&
+                  roundAnalysis.missingEvidence.length > 0
+                ) {
+                  send({
+                    type: "step_content",
+                    step: exploreStep.id,
+                    content: `⚠ Still needed: ${roundAnalysis.missingEvidence.slice(0, 2).join(", ")}\n`,
+                  });
+                }
+
+                // If AI suggested specific links to explore, add them to next round
+                if (
+                  roundAnalysis.linksToExplore &&
+                  roundAnalysis.linksToExplore.length > 0 &&
+                  iteration < maxIterations
+                ) {
+                  send({
+                    type: "step_content",
+                    step: exploreStep.id,
+                    content: `\n🔗 AI suggests exploring ${roundAnalysis.linksToExplore.length} promising links...\n`,
+                  });
+
+                  const aiSuggestedPages = await crawlUrls(
+                    roundAnalysis.linksToExplore.slice(0, 3),
+                    (progress) => {
+                      if (progress.type === "found") {
+                        send({
+                          type: "step_content",
+                          step: exploreStep.id,
+                          content: `  ✓ ${progress.title?.slice(0, 50) || "Page"}\n`,
+                        });
+
+                        const source: Source = {
+                          id: sourceId++,
+                          title: progress.title || "Page",
+                          url: progress.url!,
+                          domain: new URL(progress.url!).hostname.replace(
+                            "www.",
+                            "",
+                          ),
+                          trusted: true,
+                        };
+
+                        send({ type: "source", source });
+                      }
+                    },
+                  );
+
+                  allCrawledPages.push(...aiSuggestedPages);
+                }
+
+                // If AI suggested alternative searches and we don't have enough evidence
+                if (
+                  !roundAnalysis.hasEnoughEvidence &&
+                  roundAnalysis.suggestedSearches &&
+                  roundAnalysis.suggestedSearches.length > 0 &&
+                  iteration < maxIterations
+                ) {
+                  const suggestedQuery = roundAnalysis.suggestedSearches[0];
+
+                  send({
+                    type: "step_content",
+                    step: exploreStep.id,
+                    content: `\n🔎 AI suggests searching: "${suggestedQuery}"\n`,
+                  });
+
+                  const suggestedPages = await searchQuery(
+                    suggestedQuery,
+                    (progress) => {
+                      if (progress.type === "found") {
+                        send({
+                          type: "step_content",
+                          step: exploreStep.id,
+                          content: `  ✓ ${progress.title?.slice(0, 50) || "Page"}\n`,
+                        });
+
+                        const source: Source = {
+                          id: sourceId++,
+                          title: progress.title || "Page",
+                          url: progress.url!,
+                          domain: new URL(progress.url!).hostname.replace(
+                            "www.",
+                            "",
+                          ),
+                          trusted: true,
+                        };
+
+                        send({ type: "source", source });
+                      }
+                    },
+                  );
+
+                  allCrawledPages.push(...suggestedPages);
+                }
+              }
+            } catch {
+              // Analysis parsing failed, continue anyway
+              send({
+                type: "step_content",
+                step: exploreStep.id,
+                content: `⚠ AI analysis incomplete, continuing...\n`,
+              });
+            }
           }
 
           // Check if we've hit the page limit

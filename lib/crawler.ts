@@ -54,10 +54,11 @@ const ISLAMIC_SOURCES = {
       `https://sunnah.com/search?q=${encodeURIComponent(q)}`,
     baseUrl: "https://sunnah.com",
     selectors: {
-      results: ".hadith_result, .search-result, .hadithContainer, .allresults",
-      title: "h1, .hadithTitle, .chapter-title",
+      results: ".hadith_result, .search-result, .hadithContainer, .allresults, [class*='hadith'], [class*='result']",
+      title: "h1, .hadithTitle, .chapter-title, .collection-title",
+      // More comprehensive content selectors for sunnah.com
       content:
-        ".hadithText, .text_details, .hadith-text, .arabic_text_details, .actualHadithContainer",
+        ".hadithText, .text_details, .hadith-text, .arabic_text_details, .actualHadithContainer, .englishcontainer, .arabic_hadith_full, .hadith_narrated, .hadith-body, [class*='hadith'], [class*='text'], .chapter_hadith",
       // Match all hadith collection links
       links: HADITH_COLLECTIONS.map((c) => `a[href*="/${c}"]`).join(", "),
     },
@@ -68,10 +69,11 @@ const ISLAMIC_SOURCES = {
       `https://islamqa.info/en/search?q=${encodeURIComponent(q)}`,
     baseUrl: "https://islamqa.info",
     selectors: {
-      results: ".search-result, .article-item, .fatwa-item",
-      title: "h1, .fatwa-title, .article-title",
-      content: ".fatwa-content, .article-content, .answer-text, p",
-      links: 'a[href*="/answers/"], a[href*="/fatwa/"]',
+      results: ".search-result, .article-item, .fatwa-item, [class*='result'], [class*='article']",
+      title: "h1, .fatwa-title, .article-title, [class*='title']",
+      // More comprehensive selectors for islamqa.info
+      content: ".fatwa-content, .article-content, .answer-text, .content-body, .question-text, [class*='content'], [class*='answer'], [class*='text'], article p, main p, .entry-content",
+      links: 'a[href*="/answers/"], a[href*="/fatwa/"], a[href*="/en/"]',
     },
   },
   quran: {
@@ -80,9 +82,10 @@ const ISLAMIC_SOURCES = {
       `https://quran.com/search?q=${encodeURIComponent(q)}`,
     baseUrl: "https://quran.com",
     selectors: {
-      results: ".search-result, [class*='SearchResult']",
-      title: "h1, [class*='ChapterName']",
-      content: "[class*='Translation'], [class*='verse'], .verse-text",
+      results: ".search-result, [class*='SearchResult'], [class*='result']",
+      title: "h1, [class*='ChapterName'], [class*='surah'], [class*='Title']",
+      // More comprehensive selectors for quran.com
+      content: "[class*='Translation'], [class*='verse'], .verse-text, [class*='text'], [class*='ayah'], [class*='quran'], [class*='arabic']",
       // Match verse links like /2/255 or /4:103
       links: 'a[href^="/"][href*="/"]',
     },
@@ -205,16 +208,81 @@ async function rateLimitedFetch(url: string): Promise<Response | null> {
 function extractTextContent($: cheerio.CheerioAPI, selector: string): string {
   const elements = $(selector);
   const texts: string[] = [];
+  const seen = new Set<string>();
 
   elements.each((_, el) => {
-    const text = $(el).text().trim();
+    const text = $(el).text().trim().replace(/\s+/g, " ");
 
-    if (text && text.length > 20) {
+    // Lower threshold to 10 chars and avoid duplicates
+    if (text && text.length > 10 && !seen.has(text)) {
+      seen.add(text);
       texts.push(text);
     }
   });
 
-  return texts.join("\n\n").slice(0, 8000);
+  return texts.join("\n\n").slice(0, 10000);
+}
+
+/**
+ * Compress page content to reduce token count while preserving key information
+ * Removes boilerplate, navigation text, and compresses whitespace
+ */
+export function compressPageContent(content: string): string {
+  // Remove common boilerplate phrases
+  const boilerplate = [
+    /cookie(s)? (policy|consent|notice)/gi,
+    /privacy policy/gi,
+    /terms (of|and) (service|use|conditions)/gi,
+    /subscribe to our newsletter/gi,
+    /follow us on (twitter|facebook|instagram)/gi,
+    /share (this|on)/gi,
+    /click here/gi,
+    /read more/gi,
+    /log ?in/gi,
+    /sign ?up/gi,
+    /create (an )?account/gi,
+    /advertisement/gi,
+    /sponsored/gi,
+    /related (articles|posts|content)/gi,
+    /comments? \(\d+\)/gi,
+    /leave a (comment|reply)/gi,
+    /\d+ (views|shares|likes)/gi,
+    /posted (on|by|in)/gi,
+    /copyright \d{4}/gi,
+    /all rights reserved/gi,
+  ];
+
+  let compressed = content;
+
+  for (const pattern of boilerplate) {
+    compressed = compressed.replace(pattern, "");
+  }
+
+  // Compress multiple newlines/spaces
+  compressed = compressed
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/\s{3,}/g, " ")
+    .trim();
+
+  return compressed;
+}
+
+/**
+ * Format multiple pages into a compressed summary for AI analysis
+ */
+export function formatPagesForAIAnalysis(pages: CrawledPage[]): string {
+  return pages
+    .map((page, i) => {
+      const compressed = compressPageContent(page.content);
+      // Limit each page to 1500 chars for bulk analysis
+      const truncated = compressed.slice(0, 1500);
+      return `[PAGE ${i + 1}] ${page.source} - ${page.title}
+URL: ${page.url}
+CONTENT:
+${truncated}${compressed.length > 1500 ? "..." : ""}
+---`;
+    })
+    .join("\n\n");
 }
 
 /**
@@ -417,7 +485,7 @@ async function crawlPage(
   const $ = cheerio.load(html);
 
   // Remove scripts, styles, and navigation
-  $("script, style, nav, footer, header, aside, .sidebar, .menu").remove();
+  $("script, style, nav, footer, header, aside, .sidebar, .menu, .navigation, .nav, .footer, .header, .cookie, .popup, .modal, .ad, .advertisement").remove();
 
   // Extract title
   const title =
@@ -425,19 +493,30 @@ async function crawlPage(
     $("title").text().trim() ||
     "Untitled Page";
 
-  // Extract main content
+  // Extract main content - try multiple strategies
   let content = "";
 
-  // Try specific selectors first
+  // Strategy 1: Try specific selectors first
   content = extractTextContent($, sourceConfig.selectors.content);
 
-  // Fallback to main/article/body
+  // Strategy 2: Fallback to main content areas
   if (!content || content.length < 100) {
-    content = extractTextContent($, "main, article, .content, #content");
+    content = extractTextContent($, "main, article, .content, #content, .post-content, .entry-content, .article-content");
   }
 
+  // Strategy 3: Look for any div with substantial content
+  if (!content || content.length < 100) {
+    content = extractTextContent($, "div[class*='content'], div[class*='text'], div[class*='body'], div[class*='article']");
+  }
+
+  // Strategy 4: Get all paragraphs
   if (!content || content.length < 100) {
     content = extractTextContent($, "p");
+  }
+
+  // Strategy 5: Last resort - get all text from body
+  if (!content || content.length < 100) {
+    content = $("body").text().trim().replace(/\s+/g, " ").slice(0, 8000);
   }
 
   // Extract links for further crawling
@@ -446,7 +525,7 @@ async function crawlPage(
   return {
     url,
     title,
-    content: content.slice(0, 6000),
+    content: content.slice(0, 8000), // Increased from 6000
     links,
     depth,
     source: sourceConfig.name,
@@ -973,28 +1052,61 @@ export function formatAvailableLinks(
 
 /**
  * Initial search - get search results from all Islamic sources
+ * Now crawls THROUGH search pages to get actual content
  */
 export async function initialSearch(
   query: string,
   onProgress?: (progress: CrawlProgress) => void,
 ): Promise<CrawledPage[]> {
   const pages: CrawledPage[] = [];
+  const crawledUrls = new Set<string>();
 
   for (const [, source] of Object.entries(ISLAMIC_SOURCES)) {
     const searchUrl = source.searchUrl(query);
 
     onProgress?.({ type: "visiting", url: searchUrl, depth: 0 });
 
-    const page = await crawlPage(searchUrl, source, 0);
+    const searchPage = await crawlPage(searchUrl, source, 0);
 
-    if (page) {
-      pages.push(page);
+    if (searchPage) {
+      // DON'T add search page itself - it has no real content
+      // Instead, crawl the actual content links from the search results
+
+      // Filter to only direct content links (not more search pages)
+      const contentLinks = searchPage.links.filter(isDirectContentLink);
+
       onProgress?.({
         type: "found",
-        url: page.url,
-        title: page.title,
+        url: searchPage.url,
+        title: `Found ${contentLinks.length} results from ${source.name}`,
         depth: 0,
       });
+
+      // Crawl up to 5 content pages from each source
+      for (const link of contentLinks.slice(0, 5)) {
+        if (crawledUrls.has(link)) continue;
+        crawledUrls.add(link);
+
+        onProgress?.({ type: "visiting", url: link, depth: 1 });
+
+        const contentPage = await crawlPage(link, source, 1);
+
+        if (contentPage && contentPage.content.length > 200) {
+          pages.push(contentPage);
+          onProgress?.({
+            type: "found",
+            url: contentPage.url,
+            title: contentPage.title,
+            depth: 1,
+          });
+        } else {
+          onProgress?.({
+            type: "error",
+            url: link,
+            message: "No content extracted",
+          });
+        }
+      }
     } else {
       onProgress?.({
         type: "error",
