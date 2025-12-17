@@ -1,5 +1,6 @@
 // Local web crawler for Islamic sources
 import * as cheerio from "cheerio";
+import puppeteer, { type Browser, type Page } from "puppeteer-core";
 
 export interface CrawledPage {
   url: string;
@@ -9,6 +10,191 @@ export interface CrawledPage {
   depth: number;
   source: string;
   timestamp: number;
+}
+
+// ============================================
+// Puppeteer-based crawler for JavaScript-heavy sites
+// ============================================
+
+// Singleton browser instance
+let browserInstance: Browser | null = null;
+let browserInitializing = false;
+
+/**
+ * Get or create a browser instance
+ */
+async function getBrowser(): Promise<Browser | null> {
+  if (browserInstance) {
+    try {
+      // Check if browser is still connected
+      if (browserInstance.connected) {
+        return browserInstance;
+      }
+    } catch {
+      browserInstance = null;
+    }
+  }
+
+  if (browserInitializing) {
+    // Wait for initialization to complete
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    return browserInstance;
+  }
+
+  browserInitializing = true;
+
+  try {
+    // Try to find Chrome/Chromium
+    const possiblePaths = [
+      // Windows
+      "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+      process.env.LOCALAPPDATA +
+        "\\Google\\Chrome\\Application\\chrome.exe",
+      // macOS
+      "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      // Linux
+      "/usr/bin/google-chrome",
+      "/usr/bin/chromium-browser",
+      "/usr/bin/chromium",
+    ];
+
+    let executablePath: string | undefined;
+
+    for (const path of possiblePaths) {
+      try {
+        const fs = await import("fs");
+
+        if (fs.existsSync(path)) {
+          executablePath = path;
+          break;
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    if (!executablePath) {
+      console.warn("Chrome not found, falling back to fetch-based crawling");
+      browserInitializing = false;
+      return null;
+    }
+
+    browserInstance = await puppeteer.launch({
+      executablePath,
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--no-first-run",
+        "--no-zygote",
+        "--single-process",
+      ],
+    });
+
+    browserInitializing = false;
+    return browserInstance;
+  } catch (error) {
+    console.warn("Failed to launch browser:", error);
+    browserInitializing = false;
+    return null;
+  }
+}
+
+/**
+ * Crawl a page using Puppeteer (for JavaScript-rendered content)
+ */
+async function crawlWithPuppeteer(url: string): Promise<{
+  html: string;
+  title: string;
+} | null> {
+  const browser = await getBrowser();
+
+  if (!browser) return null;
+
+  let page: Page | null = null;
+
+  try {
+    page = await browser.newPage();
+
+    // Set a reasonable viewport
+    await page.setViewport({ width: 1280, height: 800 });
+
+    // Set user agent
+    await page.setUserAgent(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    );
+
+    // Navigate and wait for content to load
+    await page.goto(url, {
+      waitUntil: "networkidle2",
+      timeout: 20000,
+    });
+
+    // Wait a bit more for any lazy-loaded content
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // Get the rendered HTML
+    const html = await page.content();
+    const title = await page.title();
+
+    return { html, title };
+  } catch (error) {
+    console.warn(`Puppeteer failed for ${url}:`, error);
+    return null;
+  } finally {
+    if (page) {
+      try {
+        await page.close();
+      } catch {
+        // Ignore close errors
+      }
+    }
+  }
+}
+
+/**
+ * Sites that require JavaScript rendering
+ */
+const JS_RENDERED_SITES = ["sunnah.com", "quran.com"];
+
+/**
+ * Check if a URL requires JavaScript rendering
+ */
+function needsJavaScript(url: string): boolean {
+  return JS_RENDERED_SITES.some((site) => url.includes(site));
+}
+
+/**
+ * Crawl a page - uses Puppeteer for JS sites, fetch for others
+ */
+async function smartCrawl(url: string): Promise<{
+  html: string;
+  title: string;
+} | null> {
+  if (needsJavaScript(url)) {
+    // Try Puppeteer first
+    const puppeteerResult = await crawlWithPuppeteer(url);
+
+    if (puppeteerResult && puppeteerResult.html.length > 1000) {
+      return puppeteerResult;
+    }
+
+    // Fall back to fetch if Puppeteer fails
+  }
+
+  // Use regular fetch
+  const response = await rateLimitedFetch(url);
+
+  if (!response || !response.ok) return null;
+
+  const html = await response.text();
+  const $ = cheerio.load(html);
+  const title = $("title").text() || $("h1").first().text() || "";
+
+  return { html, title };
 }
 
 export interface CrawlResult {
@@ -475,13 +661,14 @@ async function crawlPage(
   sourceConfig: (typeof ISLAMIC_SOURCES)[keyof typeof ISLAMIC_SOURCES],
   depth: number,
 ): Promise<CrawledPage | null> {
-  const response = await rateLimitedFetch(url);
+  // Use smartCrawl for JavaScript-heavy sites (sunnah.com, quran.com)
+  const crawlResult = await smartCrawl(url);
 
-  if (!response || !response.ok) {
+  if (!crawlResult) {
     return null;
   }
 
-  const html = await response.text();
+  const html = crawlResult.html;
   const $ = cheerio.load(html);
 
   // Remove scripts, styles, and navigation
