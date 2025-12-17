@@ -1,4 +1,5 @@
 // Local web crawler for Islamic sources
+// IMPORTANT: Only searches sites defined in lib/traverser/sites/*.json
 import * as cheerio from "cheerio";
 import puppeteer, { type Browser, type Page } from "puppeteer-core";
 
@@ -7,7 +8,15 @@ import {
   getDomain,
   extractContent as traverserExtract,
   findContentLinks as traverserFindLinks,
+  extractSearchResults as traverserExtractSearchResults,
+  isSearchPage as traverserIsSearchPage,
+  loadAllSiteConfigs,
+  getSiteSummary,
+  getMetadataDescriptions,
+  isTrustedSource,
+  getSearchUrl,
 } from "./traverser";
+import type { SiteTraversal, RenderingConfig } from "./traverser/types";
 
 export interface CrawledPage {
   url: string;
@@ -115,8 +124,13 @@ async function getBrowser(): Promise<Browser | null> {
 
 /**
  * Crawl a page using Puppeteer (for JavaScript-rendered content)
+ * Uses rendering config from sites.json for wait times
  */
-async function crawlWithPuppeteer(url: string): Promise<{
+async function crawlWithPuppeteer(
+  url: string,
+  renderingConfig?: RenderingConfig,
+  isSearchPage: boolean = false,
+): Promise<{
   html: string;
   title: string;
 } | null> {
@@ -125,6 +139,12 @@ async function crawlWithPuppeteer(url: string): Promise<{
   if (!browser) return null;
 
   let page: Page | null = null;
+
+  // Get wait times from config or use defaults
+  const waitTime = isSearchPage
+    ? renderingConfig?.searchWaitTime ?? renderingConfig?.waitTime ?? 3000
+    : renderingConfig?.waitTime ?? 2000;
+  const waitForSelector = renderingConfig?.waitForSelector;
 
   try {
     page = await browser.newPage();
@@ -140,11 +160,21 @@ async function crawlWithPuppeteer(url: string): Promise<{
     // Navigate and wait for content to load
     await page.goto(url, {
       waitUntil: "networkidle2",
-      timeout: 20000,
+      timeout: 30000,
     });
 
-    // Wait a bit more for any lazy-loaded content
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    // Wait for specific selector if configured
+    if (waitForSelector) {
+      try {
+        await page.waitForSelector(waitForSelector, { timeout: waitTime });
+      } catch {
+        // Selector not found, continue with time-based wait
+        console.log(`[Puppeteer] Selector ${waitForSelector} not found, using time-based wait`);
+      }
+    }
+
+    // Wait configured time for lazy-loaded content
+    await new Promise((resolve) => setTimeout(resolve, waitTime));
 
     // Get the rendered HTML
     const html = await page.content();
@@ -167,31 +197,33 @@ async function crawlWithPuppeteer(url: string): Promise<{
 }
 
 /**
- * Sites that require JavaScript rendering (NOT sunnah.com/quran.com - they work with fetch)
+ * Check if a site requires JavaScript rendering based on config
  */
-const JS_RENDERED_SITES = [
-  "islamqa.info",
-  "seekersguidance.org",
-  "islamweb.net",
-  "daruliftaa.com",
-  "askimam.org",
-];
-
-/**
- * Check if a URL requires JavaScript rendering
- */
-function needsJavaScript(url: string): boolean {
-  return JS_RENDERED_SITES.some((site) => url.includes(site));
+function needsJavaScript(config: SiteTraversal | null): boolean {
+  return config?.rendering?.requiresJavaScript ?? false;
 }
 
 /**
- * Crawl a page - try fast fetch first, use Puppeteer only as fallback for JS sites
+ * Crawl a page - try fast fetch first, use Puppeteer for JS-heavy sites
+ * Uses rendering config from sites.json for wait times and JS detection
  */
-async function smartCrawl(url: string): Promise<{
+async function smartCrawl(
+  url: string,
+  config: SiteTraversal | null,
+  isSearchPage: boolean = false,
+): Promise<{
   html: string;
   title: string;
 } | null> {
-  // Always try fast fetch first
+  const requiresJS = needsJavaScript(config);
+
+  // For JS-heavy sites, go straight to Puppeteer
+  if (requiresJS) {
+    console.log(`[Puppeteer] ${config?.domain} requires JavaScript rendering`);
+    return await crawlWithPuppeteer(url, config?.rendering, isSearchPage);
+  }
+
+  // For non-JS sites, use fast fetch
   const response = await rateLimitedFetch(url);
 
   if (response && response.ok) {
@@ -207,12 +239,12 @@ async function smartCrawl(url: string): Promise<{
       return { html, title };
     }
 
-    // For JS-heavy sites with minimal content, try Puppeteer as fallback
-    if (needsJavaScript(url) && bodyText.length < 2000) {
+    // For sites with minimal content, try Puppeteer as fallback
+    if (bodyText.length < 2000) {
       console.log(
         `[Puppeteer fallback] ${url} - fetch got only ${bodyText.length} chars`,
       );
-      const puppeteerResult = await crawlWithPuppeteer(url);
+      const puppeteerResult = await crawlWithPuppeteer(url, config?.rendering, isSearchPage);
 
       if (puppeteerResult && puppeteerResult.html.length > html.length) {
         return puppeteerResult;
@@ -223,12 +255,8 @@ async function smartCrawl(url: string): Promise<{
     return { html, title };
   }
 
-  // Fetch failed completely - try Puppeteer for JS sites
-  if (needsJavaScript(url)) {
-    return await crawlWithPuppeteer(url);
-  }
-
-  return null;
+  // Fetch failed completely - try Puppeteer as last resort
+  return await crawlWithPuppeteer(url, config?.rendering, isSearchPage);
 }
 
 export interface CrawlResult {
@@ -246,150 +274,11 @@ export interface CrawlProgress {
   message?: string;
 }
 
-// Hadith collection patterns for sunnah.com
-const HADITH_COLLECTIONS = [
-  "bukhari",
-  "muslim",
-  "tirmidhi",
-  "abudawud",
-  "nasai",
-  "ibnmajah",
-  "malik",
-  "ahmad",
-  "darimi",
-  "nawawi40",
-  "qudsi40",
-  "riyadussalihin",
-  "adab",
-  "bulugh",
-  "mishkat",
-  "hisn",
-];
-
-// Islamic source configurations
-const ISLAMIC_SOURCES = {
-  sunnah: {
-    name: "Sunnah.com",
-    searchUrl: (q: string) =>
-      `https://sunnah.com/search?q=${encodeURIComponent(q)}`,
-    baseUrl: "https://sunnah.com",
-    selectors: {
-      results:
-        ".hadith_result, .search-result, .hadithContainer, .allresults, [class*='hadith'], [class*='result']",
-      title: "h1, .hadithTitle, .chapter-title, .collection-title",
-      // More comprehensive content selectors for sunnah.com
-      content:
-        ".hadithText, .text_details, .hadith-text, .arabic_text_details, .actualHadithContainer, .englishcontainer, .arabic_hadith_full, .hadith_narrated, .hadith-body, [class*='hadith'], [class*='text'], .chapter_hadith",
-      // Match all hadith collection links
-      links: HADITH_COLLECTIONS.map((c) => `a[href*="/${c}"]`).join(", "),
-    },
-  },
-  islamqa: {
-    name: "IslamQA",
-    searchUrl: (q: string) =>
-      `https://islamqa.info/en/search?q=${encodeURIComponent(q)}`,
-    baseUrl: "https://islamqa.info",
-    selectors: {
-      results:
-        ".search-result, .article-item, .fatwa-item, [class*='result'], [class*='article']",
-      title: "h1, .fatwa-title, .article-title, [class*='title']",
-      // More comprehensive selectors for islamqa.info
-      content:
-        ".fatwa-content, .article-content, .answer-text, .content-body, .question-text, [class*='content'], [class*='answer'], [class*='text'], article p, main p, .entry-content",
-      links: 'a[href*="/answers/"], a[href*="/fatwa/"], a[href*="/en/"]',
-    },
-  },
-  quran: {
-    name: "Quran.com",
-    searchUrl: (q: string) =>
-      `https://quran.com/search?q=${encodeURIComponent(q)}`,
-    baseUrl: "https://quran.com",
-    selectors: {
-      results: ".search-result, [class*='SearchResult'], [class*='result']",
-      title: "h1, [class*='ChapterName'], [class*='surah'], [class*='Title']",
-      // More comprehensive selectors for quran.com
-      content:
-        "[class*='Translation'], [class*='verse'], .verse-text, [class*='text'], [class*='ayah'], [class*='quran'], [class*='arabic']",
-      // Match verse links like /2/255 or /4:103
-      links: 'a[href^="/"][href*="/"]',
-    },
-  },
-  daruliftaa: {
-    name: "Darul Iftaa",
-    searchUrl: (q: string) =>
-      `https://daruliftaa.com/?s=${encodeURIComponent(q)}`,
-    baseUrl: "https://daruliftaa.com",
-    selectors: {
-      results: ".post, .entry, article, .search-result",
-      title: "h1, h2.entry-title, .post-title",
-      content: ".entry-content, .post-content, article p, .answer",
-      links: 'a[href*="daruliftaa.com"]',
-    },
-  },
-  askimam: {
-    name: "AskImam",
-    searchUrl: (q: string) =>
-      `https://askimam.org/public/search?keyword=${encodeURIComponent(q)}&page=1`,
-    baseUrl: "https://askimam.org",
-    selectors: {
-      results: ".fatwa, .question-answer, .search-result, article",
-      title: "h1, h2, .fatwa-title",
-      content: ".answer, .fatwa-content, .response, p",
-      links: 'a[href*="askimam.org"]',
-    },
-  },
-  seekersguidance: {
-    name: "SeekersGuidance",
-    searchUrl: (q: string) =>
-      `https://seekersguidance.org/answers/?search=${encodeURIComponent(q)}`,
-    baseUrl: "https://seekersguidance.org",
-    selectors: {
-      results: ".post, article, .search-result, .answer-item",
-      title: "h1, h2.entry-title, .post-title",
-      content: ".entry-content, .post-content, article p, .answer-content",
-      links: 'a[href*="seekersguidance.org/answers/"]',
-    },
-  },
-  alim: {
-    name: "Alim.org",
-    searchUrl: (q: string) =>
-      `https://www.alim.org/search-results/?s=${encodeURIComponent(q)}&page=1`,
-    baseUrl: "https://www.alim.org",
-    selectors: {
-      results: ".search-result, article, .post, .content-item",
-      title: "h1, h2, .entry-title, .post-title",
-      content: ".entry-content, .post-content, article p, .content, p",
-      links: 'a[href*="alim.org"]',
-    },
-  },
-  islamweb: {
-    name: "IslamWeb",
-    searchUrl: (q: string) =>
-      `https://www.islamweb.net/en/?page=websearch&srchsett=0&myRange=25&exact=0&extended=0&synonym=0&stxt=${encodeURIComponent(q)}&type=7`,
-    baseUrl: "https://www.islamweb.net",
-    selectors: {
-      results: ".fatwa-item, .search-result, .result-item, article, .content",
-      title: "h1, h2, .fatwa-title, .title",
-      content: ".fatwa-content, .answer, .content-body, article p, p",
-      links:
-        'a[href*="islamweb.net/en/fatwa/"], a[href*="islamweb.net/en/article/"]',
-    },
-  },
-};
-
-// Generic source config for unknown domains
-const GENERIC_SOURCE = {
-  name: "Web",
-  searchUrl: (q: string) =>
-    `https://www.google.com/search?q=${encodeURIComponent(q)}`,
-  baseUrl: "",
-  selectors: {
-    results: "article, .post, .content, main, .entry",
-    title: "h1, h2, .title, .post-title",
-    content: "article p, .content p, main p, .post-content, .entry-content, p",
-    links: "a[href]",
-  },
-};
+// ============================================
+// TRUSTED SITES ONLY - from lib/traverser/sites/*.json
+// ============================================
+// NO hardcoded sources - everything comes from the traverser configs
+// To add a new site, use: yarn traverse analyze <url>
 
 // Rate limiting
 const RATE_LIMIT_MS = 500;
@@ -427,24 +316,6 @@ async function rateLimitedFetch(url: string): Promise<Response | null> {
   } catch {
     return null;
   }
-}
-
-function extractTextContent($: cheerio.CheerioAPI, selector: string): string {
-  const elements = $(selector);
-  const texts: string[] = [];
-  const seen = new Set<string>();
-
-  elements.each((_, el) => {
-    const text = $(el).text().trim().replace(/\s+/g, " ");
-
-    // Lower threshold to 10 chars and avoid duplicates
-    if (text && text.length > 10 && !seen.has(text)) {
-      seen.add(text);
-      texts.push(text);
-    }
-  });
-
-  return texts.join("\n\n").slice(0, 10000);
 }
 
 /**
@@ -579,129 +450,28 @@ function isDirectContentLink(url: string): boolean {
   return true;
 }
 
-function extractLinks(
-  $: cheerio.CheerioAPI,
-  selector: string,
-  baseUrl: string,
-): string[] {
-  const links: string[] = [];
-
-  // For sunnah.com, extract ALL hadith links aggressively
-  if (baseUrl.includes("sunnah.com")) {
-    $("a[href]").each((_, el) => {
-      const href = $(el).attr("href");
-
-      if (!href) return;
-
-      try {
-        const fullUrl = href.startsWith("http")
-          ? href
-          : new URL(href, baseUrl).href;
-
-        // Match hadith links like /bukhari:123 or /muslim/1
-        if (/sunnah\.com\/[a-z]+[:/]\d+/.test(fullUrl)) {
-          links.push(fullUrl);
-        }
-      } catch {
-        // Invalid URL, skip
-      }
-    });
-
-    // Return early if we found hadith links
-    if (links.length > 0) {
-      return [...new Set(links)].slice(0, 50);
-    }
-  }
-
-  // For quran.com, extract verse links aggressively
-  if (baseUrl.includes("quran.com")) {
-    $("a[href]").each((_, el) => {
-      const href = $(el).attr("href");
-
-      if (!href) return;
-
-      try {
-        const fullUrl = href.startsWith("http")
-          ? href
-          : new URL(href, "https://quran.com").href;
-
-        // Match verse links like /2/255 or /4/93 (surah/ayah format)
-        if (/quran\.com\/\d+\/\d+/.test(fullUrl)) {
-          links.push(fullUrl);
-        }
-        // Also match /surah-name/ayah format
-        else if (/quran\.com\/[a-z-]+\/\d+/.test(fullUrl.toLowerCase())) {
-          links.push(fullUrl);
-        }
-      } catch {
-        // Invalid URL, skip
-      }
-    });
-
-    // Return early if we found verse links
-    if (links.length > 0) {
-      return [...new Set(links)].slice(0, 50);
-    }
-  }
-
-  // First, try specific selector
-  $(selector).each((_, el) => {
-    const href = $(el).attr("href");
-
-    if (href) {
-      try {
-        const fullUrl = href.startsWith("http")
-          ? href
-          : new URL(href, baseUrl).href;
-
-        // Only include links from the same domain that are direct content links
-        if (
-          fullUrl.includes(new URL(baseUrl).hostname) &&
-          isDirectContentLink(fullUrl)
-        ) {
-          links.push(fullUrl);
-        }
-      } catch {
-        // Invalid URL, skip
-      }
-    }
-  });
-
-  // If we didn't find many direct content links, also check all links on page
-  if (links.length < 5) {
-    $("a[href]").each((_, el) => {
-      const href = $(el).attr("href");
-
-      if (href) {
-        try {
-          const fullUrl = href.startsWith("http")
-            ? href
-            : new URL(href, baseUrl).href;
-
-          if (
-            fullUrl.includes(new URL(baseUrl).hostname) &&
-            isDirectContentLink(fullUrl)
-          ) {
-            links.push(fullUrl);
-          }
-        } catch {
-          // Invalid URL, skip
-        }
-      }
-    });
-  }
-
-  // Return more links for thorough crawling
-  return [...new Set(links)].slice(0, 30);
-}
-
+/**
+ * Crawl a page using traverser config exclusively
+ * Only crawls sites that have a config in lib/traverser/sites.json
+ */
 async function crawlPage(
   url: string,
-  sourceConfig: (typeof ISLAMIC_SOURCES)[keyof typeof ISLAMIC_SOURCES],
   depth: number,
 ): Promise<CrawledPage | null> {
-  // Use smartCrawl for JavaScript-heavy sites
-  const crawlResult = await smartCrawl(url);
+  const domain = getDomain(url);
+  const config = loadSiteConfig(domain);
+
+  // Only crawl trusted sites with traverser configs
+  if (!config) {
+    console.warn(`[Crawler] Skipping untrusted domain: ${domain}`);
+    return null;
+  }
+
+  // Check if this is a search page - affects rendering wait times
+  const isSearch = traverserIsSearchPage(url, config);
+
+  // Use smartCrawl with config for proper rendering handling
+  const crawlResult = await smartCrawl(url, config, isSearch);
 
   if (!crawlResult) {
     return null;
@@ -709,86 +479,30 @@ async function crawlPage(
 
   const html = crawlResult.html;
 
-  // Try to use traverser config first (AI-generated configs)
-  const domain = getDomain(url);
-  const traverserConfig = loadSiteConfig(domain);
+  // Use traverser for extraction
+  const extracted = traverserExtract(html, url, config);
 
-  if (traverserConfig) {
-    // Use traverser for extraction
-    const extracted = traverserExtract(html, url, traverserConfig);
-    const contentLinks = traverserFindLinks(html, url, traverserConfig);
-
-    return {
-      url,
-      title: extracted.title || "Untitled Page",
-      content: extracted.content.slice(0, 8000),
-      links: contentLinks,
-      depth,
-      source: traverserConfig.name,
-      timestamp: Date.now(),
-    };
-  }
-
-  // Fallback to legacy extraction if no traverser config
-  const $ = cheerio.load(html);
-
-  // Remove scripts, styles, and navigation
-  $(
-    "script, style, nav, footer, header, aside, .sidebar, .menu, .navigation, .nav, .footer, .header, .cookie, .popup, .modal, .ad, .advertisement",
-  ).remove();
-
-  // Extract title
-  const title =
-    $("h1").first().text().trim() ||
-    $("title").text().trim() ||
-    "Untitled Page";
-
-  // Extract main content - try multiple strategies
-  let content = "";
-
-  // Strategy 1: Try specific selectors first
-  content = extractTextContent($, sourceConfig.selectors.content);
-
-  // Strategy 2: Fallback to main content areas
-  if (!content || content.length < 100) {
-    content = extractTextContent(
-      $,
-      "main, article, .content, #content, .post-content, .entry-content, .article-content",
-    );
-  }
-
-  // Strategy 3: Look for any div with substantial content
-  if (!content || content.length < 100) {
-    content = extractTextContent(
-      $,
-      "div[class*='content'], div[class*='text'], div[class*='body'], div[class*='article']",
-    );
-  }
-
-  // Strategy 4: Get all paragraphs
-  if (!content || content.length < 100) {
-    content = extractTextContent($, "p");
-  }
-
-  // Strategy 5: Last resort - get all text from body
-  if (!content || content.length < 100) {
-    content = $("body").text().trim().replace(/\s+/g, " ").slice(0, 8000);
-  }
-
-  // Extract links for further crawling
-  const links = extractLinks($, "a[href]", sourceConfig.baseUrl);
+  // For search pages, use extractSearchResults to get result links
+  // For content pages, use findContentLinks to get related links
+  const contentLinks = isSearch
+    ? traverserExtractSearchResults(html, config)
+    : traverserFindLinks(html, url, config);
 
   return {
     url,
-    title,
-    content: content.slice(0, 8000),
-    links,
+    title: extracted.title || "Untitled Page",
+    content: extracted.content.slice(0, 8000),
+    links: contentLinks,
     depth,
-    source: sourceConfig.name,
+    source: config.name,
     timestamp: Date.now(),
   };
 }
 
+/**
+ * Crawl all trusted Islamic sources from traverser configs
+ * Uses lib/traverser/sites/*.json exclusively
+ */
 export async function* crawlIslamicSources(
   query: string,
   maxDepth: number = 2,
@@ -798,13 +512,26 @@ export async function* crawlIslamicSources(
   const visitedUrls = new Set<string>();
   const pages: CrawledPage[] = [];
   const errors: string[] = [];
-  const queue: { url: string; depth: number; source: string }[] = [];
+  const queue: { url: string; depth: number; domain: string }[] = [];
 
-  // Add search pages from all sources to queue
-  for (const [key, source] of Object.entries(ISLAMIC_SOURCES)) {
-    const searchUrl = source.searchUrl(query);
+  // Load all trusted site configs from traverser
+  const siteConfigs = loadAllSiteConfigs();
 
-    queue.push({ url: searchUrl, depth: 0, source: key });
+  if (siteConfigs.length === 0) {
+    console.warn("[Crawler] No site configs found in lib/traverser/sites/");
+    yield { type: "complete" };
+    return {
+      pages: [],
+      visitedUrls: [],
+      errors: ["No trusted site configurations found"],
+      totalTime: Date.now() - startTime,
+    };
+  }
+
+  // Add search pages from all trusted sources to queue
+  for (const config of siteConfigs) {
+    const searchUrl = getSearchUrl(query, config);
+    queue.push({ url: searchUrl, depth: 0, domain: config.domain });
   }
 
   while (queue.length > 0 && pages.length < maxPages) {
@@ -821,12 +548,7 @@ export async function* crawlIslamicSources(
       depth: current.depth,
     };
 
-    const sourceConfig =
-      ISLAMIC_SOURCES[current.source as keyof typeof ISLAMIC_SOURCES];
-
-    if (!sourceConfig) continue;
-
-    const page = await crawlPage(current.url, sourceConfig, current.depth);
+    const page = await crawlPage(current.url, current.depth);
 
     if (page) {
       pages.push(page);
@@ -845,7 +567,7 @@ export async function* crawlIslamicSources(
             queue.push({
               url: link,
               depth: current.depth + 1,
-              source: current.source,
+              domain: current.domain,
             });
           }
         }
@@ -871,6 +593,81 @@ export async function* crawlIslamicSources(
 }
 
 /**
+ * Get trusted sites context for AI - describes available sources and how to use them
+ */
+export function getTrustedSitesContext(): string {
+  const configs = loadAllSiteConfigs();
+
+  if (configs.length === 0) {
+    return "No trusted site configurations available.";
+  }
+
+  const sections = [
+    "=== TRUSTED ISLAMIC SOURCES ===",
+    "The following sites are configured as trusted sources. Use their specific URLs for citations.",
+    "",
+  ];
+
+  for (const config of configs) {
+    sections.push(getSiteSummary(config));
+    sections.push("");
+  }
+
+  return sections.join("\n");
+}
+
+/**
+ * Get metadata context for a specific site - helps AI understand extracted fields
+ */
+export function getSiteMetadataContext(url: string): string {
+  const domain = getDomain(url);
+  const config = loadSiteConfig(domain);
+
+  if (!config) {
+    return "";
+  }
+
+  const descriptions = getMetadataDescriptions(config);
+  const lines = [
+    `\n[${config.name} - Field Descriptions]`,
+    `Evidence Type: ${config.evidenceTypes.join(", ")}`,
+  ];
+
+  for (const [field, description] of Object.entries(descriptions)) {
+    lines.push(`  - ${field}: ${description}`);
+  }
+
+  if (config.extraction.contentNotes) {
+    lines.push(`Content Notes: ${config.extraction.contentNotes}`);
+  }
+
+  if (config.aiNotes) {
+    lines.push(`AI Notes: ${config.aiNotes}`);
+  }
+
+  return lines.join("\n");
+}
+
+/**
+ * Enhance crawled page with site context
+ */
+export function enhancePageWithContext(page: CrawledPage): CrawledPage & {
+  siteContext?: string;
+  evidenceType?: string;
+  isTrusted: boolean;
+} {
+  const domain = getDomain(page.url);
+  const config = loadSiteConfig(domain);
+
+  return {
+    ...page,
+    siteContext: config ? getSiteMetadataContext(page.url) : undefined,
+    evidenceType: config?.evidenceTypes[0],
+    isTrusted: isTrustedSource(domain),
+  };
+}
+
+/**
  * Format crawled pages into a research context string with numbered sources
  */
 export function formatCrawlResultsForAI(pages: CrawledPage[]): string {
@@ -879,6 +676,12 @@ export function formatCrawlResultsForAI(pages: CrawledPage[]): string {
   }
 
   const sections: string[] = [];
+
+  // Add trusted sites context at the beginning
+  const trustedContext = getTrustedSitesContext();
+
+  sections.push(trustedContext);
+  sections.push("\n");
 
   // Collect ALL specific hadith/article links for easy reference
   const specificLinks: string[] = [];
@@ -911,7 +714,7 @@ export function formatCrawlResultsForAI(pages: CrawledPage[]): string {
   }
   sections.push("\n");
 
-  // Then, provide the full content
+  // Then, provide the full content with site-specific context
   for (let i = 0; i < pages.length; i++) {
     const page = pages[i];
     const isSearchPage =
@@ -919,10 +722,16 @@ export function formatCrawlResultsForAI(pages: CrawledPage[]): string {
       page.url.includes("?q=") ||
       page.url.includes("?s=");
 
+    // Get site-specific context for trusted sources
+    const siteContext = getSiteMetadataContext(page.url);
+    const domain = getDomain(page.url);
+    const trusted = isTrustedSource(domain);
+
     sections.push(`
-=== SOURCE: ${page.source} ===
+=== SOURCE: ${page.source}${trusted ? " [TRUSTED]" : ""} ===
 PAGE URL: ${page.url}${isSearchPage ? " (SEARCH PAGE - DO NOT CITE THIS URL)" : " (can cite)"}
 TITLE: ${page.title}
+${siteContext}
 
 SPECIFIC LINKS FOUND ON THIS PAGE (cite these instead of search URL):
 ${page.links.filter(isSpecificContentUrl).slice(0, 20).join("\n") || "(none found)"}
@@ -985,6 +794,7 @@ function isSpecificContentUrl(url: string): boolean {
 
 /**
  * Quick search - just search pages, no deep crawling
+ * Uses traverser configs exclusively
  */
 export async function quickSearch(
   query: string,
@@ -992,12 +802,14 @@ export async function quickSearch(
   const pages: CrawledPage[] = [];
   const visitedUrls: string[] = [];
 
-  for (const [, source] of Object.entries(ISLAMIC_SOURCES)) {
-    const searchUrl = source.searchUrl(query);
+  // Load all trusted site configs from traverser
+  const siteConfigs = loadAllSiteConfigs();
 
+  for (const config of siteConfigs) {
+    const searchUrl = getSearchUrl(query, config);
     visitedUrls.push(searchUrl);
 
-    const page = await crawlPage(searchUrl, source, 0);
+    const page = await crawlPage(searchUrl, 0);
 
     if (page) {
       pages.push(page);
@@ -1031,56 +843,28 @@ export async function deepSearch(
 }
 
 /**
- * Get source config for a URL - returns generic config for unknown domains
- */
-function getSourceConfig(url: string): typeof ISLAMIC_SOURCES.sunnah {
-  if (url.includes("islamqa.info")) {
-    return ISLAMIC_SOURCES.islamqa;
-  } else if (url.includes("quran.com")) {
-    return ISLAMIC_SOURCES.quran;
-  } else if (url.includes("sunnah.com")) {
-    return ISLAMIC_SOURCES.sunnah;
-  } else if (url.includes("daruliftaa.com")) {
-    return ISLAMIC_SOURCES.daruliftaa;
-  } else if (url.includes("askimam.org")) {
-    return ISLAMIC_SOURCES.askimam;
-  } else if (url.includes("seekersguidance.org")) {
-    return ISLAMIC_SOURCES.seekersguidance;
-  } else if (url.includes("islamweb.net")) {
-    return ISLAMIC_SOURCES.islamweb;
-  }
-
-  // Return generic config with the URL's base
-  try {
-    const urlObj = new URL(url);
-
-    return {
-      ...GENERIC_SOURCE,
-      name: urlObj.hostname.replace("www.", ""),
-      baseUrl: urlObj.origin,
-    };
-  } catch {
-    return {
-      ...GENERIC_SOURCE,
-      name: "Web",
-      baseUrl: "",
-    };
-  }
-}
-
-/**
  * Crawl a single URL - used for AI-directed exploration
- * Works with any domain, not just predefined Islamic sources
+ * Only crawls trusted sites with traverser configs
  */
 export async function crawlUrl(
   url: string,
   onProgress?: (progress: CrawlProgress) => void,
 ): Promise<CrawledPage | null> {
-  const sourceConfig = getSourceConfig(url);
+  const domain = getDomain(url);
+
+  // Check if this is a trusted site
+  if (!isTrustedSource(domain)) {
+    onProgress?.({
+      type: "error",
+      url,
+      message: `Skipping untrusted domain: ${domain}`,
+    });
+    return null;
+  }
 
   onProgress?.({ type: "visiting", url, depth: 0 });
 
-  const page = await crawlPage(url, sourceConfig, 0);
+  const page = await crawlPage(url, 0);
 
   if (page) {
     onProgress?.({ type: "found", url: page.url, title: page.title, depth: 0 });
@@ -1307,8 +1091,8 @@ export function formatAvailableLinks(
 }
 
 /**
- * Initial search - get search results from all Islamic sources
- * Now crawls THROUGH search pages to get actual content
+ * Initial search - get search results from all trusted Islamic sources
+ * Uses traverser configs exclusively - crawls THROUGH search pages to get actual content
  */
 export async function initialSearch(
   query: string,
@@ -1317,12 +1101,20 @@ export async function initialSearch(
   const pages: CrawledPage[] = [];
   const crawledUrls = new Set<string>();
 
-  for (const [, source] of Object.entries(ISLAMIC_SOURCES)) {
-    const searchUrl = source.searchUrl(query);
+  // Load all trusted site configs from traverser
+  const siteConfigs = loadAllSiteConfigs();
+
+  if (siteConfigs.length === 0) {
+    console.warn("[Crawler] No site configs found in lib/traverser/sites/");
+    return pages;
+  }
+
+  for (const config of siteConfigs) {
+    const searchUrl = getSearchUrl(query, config);
 
     onProgress?.({ type: "visiting", url: searchUrl, depth: 0 });
 
-    const searchPage = await crawlPage(searchUrl, source, 0);
+    const searchPage = await crawlPage(searchUrl, 0);
 
     if (searchPage) {
       // DON'T add search page itself - it has no real content
@@ -1334,7 +1126,7 @@ export async function initialSearch(
       onProgress?.({
         type: "found",
         url: searchPage.url,
-        title: `Found ${contentLinks.length} results from ${source.name}`,
+        title: `Found ${contentLinks.length} results from ${config.name}`,
         depth: 0,
       });
 
@@ -1345,7 +1137,7 @@ export async function initialSearch(
 
         onProgress?.({ type: "visiting", url: link, depth: 1 });
 
-        const contentPage = await crawlPage(link, source, 1);
+        const contentPage = await crawlPage(link, 1);
 
         if (contentPage && contentPage.content.length > 200) {
           pages.push(contentPage);

@@ -46,6 +46,23 @@ export interface MetadataSchema {
 }
 
 /**
+ * URL structure patterns for direct navigation
+ * Helps AI understand how URLs are constructed for different page types
+ */
+export interface UrlStructure {
+  /** Root URL pattern */
+  root: string;
+  /** Search URL pattern with {query} placeholder */
+  search: string;
+  /** Parameter descriptions - explains what each {placeholder} means */
+  parameters?: Record<string, string>;
+  /** Example URLs for reference */
+  examples?: Record<string, string>;
+  /** Additional URL patterns - any string key maps to a URL template */
+  [key: string]: string | Record<string, string> | undefined;
+}
+
+/**
  * Main site configuration - all sites in /sites/ are trusted sources
  */
 export interface SiteTraversal {
@@ -64,6 +81,9 @@ export interface SiteTraversal {
   /** Types of Islamic evidence this site provides */
   evidenceTypes: EvidenceType[];
 
+  /** URL structure patterns for direct access - helps AI construct URLs */
+  urlStructure?: UrlStructure;
+
   /** Content categories available on this site */
   categories?: ContentCategory[];
 
@@ -78,6 +98,9 @@ export interface SiteTraversal {
 
   /** How to find and filter links for navigation */
   navigation: NavigationConfig;
+
+  /** Rendering requirements for JavaScript-heavy sites */
+  rendering?: RenderingConfig;
 
   /** Site-specific notes for the AI */
   aiNotes?: string;
@@ -98,6 +121,26 @@ export interface SearchConfig {
 
   /** Tips for AI on how to use search effectively */
   searchTips?: string;
+}
+
+/**
+ * Rendering configuration for JavaScript-heavy sites
+ */
+export interface RenderingConfig {
+  /** Whether the site requires JavaScript to render content */
+  requiresJavaScript: boolean;
+
+  /** Milliseconds to wait after page load for content to render (default: 2000) */
+  waitTime?: number;
+
+  /** Additional wait for search pages specifically (default: same as waitTime) */
+  searchWaitTime?: number;
+
+  /** CSS selector to wait for before considering page loaded */
+  waitForSelector?: string;
+
+  /** Notes about rendering behavior */
+  notes?: string;
 }
 
 export interface ContentPageConfig {

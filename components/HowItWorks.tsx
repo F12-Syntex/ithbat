@@ -11,6 +11,7 @@ import {
   ChevronDown,
   type LucideIcon,
 } from "lucide-react";
+import { getTrustedSitesForUI } from "@/lib/trusted-sites";
 
 const steps: { icon: LucideIcon; title: string; description: string }[] = [
   {
@@ -39,12 +40,8 @@ const steps: { icon: LucideIcon; title: string; description: string }[] = [
   },
 ];
 
-const trustedSources = [
-  { name: "Quran.com", type: "Quran" },
-  { name: "Sunnah.com", type: "Hadith" },
-  { name: "IslamQA.info", type: "Fatawa" },
-  { name: "SeekersGuidance", type: "Scholarly" },
-];
+// Load trusted sources dynamically from traverser config
+const trustedSources = getTrustedSitesForUI();
 
 export function HowItWorks() {
   const [isOpen, setIsOpen] = useState(false);

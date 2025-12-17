@@ -17,16 +17,36 @@ import type {
   MetadataSchema,
 } from "./types";
 
-import * as fs from "fs";
-import * as path from "path";
-
 import * as cheerio from "cheerio";
 
-// Cache for loaded site configs
+// Import the list of enabled sites (just filenames)
+import enabledSites from "./sites.json";
+
+// Import all available site configs
+// To add a new site: 1) Create sites/newsite.json  2) Add import here  3) Add to AVAILABLE_CONFIGS  4) Add filename to sites.json
+import sunnahConfig from "./sites/sunnah.com.json";
+import quranConfig from "./sites/quran.com.json";
+import islamqaConfig from "./sites/islamqa.info.json";
+
+// Map of filename -> config (add new sites here after importing)
+const AVAILABLE_CONFIGS: Record<string, SiteTraversal> = {
+  "sunnah.com.json": sunnahConfig as unknown as SiteTraversal,
+  "quran.com.json": quranConfig as unknown as SiteTraversal,
+  "islamqa.info.json": islamqaConfig as unknown as SiteTraversal,
+};
+
+// Build active configs based on sites.json list
+const ALL_SITE_CONFIGS: SiteTraversal[] = enabledSites.sites
+  .filter((filename: string) => filename in AVAILABLE_CONFIGS)
+  .map((filename: string) => AVAILABLE_CONFIGS[filename]);
+
+// Cache for loaded site configs (by domain)
 const configCache: Map<string, SiteTraversal> = new Map();
 
-// Path to site config files
-const SITES_DIR = path.join(__dirname, "sites");
+// Initialize cache from enabled configs
+for (const config of ALL_SITE_CONFIGS) {
+  configCache.set(config.domain, config);
+}
 
 /**
  * Generic fallback config for unknown sites
@@ -78,67 +98,26 @@ export function getDomain(url: string): string {
 }
 
 /**
- * Load site config from JSON file
+ * Load site config by domain
+ * Configs are imported at build time, so this just looks up from cache
  */
 export function loadSiteConfig(domain: string): SiteTraversal | null {
-  // Check cache first
-  if (configCache.has(domain)) {
-    return configCache.get(domain)!;
-  }
-
-  // Try to load from file
-  const configPath = path.join(SITES_DIR, `${domain}.json`);
-
-  try {
-    if (fs.existsSync(configPath)) {
-      const configData = fs.readFileSync(configPath, "utf-8");
-      const config = JSON.parse(configData) as SiteTraversal;
-
-      configCache.set(domain, config);
-
-      return config;
-    }
-  } catch (error) {
-    console.warn(`Failed to load config for ${domain}:`, error);
-  }
-
-  return null;
+  return configCache.get(domain) || null;
 }
 
 /**
  * Get all available site configs (all are trusted sources)
  */
 export function getAvailableSites(): string[] {
-  try {
-    if (!fs.existsSync(SITES_DIR)) {
-      return [];
-    }
-
-    return fs
-      .readdirSync(SITES_DIR)
-      .filter((f) => f.endsWith(".json"))
-      .map((f) => f.replace(".json", ""));
-  } catch {
-    return [];
-  }
+  return ALL_SITE_CONFIGS.map((config) => config.domain);
 }
 
 /**
  * Load all site configs at once
+ * Returns all imported site configs
  */
 export function loadAllSiteConfigs(): SiteTraversal[] {
-  const sites = getAvailableSites();
-  const configs: SiteTraversal[] = [];
-
-  for (const domain of sites) {
-    const config = loadSiteConfig(domain);
-
-    if (config) {
-      configs.push(config);
-    }
-  }
-
-  return configs;
+  return ALL_SITE_CONFIGS;
 }
 
 /**
@@ -379,6 +358,7 @@ export function findContentLinks(
 
 /**
  * Extract search results from a search page
+ * Uses both config selectors and fallback patterns for JavaScript-rendered sites
  */
 export function extractSearchResults(
   html: string,
@@ -388,6 +368,7 @@ export function extractSearchResults(
   const links: string[] = [];
   const baseUrl = `https://${config.domain}`;
 
+  // Strategy 1: Use configured selectors
   $(config.search.resultSelector).each((_, el) => {
     const linkEl = $(el).find(config.search.resultLinkSelector).first();
     const href = linkEl.attr("href") || $(el).find("a").first().attr("href");
@@ -406,8 +387,38 @@ export function extractSearchResults(
       return;
     }
 
-    links.push(fullUrl);
+    // Only include links that look like content pages
+    if (isContentPage(fullUrl, config)) {
+      links.push(fullUrl);
+    }
   });
+
+  // Strategy 2: Fallback - find ANY links that match content page patterns
+  // This helps with JavaScript-rendered sites where selectors may not work
+  if (links.length === 0) {
+    $("a[href]").each((_, el) => {
+      const href = $(el).attr("href");
+      if (!href) return;
+
+      let fullUrl: string;
+      try {
+        if (href.startsWith("http")) {
+          fullUrl = href;
+        } else if (href.startsWith("/")) {
+          fullUrl = baseUrl + href;
+        } else {
+          return;
+        }
+      } catch {
+        return;
+      }
+
+      // Only include links from same domain that are content pages
+      if (fullUrl.includes(config.domain) && isContentPage(fullUrl, config)) {
+        links.push(fullUrl);
+      }
+    });
+  }
 
   return [...new Set(links)];
 }
@@ -575,6 +586,14 @@ export function isTrustedSource(domain: string): boolean {
  */
 export function getConfigForDomain(domain: string): SiteTraversal | null {
   return loadSiteConfig(domain);
+}
+
+/**
+ * Check if a URL is a search page
+ */
+export function isSearchPage(url: string, config: SiteTraversal): boolean {
+  const searchUrlBase = config.search.urlTemplate.split("{query}")[0];
+  return url.includes(searchUrlBase.replace("https://", "").replace("http://", ""));
 }
 
 // Re-export types

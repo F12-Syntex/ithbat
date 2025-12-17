@@ -43,54 +43,87 @@ HTML Structure (key elements):
 
 ## YOUR TASK:
 
-Analyze these pages and create a navigation configuration. You need to identify:
+Analyze these pages and create a COMPREHENSIVE navigation configuration. You need to identify:
 
-1. **Search**: How to search this site
+1. **Site Purpose**: What type of Islamic content does this site provide?
+   - Is it hadith, Quran, fatwas, scholarly articles, or a mix?
+   - What languages are available?
+   - What are the main content categories?
+
+2. **Search**: How to search this site
    - What's the search URL pattern? (look for search forms, /search?q=, etc.)
    - What CSS selector identifies search results?
    - What CSS selector gets the link from each result?
+   - Any tips for effective searching?
 
-2. **Content Pages**: How to identify actual content pages vs index/search pages
+3. **Content Pages**: How to identify actual content pages vs index/search pages
    - What URL patterns indicate a content page? (e.g., /answers/\\d+, /bukhari:\\d+)
    - Look for patterns like /article/ID, /fatwa/ID, /collection/number, etc.
 
-3. **Content Extraction**: How to extract the main content
+4. **Content Extraction**: How to extract the main content
    - What CSS selectors contain the title?
    - What CSS selectors contain the main content (hadith text, fatwa answer, article body)?
-   - What metadata is available (author, date, category, hadith number, grade)?
+   - What metadata is available? For EACH metadata field, provide:
+     - The CSS selector
+     - A description of what the field means
+     - The data type (string, number, grade, reference, list)
 
-4. **Navigation**: How to find related content links
+5. **Navigation**: How to find related content links
    - What CSS selectors lead to other content pages?
    - What URL patterns should be excluded (pagination, login, about, etc.)?
+
+## EVIDENCE TYPES (choose all that apply):
+- "hadith" - Prophetic traditions/narrations
+- "quran" - Quranic verses
+- "tafsir" - Quranic exegesis/interpretation
+- "fatwa" - Scholarly legal opinions/rulings
+- "scholarly_opinion" - General scholarly commentary
+- "fiqh" - Islamic jurisprudence rulings
 
 ## RESPOND WITH ONLY THIS JSON (no explanation):
 
 {
   "domain": "{domain}",
   "name": "Site Name - Brief Description",
+  "description": "A 2-3 sentence description of what this site offers and why it's valuable for Islamic research",
+  "languages": ["en", "ar"],
+  "evidenceTypes": ["hadith", "fatwa"],
+  "categories": [
+    {
+      "id": "category-id",
+      "name": "Category Name",
+      "description": "What content this category contains",
+      "urlPattern": "/path-pattern"
+    }
+  ],
   "search": {
     "urlTemplate": "https://{domain}/search?q={query}",
     "resultSelector": "CSS selector for result items",
-    "resultLinkSelector": "CSS selector for link within result"
+    "resultLinkSelector": "CSS selector for link within result",
+    "searchTips": "Tips for searching effectively on this site"
   },
   "contentPage": {
-    "urlPatterns": [
-      "regex pattern 1 for content URLs",
-      "regex pattern 2 if needed"
-    ]
+    "urlPatterns": ["regex pattern for content URLs"],
+    "description": "Description of what content pages look like on this site"
   },
   "extraction": {
     "title": ["selector1", "selector2"],
-    "mainContent": ["selector1", "selector2", "selector3"],
+    "mainContent": ["selector1", "selector2"],
     "metadata": {
-      "key1": "selector",
-      "key2": "selector"
-    }
+      "fieldName": {
+        "selector": "CSS selector",
+        "description": "What this field represents and how to interpret it",
+        "type": "string|number|grade|reference|list"
+      }
+    },
+    "contentNotes": "How to interpret the extracted content (e.g., what format the text is in, what parts are important)"
   },
   "navigation": {
     "relatedLinks": ["selector1", "selector2"],
-    "excludePatterns": ["/search", "?q=", "/about", "/login"]
-  }
+    "excludePatterns": ["/search", "?q=", "/about", "/login"],
+    "maxDepth": 2
+  },
+  "aiNotes": "Important notes for AI when using this site - citation format, reliability notes, special considerations"
 }`;
 
 /**
@@ -341,6 +374,20 @@ export async function analyzeSite(
       log(`Invalid config structure from AI`);
 
       return null;
+    }
+
+    // Ensure new required fields have defaults if AI didn't provide them
+    if (!config.description) {
+      config.description = `Islamic knowledge website at ${config.domain}`;
+    }
+    if (!config.languages || config.languages.length === 0) {
+      config.languages = ["en"];
+    }
+    if (!config.evidenceTypes || config.evidenceTypes.length === 0) {
+      config.evidenceTypes = ["scholarly_opinion"];
+    }
+    if (!config.aiNotes) {
+      config.aiNotes = `Content from ${config.name}. Verify authenticity of sources.`;
     }
 
     log(`Successfully generated config for ${config.name}`);
