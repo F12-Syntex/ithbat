@@ -156,9 +156,15 @@ async function crawlWithPuppeteer(url: string): Promise<{
 }
 
 /**
- * Sites that require JavaScript rendering
+ * Sites that require JavaScript rendering (NOT sunnah.com/quran.com - they work with fetch)
  */
-const JS_RENDERED_SITES = ["sunnah.com", "quran.com"];
+const JS_RENDERED_SITES = [
+  "islamqa.info",
+  "seekersguidance.org",
+  "islamweb.net",
+  "daruliftaa.com",
+  "askimam.org",
+];
 
 /**
  * Check if a URL requires JavaScript rendering
@@ -168,33 +174,48 @@ function needsJavaScript(url: string): boolean {
 }
 
 /**
- * Crawl a page - uses Puppeteer for JS sites, fetch for others
+ * Crawl a page - try fast fetch first, use Puppeteer only as fallback for JS sites
  */
 async function smartCrawl(url: string): Promise<{
   html: string;
   title: string;
 } | null> {
-  if (needsJavaScript(url)) {
-    // Try Puppeteer first
-    const puppeteerResult = await crawlWithPuppeteer(url);
-
-    if (puppeteerResult && puppeteerResult.html.length > 1000) {
-      return puppeteerResult;
-    }
-
-    // Fall back to fetch if Puppeteer fails
-  }
-
-  // Use regular fetch
+  // Always try fast fetch first
   const response = await rateLimitedFetch(url);
 
-  if (!response || !response.ok) return null;
+  if (response && response.ok) {
+    const html = await response.text();
+    const $ = cheerio.load(html);
+    const title = $("title").text() || $("h1").first().text() || "";
 
-  const html = await response.text();
-  const $ = cheerio.load(html);
-  const title = $("title").text() || $("h1").first().text() || "";
+    // Check if we got meaningful content
+    const bodyText = $("body").text().replace(/\s+/g, " ").trim();
 
-  return { html, title };
+    // If fetch got decent content (>2000 chars), use it
+    if (bodyText.length > 2000) {
+      return { html, title };
+    }
+
+    // For JS-heavy sites with minimal content, try Puppeteer as fallback
+    if (needsJavaScript(url) && bodyText.length < 2000) {
+      console.log(`[Puppeteer fallback] ${url} - fetch got only ${bodyText.length} chars`);
+      const puppeteerResult = await crawlWithPuppeteer(url);
+
+      if (puppeteerResult && puppeteerResult.html.length > html.length) {
+        return puppeteerResult;
+      }
+    }
+
+    // Return fetch result even if small (better than nothing)
+    return { html, title };
+  }
+
+  // Fetch failed completely - try Puppeteer for JS sites
+  if (needsJavaScript(url)) {
+    return await crawlWithPuppeteer(url);
+  }
+
+  return null;
 }
 
 export interface CrawlResult {
