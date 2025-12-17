@@ -380,35 +380,28 @@ export function ResearchContainer() {
                 transition={{ duration: 0.4, ease: "easeOut" }}
               >
                 <div className="max-w-2xl mx-auto py-3 sm:py-4">
-                  {/* Clear button at top */}
-                  <motion.div
-                    animate={{ opacity: 1 }}
-                    className="flex items-center justify-end mb-3 sm:mb-4"
-                    initial={{ opacity: 0 }}
-                  >
-                    {state.status === "completed" && (
-                      <button
-                        className="flex-shrink-0 text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors"
-                        onClick={reset}
-                      >
-                        New conversation
-                      </button>
-                    )}
-                  </motion.div>
-
                   {/* Completed Sessions (Previous Q&A in thread) */}
                   {state.completedSessions?.map((session, sessionIndex) => (
                     <div key={sessionIndex} className="mb-6">
-                      {/* Previous Query */}
+                      {/* Previous Query - with New conversation button on first session */}
                       <div className="flex items-center gap-2 mb-2">
                         <span className="w-5 h-5 rounded-full bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center flex-shrink-0">
                           <span className="text-[10px] font-medium text-accent-600 dark:text-accent-400">
                             {sessionIndex + 1}
                           </span>
                         </span>
-                        <span className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-300">
+                        <span className="flex-1 text-xs sm:text-sm text-neutral-600 dark:text-neutral-300">
                           {session.query}
                         </span>
+                        {sessionIndex === 0 && state.status === "completed" && (
+                          <button
+                            className="flex-shrink-0 text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors"
+                            type="button"
+                            onClick={reset}
+                          >
+                            New conversation
+                          </button>
+                        )}
                       </div>
 
                       {/* Previous Progress (collapsed by default) */}

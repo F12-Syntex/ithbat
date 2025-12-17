@@ -17,7 +17,7 @@ export function PipelineConnector({
   const isActive = status === "active";
 
   return (
-    <div className="relative flex-shrink-0 w-10 sm:w-16 h-0.5 mx-1.5 sm:mx-2">
+    <div className="relative flex-shrink-0 w-8 sm:w-12 h-0.5 mx-2 sm:mx-3">
       {/* Background track */}
       <div className="absolute inset-0 bg-neutral-200 dark:bg-neutral-700 rounded-full" />
 

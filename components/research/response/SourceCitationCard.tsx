@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Link2, ChevronDown, ExternalLink } from "lucide-react";
 
 import { SourceType, SourceTypeBadge } from "../sources/SourceTypeBadge";
 
@@ -71,19 +72,7 @@ export function SourceCitationCard({
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-2">
-          <svg
-            className="w-4 h-4 text-neutral-500 dark:text-neutral-400"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.5}
-            viewBox="0 0 24 24"
-          >
-            <path
-              d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <Link2 className="w-4 h-4 text-neutral-500 dark:text-neutral-400" strokeWidth={1.5} />
           <span className="text-sm font-medium text-neutral-700 dark:text-neutral-200">
             {title}
           </span>
@@ -92,21 +81,12 @@ export function SourceCitationCard({
           </span>
         </div>
 
-        <motion.svg
+        <motion.div
           animate={{ rotate: isExpanded ? 180 : 0 }}
-          className="w-4 h-4 text-neutral-400 dark:text-neutral-500"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
           transition={{ duration: 0.2 }}
-          viewBox="0 0 24 24"
         >
-          <path
-            d="M19 9l-7 7-7-7"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </motion.svg>
+          <ChevronDown className="w-4 h-4 text-neutral-400 dark:text-neutral-500" strokeWidth={2} />
+        </motion.div>
       </button>
 
       {/* Source list */}
@@ -156,19 +136,10 @@ export function SourceCitationCard({
                   />
 
                   {/* External link icon */}
-                  <svg
+                  <ExternalLink
                     className="w-3.5 h-3.5 text-neutral-300 dark:text-neutral-600 group-hover:text-accent-500 transition-colors flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
                     strokeWidth={2}
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                  />
                 </motion.a>
               ))}
             </div>
