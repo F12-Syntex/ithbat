@@ -137,8 +137,8 @@ export function HowItWorks() {
 
               {/* Note */}
               <p className="mt-4 text-[10px] text-neutral-400 dark:text-neutral-500 leading-relaxed">
-                All answers include source citations. Always verify with a
-                qualified scholar for personal rulings.
+                All answers include source citations ( we try to ). Always verify with a
+                qualified scholar for personal rulings. AI can make mistakes!
               </p>
             </div>
           </motion.div>
