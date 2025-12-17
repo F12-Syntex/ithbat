@@ -234,33 +234,6 @@ function SettingsPanelContent({
           <div className="space-y-2">
             <label className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
               <span className="text-sm text-neutral-700 dark:text-neutral-300">
-                Auto-expand steps
-              </span>
-              <div
-                className={`w-10 h-6 rounded-full p-0.5 transition-colors ${
-                  settings.autoExpandSteps
-                    ? "bg-accent-500"
-                    : "bg-neutral-300 dark:bg-neutral-600"
-                }`}
-              >
-                <div
-                  className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                    settings.autoExpandSteps ? "translate-x-4" : "translate-x-0"
-                  }`}
-                />
-              </div>
-              <input
-                checked={settings.autoExpandSteps}
-                className="sr-only"
-                type="checkbox"
-                onChange={(e) =>
-                  updateSetting("autoExpandSteps", e.target.checked)
-                }
-              />
-            </label>
-
-            <label className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
-              <span className="text-sm text-neutral-700 dark:text-neutral-300">
                 Show timestamps
               </span>
               <div

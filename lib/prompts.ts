@@ -158,10 +158,14 @@ export const EXPLORATION_PROMPT = `You are analyzing crawled web content to answ
 ## DECISION CRITERIA - When to STOP searching (hasEnoughInfo = true):
 
 Set hasEnoughInfo = TRUE if you have:
-- At least 1-2 specific hadith with numbers (e.g., Bukhari 1234)
-- OR at least 1 Quran verse reference
-- AND at least 1 scholarly fatwa/opinion with reasoning
-- Enough general principles to deduce an answer
+- At least ONE of: Quran verse, specific hadith with numbers, or scholarly fatwa
+- AND at least one scholarly fatwa/opinion with reasoning (from IslamQA, etc.)
+- Enough content to answer the question
+
+**BALANCED EVIDENCE IS IMPORTANT:**
+- Try to find Quran verses when relevant - they are PRIMARY evidence
+- Try to find hadith to support Quranic evidence
+- Always look for scholarly opinions that explain the ruling
 
 Set hasEnoughInfo = FALSE only if:
 - You have NO relevant content at all
@@ -336,26 +340,45 @@ Highlight:
 **CRITICAL: Do NOT include an "Answer" section. Do NOT provide your own conclusions or interpretations.**
 **Your role is ONLY to present the evidence directly from the sources. Let the reader draw their own conclusions.**
 
-## Evidence from Sources
-
+**QUOTE DIRECTLY from the crawled content.** Copy the exact text that addresses the question.
 Use PARAGRAPHS separated by blank lines, NOT bullet points. Each piece of evidence should have an UNDERLINED header.
 
-**QUOTE DIRECTLY from the crawled content.** Copy the exact text that addresses the question.
+**YOU MUST INCLUDE ALL THREE SECTIONS BELOW if the relevant evidence was found in the research:**
 
-Format each evidence item like this:
-<u>Source Title or Topic</u>
+## Quranic Evidence
 
-**"[EXACT QUOTE from the crawled page that addresses the question]"** - [Sahih Muslim 1468](https://sunnah.com/muslim:1468)
+**ALWAYS include this section** when Quran verses are found in the crawled data. This is PRIMARY evidence.
+
+<u>Verse Topic or Surah Name</u>
+
+**"[EXACT ARABIC TEXT if available]"**
+**"[EXACT TRANSLATION from the crawled content]"** - [Quran SURAH:AYAH](https://quran.com/SURAH/AYAH)
+
+If tafsir (explanation) was found, include it:
+Ibn Kathir explains: "**[tafsir quote]**"
+
+Example:
+<u>Warning Against Murder</u>
+
+**"And whoever kills a believer intentionally, his recompense is Hell to abide therein; and the Wrath and the Curse of Allah are upon him, and a great punishment is prepared for him."** - [Quran 4:93](https://quran.com/4/93)
+
+## Hadith Evidence
+
+**ALWAYS include this section** when authentic hadith are found in the crawled data.
+
+<u>Hadith Topic or Book Name</u>
+
+**"[EXACT QUOTE from the hadith]"** - [Sahih Muslim 1468](https://sunnah.com/muslim:1468)
 
 Additional context from the same source if needed.
 
-<u>Second Source</u>
+<u>Second Hadith</u>
 
 **"[EXACT QUOTE from this source]"** - [Sahih Bukhari 1894](https://sunnah.com/bukhari:1894)
 
 ## Scholarly Statements
 
-**ALWAYS include this section** when you find fatwa explanations. Quote DIRECTLY - do not paraphrase:
+**ALWAYS include this section** when fatwa explanations or scholar quotes are found. Quote DIRECTLY - do not paraphrase:
 
 <u>Scholar or Fatwa Source Name</u>
 
@@ -365,6 +388,8 @@ Example:
 <u>IslamQA Ruling</u>
 
 **"The basic principle is that it is permissible to eat seafood, based on the verse 'Lawful to you is the game from the sea and its food' [Quran 5:96]. The exception is anything that is harmful."** - [IslamQA 20953](https://islamqa.info/en/answers/20953)
+
+**IMPORTANT: If a section has no evidence found, write "No [Quranic/Hadith/Scholarly] evidence was found in the sources researched regarding this topic." Do NOT skip the section entirely.**
 
 ## DIRECT QUOTE REQUIREMENT - CRITICAL:
 

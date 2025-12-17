@@ -249,8 +249,8 @@ function VerticalStepRow({
 
   const Icon = stepIcons[step.type] || Lightbulb;
 
-  // Auto-expand active steps
-  const shouldShowContent = showDetails && (isExpanded || isActive) && hasContent;
+  // Only expand when manually toggled
+  const shouldShowContent = showDetails && isExpanded && hasContent;
 
   useEffect(() => {
     if (isActive && step.startTime) {
