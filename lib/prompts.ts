@@ -396,37 +396,51 @@ Highlight:
 - If the same evidence supports multiple points, cite it once and refer back
 - Check your response before finishing to remove any duplicates
 
-## REQUIRED FORMAT - Use descriptive topic headers only:
+## REQUIRED FORMAT - PARAGRAPH STYLE WITH INLINE REFERENCES:
 
-Each piece of evidence gets its own underlined header describing WHAT it's about:
+**EACH evidence point is a STANDALONE PARAGRAPH** with the reference at the end.
 
-<u>The Virtue of Reciting Surah Al-Kahf on Friday</u>
+**FORMAT TEMPLATE:**
+  **[Brief topic/point title]** — [EXACT QUOTE from the source in regular text]. — [Source Reference](URL)
 
-**"[EXACT QUOTE from the source]"** - [Source Name Reference](URL)
+**EXAMPLES:**
 
-<u>Warning Against Abandoning Prayer</u>
+**The Prophet's guidance on fasting** — "Fasting is a shield; so when one of you is fasting, he should not use foul language." — [Sahih Bukhari 1894](https://sunnah.com/bukhari:1894)
 
-**"[EXACT QUOTE]"** - [Sahih Muslim 82](https://sunnah.com/muslim:82)
+**Allah's command regarding prayer** — "Establish prayer and give zakah and bow with those who bow." — [Quran 2:43](https://quran.com/2/43)
 
-## Citation Examples:
+**Ibn Baz on the ruling** — "This matter is permissible based on the general principle that all things are halal unless prohibited." — [IslamQA 12345](https://islamqa.info/en/answers/12345)
 
-**Quran:**
-<u>Allah's Command Regarding Prayer</u>
+## FORMATTING RULES:
 
-**"[ARABIC if available]"**
-**"[Translation]"** - [Quran 2:43](https://quran.com/2/43)
+1. **NO headers like "## Evidence" or "### Hadith"** — Just flowing paragraphs
+2. **Each paragraph = ONE piece of evidence** with its reference at the END
+3. **Bold the topic/point title** at the start of each paragraph
+4. **Use em-dash (—)** to separate: title — quote — reference
+5. **Keep quotes in regular text**, not bold (for readability)
+6. **Reference is ALWAYS at the end** of the paragraph, not embedded in the quote
+7. **Add a blank line** between each evidence paragraph for readability
 
-**Hadith:**
-<u>The Prophet's Statement on Fasting</u>
+## GOOD EXAMPLE RESPONSE:
 
-**"[EXACT hadith text]"** - [Sahih Bukhari 1894](https://sunnah.com/bukhari:1894)
+**The virtue of Ayatul Kursi** — "Whoever recites Ayatul Kursi after every obligatory prayer, nothing will prevent him from entering Paradise except death." — [Sunan an-Nasa'i 9848](https://sunnah.com/nasai:9848)
 
-**Scholar:**
-<u>Ibn Taymiyyah on This Matter</u>
+**Recitation before sleep** — "When you go to bed, recite Ayatul Kursi from beginning to end. There will be a guardian appointed over you from Allah, and no devil will come near you until morning." — [Sahih Bukhari 5010](https://sunnah.com/bukhari:5010)
 
-**"[EXACT quote from scholar]"** - [IslamQA 12345](url)
+**The greatest verse in the Quran** — The Prophet ﷺ asked Ubayy ibn Ka'b, "Which verse in the Book of Allah is greatest?" He replied, "Allah and His Messenger know best." The Prophet ﷺ repeated the question, and Ubayy said, "Ayatul Kursi." The Prophet ﷺ said, "May knowledge be pleasant for you, O Abu al-Mundhir!" — [Sahih Muslim 810](https://sunnah.com/muslim:810)
 
-**Flow naturally** - present evidence in logical order by topic, NOT by source type.
+## BAD EXAMPLE (DO NOT DO THIS):
+
+❌ Headers grouping by type:
+  ## Hadith Evidence
+  [Sahih Bukhari 5010](url) states that...
+  ## Quranic Evidence
+  Allah says in [Quran 2:255](url)...
+
+❌ References embedded in text:
+  According to [Sahih Bukhari 5010](url), the Prophet said...
+
+**Flow naturally** — present evidence in logical order by topic, NOT by source type.
 
 ## DIRECT QUOTE REQUIREMENT - CRITICAL:
 
@@ -507,7 +521,8 @@ export const VERIFICATION_PROMPT = `You are a reference verification assistant. 
    - Quran: [Quran 2:255](https://quran.com/2/255)
    - Fatwa: [IslamQA 826](https://islamqa.info/en/answers/826)
 5. **Remove any citations that cannot be verified** from the crawled data
-6. **Keep underlined headers** for evidence sections using <u>Header</u> format
+6. **Preserve the PARAGRAPH FORMAT** — Each evidence point is a standalone paragraph with format:
+   **[Topic]** — "Quote text" — [Reference](URL)
 
 ## FACT-CHECKING - CRITICAL
 
@@ -655,7 +670,7 @@ Return the COMPLETE cleaned response with:
 - Do NOT remove content that IS verified AND topically relevant
 - Do NOT add ANY verification notes or summaries
 - If evidence is on-topic and the citation exists, KEEP IT
-- Preserve all formatting (bold, headers, links)
+- Preserve the paragraph format: **[Topic]** — "Quote" — [Reference](URL)
 - **QUANTITY MATTERS** - Keep all valid evidence, do not reduce to just a few examples`;
 
 export function buildPrompt(

@@ -14,6 +14,7 @@ import {
   X,
   Loader2,
   ChevronDown,
+  FlaskConical,
   type LucideIcon,
 } from "lucide-react";
 
@@ -26,6 +27,7 @@ interface ResearchPipelineProps {
 const stepIcons: Record<string, LucideIcon> = {
   understanding: Lightbulb,
   searching: Search,
+  extracting: FlaskConical,
   exploring: Globe,
   synthesizing: FileText,
 };
@@ -474,9 +476,11 @@ function VerticalStepRow({
 
 // Helper to determine line color
 function getLineColor(line: string): string {
+  // Success indicators
   if (line.startsWith("✓") || line.toLowerCase().includes("found")) {
     return "text-emerald-600 dark:text-emerald-400";
   }
+  // Error indicators
   if (
     line.startsWith("✗") ||
     line.toLowerCase().includes("error") ||
@@ -484,6 +488,11 @@ function getLineColor(line: string): string {
   ) {
     return "text-red-500 dark:text-red-400";
   }
+  // Warning indicators
+  if (line.startsWith("⚠")) {
+    return "text-amber-600 dark:text-amber-400";
+  }
+  // Action indicators
   if (
     line.startsWith("→") ||
     line.toLowerCase().includes("searching") ||
@@ -491,6 +500,28 @@ function getLineColor(line: string): string {
   ) {
     return "text-blue-600 dark:text-blue-400";
   }
+  // Evidence count lines (emoji indicators)
+  if (line.includes("📖") || line.includes("Hadith:")) {
+    return "text-amber-600 dark:text-amber-400";
+  }
+  if (line.includes("📜") || line.includes("Quran:")) {
+    return "text-sky-600 dark:text-sky-400";
+  }
+  if (line.includes("🎓") || line.includes("Scholarly:")) {
+    return "text-purple-600 dark:text-purple-400";
+  }
+  if (line.includes("⚖️") || line.includes("Fatwas:")) {
+    return "text-indigo-600 dark:text-indigo-400";
+  }
+  // Header lines
+  if (line.includes("📚") || line.includes("EVIDENCE FOUND")) {
+    return "text-accent-600 dark:text-accent-400 font-semibold";
+  }
+  // Separator lines
+  if (line.includes("━━━")) {
+    return "text-neutral-300 dark:text-neutral-600";
+  }
+  // URLs
   if (line.match(/^https?:\/\//)) {
     return "text-accent-600 dark:text-accent-400";
   }

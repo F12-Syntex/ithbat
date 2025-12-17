@@ -322,6 +322,11 @@ export async function POST(request: NextRequest) {
           id: "searching",
           title: "Searching Islamic sources",
         };
+        // Dedicated extraction step - always use fixed title for clarity
+        const extractStep = {
+          id: "extracting",
+          title: "Extracting evidence",
+        };
         const exploreStep = plan.steps.find((s) => s.id.includes("explor")) || {
           id: "exploring",
           title: "Exploring relevant links",
@@ -396,26 +401,43 @@ export async function POST(request: NextRequest) {
         send({
           type: "step_content",
           step: searchStep.id,
-          content: `\n━━━ Initial search complete: ${initialPages.length} pages ━━━\n`,
+          content: `\n━━━ Search complete: ${initialPages.length} pages found ━━━\n`,
         });
 
-        // STRUCTURED EVIDENCE EXTRACTION - Extract evidence from each page
+        send({ type: "step_complete", step: searchStep.id });
+
+        // STEP: EXTRACTING EVIDENCE - Dedicated step for evidence extraction
+        send({
+          type: "step_start",
+          step: extractStep.id,
+          stepTitle: extractStep.title,
+        });
+
         if (initialPages.length > 0) {
           send({
             type: "step_content",
-            step: searchStep.id,
-            content: `\n🔬 Extracting structured evidence from ${initialPages.length} pages...\n`,
+            step: extractStep.id,
+            content: `Analyzing ${initialPages.length} pages for Islamic evidence...\n\n`,
           });
 
           // Extract evidence from each page in parallel (batch of 3)
           for (let i = 0; i < initialPages.length; i += 3) {
             const batch = initialPages.slice(i, i + 3);
+            const batchNum = Math.floor(i / 3) + 1;
+            const totalBatches = Math.ceil(initialPages.length / 3);
+
+            send({
+              type: "step_content",
+              step: extractStep.id,
+              content: `Processing batch ${batchNum}/${totalBatches}...\n`,
+            });
+
             const extractions = await Promise.all(
               batch.map((page) =>
                 extractEvidenceFromPage(page.url, page.content, query, (msg) => {
                   send({
                     type: "step_content",
-                    step: searchStep.id,
+                    step: extractStep.id,
                     content: `  ${msg}\n`,
                   });
                 })
@@ -428,30 +450,69 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // Report extraction results
+          // Get evidence summary for pretty display
+          const evidence = evidenceAccumulator.getEvidence();
+
+          // Pretty summary with counts
           send({
             type: "step_content",
-            step: searchStep.id,
-            content: `\n📊 Evidence extracted: ${evidenceAccumulator.getSummary()}\n`,
+            step: extractStep.id,
+            content: `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`,
+          });
+          send({
+            type: "step_content",
+            step: extractStep.id,
+            content: `📚 EVIDENCE FOUND:\n`,
+          });
+          send({
+            type: "step_content",
+            step: extractStep.id,
+            content: `   📖 Hadith:     ${evidence.hadith.length} references\n`,
+          });
+          send({
+            type: "step_content",
+            step: extractStep.id,
+            content: `   📜 Quran:      ${evidence.quranVerses.length} verses\n`,
+          });
+          send({
+            type: "step_content",
+            step: extractStep.id,
+            content: `   🎓 Scholarly:  ${evidence.scholarlyOpinions.length} opinions\n`,
+          });
+          send({
+            type: "step_content",
+            step: extractStep.id,
+            content: `   ⚖️  Fatwas:     ${evidence.fatwas.length} rulings\n`,
+          });
+          send({
+            type: "step_content",
+            step: extractStep.id,
+            content: `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`,
           });
 
           // Check if we have minimum evidence
           if (evidenceAccumulator.hasMinimumEvidence()) {
             send({
               type: "step_content",
-              step: searchStep.id,
-              content: `✓ Minimum evidence requirements met\n`,
+              step: extractStep.id,
+              content: `\n✓ Sufficient evidence gathered\n`,
             });
           } else {
             send({
               type: "step_content",
-              step: searchStep.id,
-              content: `⚠ Need more evidence - continuing search\n`,
+              step: extractStep.id,
+              content: `\n⚠ Need more evidence - will continue exploring\n`,
             });
           }
+        } else {
+          send({
+            type: "step_content",
+            step: extractStep.id,
+            content: `No pages to analyze\n`,
+          });
         }
 
-        send({ type: "step_complete", step: searchStep.id });
+        send({ type: "step_complete", step: extractStep.id });
 
         // Step 4: AI-Driven Exploration Loop
         send({

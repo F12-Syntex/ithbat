@@ -358,21 +358,41 @@ export function findAllReferences(text: string): ParsedReference[] {
 
 /**
  * Convert all references in text to markdown links
+ * IMPORTANT: Skips references that are already markdown links
  */
 export function convertReferencesToLinks(text: string): string {
   let result = text;
-  const references = findAllReferences(text);
+
+  // First, fix any broken/nested links like [[text](url)](url) or [text](url)(url)
+  // Pattern: [[...](...)](...) -> [...](...)
+  result = result.replace(/\[\[([^\]]+)\]\(([^)]+)\)\]\([^)]+\)/g, '[$1]($2)');
+  // Pattern: [...](...)(url) -> [...](...)
+  result = result.replace(/(\[[^\]]+\]\([^)]+\))\([^)]+\)/g, '$1');
+
+  // Find references that are NOT already inside markdown links
+  const references = findAllReferences(result);
 
   // Sort by length descending to avoid replacing substrings first
   references.sort((a, b) => b.original.length - a.original.length);
 
   for (const ref of references) {
+    // Check if this reference is already a markdown link
+    // Pattern: [reference](url) - if this pattern exists, skip it
+    const escapedOriginal = ref.original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const alreadyLinkedPattern = new RegExp(`\\[${escapedOriginal}\\]\\([^)]+\\)`, 'gi');
+
+    if (alreadyLinkedPattern.test(result)) {
+      // This reference is already linked, skip it
+      continue;
+    }
+
     // Create markdown link
     const link = `[${ref.original}](${ref.url})`;
-    // Replace all occurrences (but not already linked ones)
-    const escapedOriginal = ref.original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const notAlreadyLinked = new RegExp(`(?<!\\]\\()${escapedOriginal}(?!\\))`, 'gi');
-    result = result.replace(notAlreadyLinked, link);
+
+    // Replace only standalone occurrences (not inside existing links)
+    // Negative lookbehind for [ and negative lookahead for ]( ensures we don't match link text
+    const standalonePattern = new RegExp(`(?<!\\[)${escapedOriginal}(?!\\]\\()`, 'gi');
+    result = result.replace(standalonePattern, link);
   }
 
   return result;

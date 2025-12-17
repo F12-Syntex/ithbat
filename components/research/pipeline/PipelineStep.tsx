@@ -10,6 +10,7 @@ import {
   FileText,
   Check,
   X,
+  FlaskConical,
   type LucideIcon,
 } from "lucide-react";
 
@@ -23,6 +24,7 @@ interface PipelineStepProps {
 const stepIcons: Record<string, LucideIcon> = {
   understanding: Lightbulb,
   searching: Search,
+  extracting: FlaskConical,
   exploring: Globe,
   synthesizing: FileText,
 };
