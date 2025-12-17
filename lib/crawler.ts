@@ -2,6 +2,13 @@
 import * as cheerio from "cheerio";
 import puppeteer, { type Browser, type Page } from "puppeteer-core";
 
+import {
+  loadSiteConfig,
+  getDomain,
+  extractContent as traverserExtract,
+  findContentLinks as traverserFindLinks,
+} from "./traverser";
+
 export interface CrawledPage {
   url: string;
   title: string;
@@ -38,6 +45,7 @@ async function getBrowser(): Promise<Browser | null> {
   if (browserInitializing) {
     // Wait for initialization to complete
     await new Promise((resolve) => setTimeout(resolve, 1000));
+
     return browserInstance;
   }
 
@@ -49,8 +57,7 @@ async function getBrowser(): Promise<Browser | null> {
       // Windows
       "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
       "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-      process.env.LOCALAPPDATA +
-        "\\Google\\Chrome\\Application\\chrome.exe",
+      process.env.LOCALAPPDATA + "\\Google\\Chrome\\Application\\chrome.exe",
       // macOS
       "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
       // Linux
@@ -77,6 +84,7 @@ async function getBrowser(): Promise<Browser | null> {
     if (!executablePath) {
       console.warn("Chrome not found, falling back to fetch-based crawling");
       browserInitializing = false;
+
       return null;
     }
 
@@ -95,10 +103,12 @@ async function getBrowser(): Promise<Browser | null> {
     });
 
     browserInitializing = false;
+
     return browserInstance;
   } catch (error) {
     console.warn("Failed to launch browser:", error);
     browserInitializing = false;
+
     return null;
   }
 }
@@ -143,6 +153,7 @@ async function crawlWithPuppeteer(url: string): Promise<{
     return { html, title };
   } catch (error) {
     console.warn(`Puppeteer failed for ${url}:`, error);
+
     return null;
   } finally {
     if (page) {
@@ -198,7 +209,9 @@ async function smartCrawl(url: string): Promise<{
 
     // For JS-heavy sites with minimal content, try Puppeteer as fallback
     if (needsJavaScript(url) && bodyText.length < 2000) {
-      console.log(`[Puppeteer fallback] ${url} - fetch got only ${bodyText.length} chars`);
+      console.log(
+        `[Puppeteer fallback] ${url} - fetch got only ${bodyText.length} chars`,
+      );
       const puppeteerResult = await crawlWithPuppeteer(url);
 
       if (puppeteerResult && puppeteerResult.html.length > html.length) {
@@ -261,7 +274,8 @@ const ISLAMIC_SOURCES = {
       `https://sunnah.com/search?q=${encodeURIComponent(q)}`,
     baseUrl: "https://sunnah.com",
     selectors: {
-      results: ".hadith_result, .search-result, .hadithContainer, .allresults, [class*='hadith'], [class*='result']",
+      results:
+        ".hadith_result, .search-result, .hadithContainer, .allresults, [class*='hadith'], [class*='result']",
       title: "h1, .hadithTitle, .chapter-title, .collection-title",
       // More comprehensive content selectors for sunnah.com
       content:
@@ -276,10 +290,12 @@ const ISLAMIC_SOURCES = {
       `https://islamqa.info/en/search?q=${encodeURIComponent(q)}`,
     baseUrl: "https://islamqa.info",
     selectors: {
-      results: ".search-result, .article-item, .fatwa-item, [class*='result'], [class*='article']",
+      results:
+        ".search-result, .article-item, .fatwa-item, [class*='result'], [class*='article']",
       title: "h1, .fatwa-title, .article-title, [class*='title']",
       // More comprehensive selectors for islamqa.info
-      content: ".fatwa-content, .article-content, .answer-text, .content-body, .question-text, [class*='content'], [class*='answer'], [class*='text'], article p, main p, .entry-content",
+      content:
+        ".fatwa-content, .article-content, .answer-text, .content-body, .question-text, [class*='content'], [class*='answer'], [class*='text'], article p, main p, .entry-content",
       links: 'a[href*="/answers/"], a[href*="/fatwa/"], a[href*="/en/"]',
     },
   },
@@ -292,7 +308,8 @@ const ISLAMIC_SOURCES = {
       results: ".search-result, [class*='SearchResult'], [class*='result']",
       title: "h1, [class*='ChapterName'], [class*='surah'], [class*='Title']",
       // More comprehensive selectors for quran.com
-      content: "[class*='Translation'], [class*='verse'], .verse-text, [class*='text'], [class*='ayah'], [class*='quran'], [class*='arabic']",
+      content:
+        "[class*='Translation'], [class*='verse'], .verse-text, [class*='text'], [class*='ayah'], [class*='quran'], [class*='arabic']",
       // Match verse links like /2/255 or /4:103
       links: 'a[href^="/"][href*="/"]',
     },
@@ -483,6 +500,7 @@ export function formatPagesForAIAnalysis(pages: CrawledPage[]): string {
       const compressed = compressPageContent(page.content);
       // Limit each page to 1500 chars for bulk analysis
       const truncated = compressed.slice(0, 1500);
+
       return `[PAGE ${i + 1}] ${page.source} - ${page.title}
 URL: ${page.url}
 CONTENT:
@@ -682,7 +700,7 @@ async function crawlPage(
   sourceConfig: (typeof ISLAMIC_SOURCES)[keyof typeof ISLAMIC_SOURCES],
   depth: number,
 ): Promise<CrawledPage | null> {
-  // Use smartCrawl for JavaScript-heavy sites (sunnah.com, quran.com)
+  // Use smartCrawl for JavaScript-heavy sites
   const crawlResult = await smartCrawl(url);
 
   if (!crawlResult) {
@@ -690,10 +708,34 @@ async function crawlPage(
   }
 
   const html = crawlResult.html;
+
+  // Try to use traverser config first (AI-generated configs)
+  const domain = getDomain(url);
+  const traverserConfig = loadSiteConfig(domain);
+
+  if (traverserConfig) {
+    // Use traverser for extraction
+    const extracted = traverserExtract(html, url, traverserConfig);
+    const contentLinks = traverserFindLinks(html, url, traverserConfig);
+
+    return {
+      url,
+      title: extracted.title || "Untitled Page",
+      content: extracted.content.slice(0, 8000),
+      links: contentLinks,
+      depth,
+      source: traverserConfig.name,
+      timestamp: Date.now(),
+    };
+  }
+
+  // Fallback to legacy extraction if no traverser config
   const $ = cheerio.load(html);
 
   // Remove scripts, styles, and navigation
-  $("script, style, nav, footer, header, aside, .sidebar, .menu, .navigation, .nav, .footer, .header, .cookie, .popup, .modal, .ad, .advertisement").remove();
+  $(
+    "script, style, nav, footer, header, aside, .sidebar, .menu, .navigation, .nav, .footer, .header, .cookie, .popup, .modal, .ad, .advertisement",
+  ).remove();
 
   // Extract title
   const title =
@@ -709,12 +751,18 @@ async function crawlPage(
 
   // Strategy 2: Fallback to main content areas
   if (!content || content.length < 100) {
-    content = extractTextContent($, "main, article, .content, #content, .post-content, .entry-content, .article-content");
+    content = extractTextContent(
+      $,
+      "main, article, .content, #content, .post-content, .entry-content, .article-content",
+    );
   }
 
   // Strategy 3: Look for any div with substantial content
   if (!content || content.length < 100) {
-    content = extractTextContent($, "div[class*='content'], div[class*='text'], div[class*='body'], div[class*='article']");
+    content = extractTextContent(
+      $,
+      "div[class*='content'], div[class*='text'], div[class*='body'], div[class*='article']",
+    );
   }
 
   // Strategy 4: Get all paragraphs
@@ -733,7 +781,7 @@ async function crawlPage(
   return {
     url,
     title,
-    content: content.slice(0, 8000), // Increased from 6000
+    content: content.slice(0, 8000),
     links,
     depth,
     source: sourceConfig.name,

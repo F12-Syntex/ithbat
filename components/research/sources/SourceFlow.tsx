@@ -83,7 +83,7 @@ export function SourceFlow({
         id: source.id || `source-${index}`,
         type: source.type || getSourceTypeFromUrl(source.url, source.domain),
       })),
-    [sources]
+    [sources],
   );
 
   // Get visible sources based on expanded state (different counts for mobile/desktop)

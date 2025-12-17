@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint --fix"
+    "lint": "eslint --fix",
+    "traverse": "npx tsx scripts/traverse.ts"
   },
   "dependencies": {
     "@heroui/button": "2.2.28",
@@ -56,6 +57,7 @@
     "postcss": "8.5.6",
     "prettier": "^3.7.4",
     "tailwindcss": "4.1.11",
+    "ts-node": "^10.9.2",
     "typescript": "5.6.3"
   }
 }

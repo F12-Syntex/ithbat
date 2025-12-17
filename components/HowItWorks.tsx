@@ -85,27 +85,28 @@ export function HowItWorks() {
                 <div className="space-y-3">
                   {steps.map((step, index) => {
                     const Icon = step.icon;
+
                     return (
-                    <motion.div
-                      key={step.title}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="flex gap-3"
-                      initial={{ opacity: 0, x: -10 }}
-                      transition={{ delay: index * 0.1 }}
-                    >
-                      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center text-accent-600 dark:text-accent-400">
-                        <Icon className="w-5 h-5" strokeWidth={1.5} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                          {step.title}
-                        </p>
-                        <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                          {step.description}
-                        </p>
-                      </div>
-                    </motion.div>
-                  );
+                      <motion.div
+                        key={step.title}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="flex gap-3"
+                        initial={{ opacity: 0, x: -10 }}
+                        transition={{ delay: index * 0.1 }}
+                      >
+                        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center text-accent-600 dark:text-accent-400">
+                          <Icon className="w-5 h-5" strokeWidth={1.5} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                            {step.title}
+                          </p>
+                          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                            {step.description}
+                          </p>
+                        </div>
+                      </motion.div>
+                    );
                   })}
                 </div>
               </div>

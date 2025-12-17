@@ -450,10 +450,7 @@ export async function POST(request: NextRequest) {
               }
 
               // Report evidence gaps
-              if (
-                analysis.evidenceGaps &&
-                analysis.evidenceGaps.length > 0
-              ) {
+              if (analysis.evidenceGaps && analysis.evidenceGaps.length > 0) {
                 send({
                   type: "step_content",
                   step: searchStep.id,

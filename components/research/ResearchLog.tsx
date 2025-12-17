@@ -19,8 +19,7 @@ export function ResearchLog({
 
   // Find the active step or the last completed step with content
   const activeStep = steps.find((s) => s.status === "in_progress");
-  const displayStep =
-    activeStep || [...steps].reverse().find((s) => s.content);
+  const displayStep = activeStep || [...steps].reverse().find((s) => s.content);
 
   // Auto-scroll to bottom when content updates
   useEffect(() => {
@@ -151,7 +150,9 @@ function LogLine({
       transition={{ delay: index * 0.02 }}
     >
       <span className={`flex-shrink-0 mt-0.5 ${color}`}>{icon}</span>
-      <span className={`${color} break-words`}>{renderTextWithLinks(text)}</span>
+      <span className={`${color} break-words`}>
+        {renderTextWithLinks(text)}
+      </span>
     </motion.div>
   );
 }

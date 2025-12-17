@@ -72,7 +72,10 @@ export function SourceCitationCard({
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-2">
-          <Link2 className="w-4 h-4 text-neutral-500 dark:text-neutral-400" strokeWidth={1.5} />
+          <Link2
+            className="w-4 h-4 text-neutral-500 dark:text-neutral-400"
+            strokeWidth={1.5}
+          />
           <span className="text-sm font-medium text-neutral-700 dark:text-neutral-200">
             {title}
           </span>
@@ -85,7 +88,10 @@ export function SourceCitationCard({
           animate={{ rotate: isExpanded ? 180 : 0 }}
           transition={{ duration: 0.2 }}
         >
-          <ChevronDown className="w-4 h-4 text-neutral-400 dark:text-neutral-500" strokeWidth={2} />
+          <ChevronDown
+            className="w-4 h-4 text-neutral-400 dark:text-neutral-500"
+            strokeWidth={2}
+          />
         </motion.div>
       </button>
 

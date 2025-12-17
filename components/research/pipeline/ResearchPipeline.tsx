@@ -47,11 +47,13 @@ export function ResearchPipeline({
   const toggleStep = (stepId: string) => {
     setExpandedSteps((prev) => {
       const next = new Set(prev);
+
       if (next.has(stepId)) {
         next.delete(stepId);
       } else {
         next.add(stepId);
       }
+
       return next;
     });
   };
@@ -108,19 +110,23 @@ function MobileProgressView({
       const interval = setInterval(() => {
         setElapsedTime(Date.now() - activeStep.startTime!);
       }, 1000);
+
       setElapsedTime(Date.now() - activeStep.startTime);
+
       return () => clearInterval(interval);
     }
   }, [activeStep]);
 
   const formatTime = (ms: number) => {
     const seconds = Math.floor(ms / 1000);
+
     if (seconds < 60) return `${seconds}s`;
     const minutes = Math.floor(seconds / 60);
+
     return `${minutes}:${(seconds % 60).toString().padStart(2, "0")}`;
   };
 
-  const Icon = activeStep ? (stepIcons[activeStep.type] || Lightbulb) : Check;
+  const Icon = activeStep ? stepIcons[activeStep.type] || Lightbulb : Check;
   const isAllComplete = completedCount === totalSteps;
 
   return (
@@ -168,14 +174,16 @@ function MobileProgressView({
           ) : activeStep ? (
             <Icon size={20} strokeWidth={1.5} />
           ) : (
-            <Loader2 size={20} strokeWidth={2} className="animate-spin" />
+            <Loader2 className="animate-spin" size={20} strokeWidth={2} />
           )}
         </div>
 
         {/* Status text */}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-neutral-800 dark:text-neutral-100">
-            {isAllComplete ? "Research complete" : activeStep?.title || "Starting..."}
+            {isAllComplete
+              ? "Research complete"
+              : activeStep?.title || "Starting..."}
           </p>
           <p className="text-xs text-neutral-500 dark:text-neutral-400">
             {isAllComplete
@@ -257,7 +265,9 @@ function VerticalStepRow({
       const interval = setInterval(() => {
         setElapsedTime(Date.now() - step.startTime!);
       }, 1000);
+
       setElapsedTime(Date.now() - step.startTime);
+
       return () => clearInterval(interval);
     } else if (isCompleted && step.startTime && step.endTime) {
       setElapsedTime(step.endTime - step.startTime);
@@ -273,8 +283,10 @@ function VerticalStepRow({
 
   const formatTime = (ms: number) => {
     const seconds = Math.floor(ms / 1000);
+
     if (seconds < 60) return `${seconds}s`;
     const minutes = Math.floor(seconds / 60);
+
     return `${minutes}:${(seconds % 60).toString().padStart(2, "0")}`;
   };
 
@@ -287,7 +299,9 @@ function VerticalStepRow({
       {/* Header row */}
       <button
         className={`w-full flex items-center gap-4 px-4 py-3 transition-colors text-left ${
-          hasContent ? "cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50" : "cursor-default"
+          hasContent
+            ? "cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
+            : "cursor-default"
         }`}
         disabled={!hasContent}
         type="button"
@@ -338,7 +352,12 @@ function VerticalStepRow({
               animate={{ scale: 1 }}
               className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-accent-500 flex items-center justify-center shadow-sm"
               initial={{ scale: 0 }}
-              transition={{ type: "spring", stiffness: 300, damping: 20, delay: 0.1 }}
+              transition={{
+                type: "spring",
+                stiffness: 300,
+                damping: 20,
+                delay: 0.1,
+              }}
             >
               <Check className="text-white" size={12} strokeWidth={3} />
             </motion.div>
@@ -376,11 +395,7 @@ function VerticalStepRow({
               Pending
             </span>
           )}
-          {isError && (
-            <span className="text-sm text-red-500">
-              Error
-            </span>
-          )}
+          {isError && <span className="text-sm text-red-500">Error</span>}
 
           {/* Expand chevron */}
           {hasContent && (
@@ -424,7 +439,9 @@ function VerticalStepRow({
                     .map((line, lineIndex) => (
                       <div key={lineIndex} className="flex items-start gap-2">
                         <span className="text-neutral-300 dark:text-neutral-600 select-none">
-                          {lineIndex === step.content.split("\n").filter(Boolean).length - 1 && !isActive
+                          {lineIndex ===
+                            step.content.split("\n").filter(Boolean).length -
+                              1 && !isActive
                             ? "└─"
                             : "├─"}
                         </span>

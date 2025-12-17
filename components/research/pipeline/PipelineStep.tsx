@@ -97,11 +97,7 @@ export function PipelineStep({
             <Check size={iconSize} strokeWidth={2.5} />
           </motion.div>
         ) : isError ? (
-          <motion.div
-            key="error"
-            animate={{ scale: 1 }}
-            initial={{ scale: 0 }}
-          >
+          <motion.div key="error" animate={{ scale: 1 }} initial={{ scale: 0 }}>
             <X size={iconSize} strokeWidth={2} />
           </motion.div>
         ) : (

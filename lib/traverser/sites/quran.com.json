@@ -1,0 +1,117 @@
+{
+  "domain": "quran.com",
+  "name": "Quran.com - Quran Translation & Tafsir",
+  "description": "Comprehensive Quran resource with multiple translations, transliterations, audio recitations, and tafsir (exegesis). Provides verse-by-verse navigation of all 114 surahs.",
+  "languages": ["ar", "en"],
+  "evidenceTypes": ["quran", "tafsir"],
+  "categories": [
+    {
+      "id": "surah",
+      "name": "Surahs (Chapters)",
+      "description": "The 114 chapters of the Quran, from Al-Fatiha to An-Nas",
+      "urlPattern": "/\\d+"
+    },
+    {
+      "id": "juz",
+      "name": "Juz (Parts)",
+      "description": "The Quran divided into 30 parts for ease of recitation",
+      "urlPattern": "/juz/\\d+"
+    },
+    {
+      "id": "page",
+      "name": "Pages",
+      "description": "The Quran by page number (604 pages in standard Madani mushaf)",
+      "urlPattern": "/page/\\d+"
+    }
+  ],
+  "search": {
+    "urlTemplate": "https://quran.com/search?q={query}",
+    "resultSelector": "[data-testid='search-result'], .search-result, .verse-result",
+    "resultLinkSelector": "a[href^='/']",
+    "paginationSelector": "[data-testid='pagination-next'], .pagination-next",
+    "searchTips": "Search for English terms or Arabic words. Use 'surah:verse' format for direct navigation (e.g., '2:255' for Ayatul Kursi). Topic searches return relevant verses."
+  },
+  "contentPage": {
+    "urlPatterns": [
+      "quran\\.com/\\d+/\\d+",
+      "quran\\.com/\\d+:\\d+",
+      "quran\\.com/\\d+\\?startingVerse=\\d+"
+    ],
+    "description": "Content pages are individual verses or surah pages. Format is surah/ayah (e.g., /2/255 for Al-Baqarah verse 255)."
+  },
+  "extraction": {
+    "title": ["h1", "[data-testid='surah-name']", ".surah-name"],
+    "mainContent": [
+      "[data-testid='translation-text']",
+      ".TranslationText",
+      ".translation",
+      "[data-testid='verse-text']",
+      ".verse-text"
+    ],
+    "metadata": {
+      "surahNumber": {
+        "selector": "[data-testid='surah-number'], .surah-number",
+        "description": "The surah (chapter) number, 1-114",
+        "type": "number"
+      },
+      "surahName": {
+        "selector": "[data-testid='surah-name'], .surah-name, h1",
+        "description": "The Arabic name of the surah",
+        "type": "string"
+      },
+      "surahNameTranslation": {
+        "selector": "[data-testid='surah-name-translation'], .surah-translation",
+        "description": "The English meaning of the surah name",
+        "type": "string"
+      },
+      "ayahNumber": {
+        "selector": "[data-testid='verse-number'], .verse-number",
+        "description": "The verse number within the surah",
+        "type": "number"
+      },
+      "arabicText": {
+        "selector": "[data-testid='quran-text'], .quran-text, .arabic-text",
+        "description": "The original Arabic Quranic text",
+        "type": "string"
+      },
+      "transliteration": {
+        "selector": "[data-testid='transliteration'], .transliteration",
+        "description": "Roman alphabet representation of Arabic pronunciation",
+        "type": "string"
+      },
+      "translator": {
+        "selector": "[data-testid='translator-name'], .translator",
+        "description": "The scholar who provided this translation",
+        "type": "string"
+      },
+      "revelationType": {
+        "selector": "[data-testid='revelation-type'], .revelation-type",
+        "description": "Whether revealed in Makkah or Madinah",
+        "type": "string",
+        "valueMap": {
+          "meccan": "Revealed in Makkah before Hijrah - often about faith fundamentals",
+          "medinan": "Revealed in Madinah after Hijrah - often about laws and society"
+        }
+      }
+    },
+    "contentNotes": "Quran.com is JavaScript-heavy; content may require JavaScript rendering. The translation depends on user settings - Sahih International is default. Always cite as Surah:Ayah format (e.g., Quran 2:255). Arabic text is the original revelation; translations are scholarly interpretations."
+  },
+  "navigation": {
+    "relatedLinks": [
+      "a[href^='/'][href*='/']",
+      "a[href^='/'][data-testid]",
+      ".verse-navigation a"
+    ],
+    "excludePatterns": [
+      "/search",
+      "/settings",
+      "/about",
+      "/developers",
+      "/audio",
+      "/radio",
+      "/reciters"
+    ],
+    "maxDepth": 2
+  },
+  "aiNotes": "Quran.com requires Puppeteer for full content extraction due to heavy JavaScript. Citation format is 'Quran [Surah]:[Ayah]' (e.g., Quran 2:255). Always distinguish between the Arabic text (divine revelation) and translations (human interpretation). Multiple translations available - Sahih International is widely accepted. For tafsir, navigate to /surah/verse/tafsirs."
+}

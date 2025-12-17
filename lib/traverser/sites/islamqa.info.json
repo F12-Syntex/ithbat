@@ -1,0 +1,129 @@
+{
+  "domain": "islamqa.info",
+  "name": "IslamQA - Scholarly Fatwas & Answers",
+  "description": "Major Islamic Q&A website supervised by Sheikh Muhammad Salih al-Munajjid. Provides detailed scholarly answers (fatwas) on Islamic jurisprudence, beliefs, and practice. Answers are based on Quran, Sunnah, and scholarly consensus.",
+  "languages": ["en", "ar"],
+  "evidenceTypes": ["fatwa", "scholarly_opinion", "fiqh"],
+  "categories": [
+    {
+      "id": "fiqh",
+      "name": "Jurisprudence (Fiqh)",
+      "description": "Questions about Islamic law - prayer, fasting, zakat, hajj, transactions",
+      "urlPattern": "/categories/fiqh"
+    },
+    {
+      "id": "aqeedah",
+      "name": "Beliefs (Aqeedah)",
+      "description": "Questions about Islamic creed and beliefs",
+      "urlPattern": "/categories/aqeedah"
+    },
+    {
+      "id": "tafsir",
+      "name": "Quran Interpretation",
+      "description": "Questions about meanings and interpretations of Quranic verses",
+      "urlPattern": "/categories/tafsir"
+    },
+    {
+      "id": "hadith",
+      "name": "Hadith Sciences",
+      "description": "Questions about hadith authenticity, meanings, and applications",
+      "urlPattern": "/categories/hadith"
+    },
+    {
+      "id": "manners",
+      "name": "Manners & Ethics",
+      "description": "Questions about Islamic etiquette and moral conduct",
+      "urlPattern": "/categories/manners"
+    },
+    {
+      "id": "women",
+      "name": "Women's Issues",
+      "description": "Questions specifically related to Muslim women",
+      "urlPattern": "/categories/women"
+    }
+  ],
+  "search": {
+    "urlTemplate": "https://islamqa.info/en/search?q={query}",
+    "resultSelector": ".search-result-item, .result-item, article.search-result",
+    "resultLinkSelector": "a.result-title, a[href*='/answers/'], h2 a, h3 a",
+    "paginationSelector": ".pagination a.next, a[rel='next']",
+    "searchTips": "Search in English for English answers. Use specific Islamic terms (e.g., 'wudu', 'zakat') for better results. Question numbers can be searched directly."
+  },
+  "contentPage": {
+    "urlPatterns": [
+      "islamqa\\.info/en/answers/\\d+",
+      "islamqa\\.info/ar/answers/\\d+",
+      "islamqa\\.info/\\w+/answers/\\d+"
+    ],
+    "description": "Content pages are individual fatwas/answers, identified by /answers/{question-number} path. Available in multiple languages."
+  },
+  "extraction": {
+    "title": ["h1.single-title", "h1.entry-title", "h1", ".question-title"],
+    "mainContent": [
+      ".single-content",
+      ".answer-content",
+      "article.content",
+      ".entry-content",
+      ".fatwa-content"
+    ],
+    "metadata": {
+      "questionNumber": {
+        "selector": ".question-number, .fatwa-number",
+        "description": "Unique identifier for this fatwa/answer",
+        "type": "reference"
+      },
+      "category": {
+        "selector": ".category-link, .fatwa-category, .breadcrumb a",
+        "description": "The topic category this fatwa belongs to",
+        "type": "string"
+      },
+      "question": {
+        "selector": ".question-text, .fatwa-question, blockquote",
+        "description": "The original question that was asked",
+        "type": "string"
+      },
+      "summary": {
+        "selector": ".answer-summary, .fatwa-summary",
+        "description": "Brief summary of the answer",
+        "type": "string"
+      },
+      "scholar": {
+        "selector": ".author-name, .answered-by",
+        "description": "The scholar or committee that answered",
+        "type": "string"
+      },
+      "sources": {
+        "selector": ".references, .sources-list",
+        "description": "Islamic sources cited in the answer (Quran, Hadith, scholarly works)",
+        "type": "list"
+      }
+    },
+    "contentNotes": "IslamQA answers are comprehensive fatwas that cite evidence from Quran and Hadith. The answers follow Sunni orthodox methodology (primarily Hanbali school). Each answer includes the question, detailed response with evidence, and often a summary. References to Quranic verses and hadith within the text should be extracted."
+  },
+  "navigation": {
+    "relatedLinks": [
+      "a[href*='/answers/']",
+      "a[href*='/en/answers/']",
+      ".related-posts a"
+    ],
+    "excludePatterns": [
+      "/search",
+      "/categories",
+      "/about",
+      "/contact",
+      "?q=",
+      "/ar/",
+      "/fr/",
+      "/es/",
+      "/ur/",
+      "/id/",
+      "/tr/",
+      "/ru/",
+      "/bn/",
+      "/zh/",
+      "/fa/"
+    ],
+    "maxDepth": 2
+  },
+  "aiNotes": "IslamQA.info is a trusted Sunni scholarly source following the Hanbali madhab. When citing, use the question number (e.g., 'IslamQA #12345'). Answers contain embedded Quran and hadith references that should be extracted. The site provides detailed evidence-based responses, making it excellent for scholarly opinions. Requires Puppeteer for full JavaScript content rendering."
+}

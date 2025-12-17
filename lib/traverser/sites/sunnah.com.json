@@ -1,0 +1,132 @@
+{
+  "domain": "sunnah.com",
+  "name": "Sunnah.com - Hadith Database",
+  "description": "The largest online collection of authentic hadith (prophetic traditions). Contains the six major hadith collections (Kutub al-Sittah) plus additional compilations. Each hadith includes Arabic text, English translation, and scholarly grading.",
+  "languages": ["en", "ar"],
+  "evidenceTypes": ["hadith"],
+  "categories": [
+    {
+      "id": "bukhari",
+      "name": "Sahih al-Bukhari",
+      "description": "Most authentic hadith collection, compiled by Imam al-Bukhari (810-870 CE). Contains 7,275 hadith.",
+      "urlPattern": "/bukhari"
+    },
+    {
+      "id": "muslim",
+      "name": "Sahih Muslim",
+      "description": "Second most authentic collection, compiled by Imam Muslim (815-875 CE). Contains 7,563 hadith.",
+      "urlPattern": "/muslim"
+    },
+    {
+      "id": "tirmidhi",
+      "name": "Jami at-Tirmidhi",
+      "description": "Collection by Imam at-Tirmidhi (824-892 CE). Known for including hadith grades.",
+      "urlPattern": "/tirmidhi"
+    },
+    {
+      "id": "abudawud",
+      "name": "Sunan Abu Dawud",
+      "description": "Collection focused on legal hadith, by Imam Abu Dawud (817-889 CE).",
+      "urlPattern": "/abudawud"
+    },
+    {
+      "id": "nasai",
+      "name": "Sunan an-Nasai",
+      "description": "Collection by Imam an-Nasai (829-915 CE), known for strict criteria.",
+      "urlPattern": "/nasai"
+    },
+    {
+      "id": "ibnmajah",
+      "name": "Sunan Ibn Majah",
+      "description": "Collection by Imam Ibn Majah (824-887 CE).",
+      "urlPattern": "/ibnmajah"
+    },
+    {
+      "id": "malik",
+      "name": "Muwatta Malik",
+      "description": "Earliest written collection by Imam Malik (711-795 CE).",
+      "urlPattern": "/malik"
+    },
+    {
+      "id": "nawawi40",
+      "name": "40 Hadith Nawawi",
+      "description": "40 foundational hadith selected by Imam an-Nawawi.",
+      "urlPattern": "/nawawi40"
+    },
+    {
+      "id": "riyadussalihin",
+      "name": "Riyad as-Salihin",
+      "description": "Collection of hadith on ethics and manners by Imam an-Nawawi.",
+      "urlPattern": "/riyadussalihin"
+    }
+  ],
+  "search": {
+    "urlTemplate": "https://sunnah.com/search?q={query}",
+    "resultSelector": ".AllHadith .hadith, .search-results .hadith",
+    "resultLinkSelector": "a.hadith_permalink, a[href*=':']",
+    "paginationSelector": ".pagination a.next",
+    "searchTips": "Search in English or Arabic. Use collection names (bukhari, muslim) to filter. Hadith numbers work directly (e.g., 'bukhari:1')."
+  },
+  "contentPage": {
+    "urlPatterns": [
+      "sunnah\\.com/(bukhari|muslim|tirmidhi|abudawud|nasai|ibnmajah|malik|ahmad|darimi|nawawi40|qudsi40|riyadussalihin):\\d+",
+      "sunnah\\.com/(bukhari|muslim|tirmidhi|abudawud|nasai|ibnmajah|malik|ahmad|darimi|nawawi40|qudsi40|riyadussalihin)/\\d+/\\d+"
+    ],
+    "description": "Content pages are individual hadith, identified by collection:number format (e.g., bukhari:1) or collection/book/hadith path."
+  },
+  "extraction": {
+    "title": [".hadith_narrated", ".englishcontainer .hadith_narrated", "h1"],
+    "mainContent": [".text_details", ".englishcontainer", ".hadith_content", ".arabic_hadith_full"],
+    "metadata": {
+      "collection": {
+        "selector": ".book_page_english_name, .collection_title",
+        "description": "The hadith collection name (e.g., Sahih al-Bukhari)",
+        "type": "string"
+      },
+      "bookName": {
+        "selector": ".book_page_english_name",
+        "description": "The book/chapter within the collection",
+        "type": "string"
+      },
+      "hadithNumber": {
+        "selector": ".hadith_reference_sticky, .hadith-number",
+        "description": "The hadith number within the collection",
+        "type": "reference"
+      },
+      "arabicText": {
+        "selector": ".arabic_hadith_full, .arabic",
+        "description": "The original Arabic text of the hadith",
+        "type": "string"
+      },
+      "grade": {
+        "selector": ".hadith_grade, .english_grade",
+        "description": "Scholarly authentication grade of the hadith",
+        "type": "grade",
+        "valueMap": {
+          "sahih": "Authentic - highest level of authentication",
+          "hasan": "Good - acceptable but slightly lower than sahih",
+          "da'if": "Weak - has issues in chain or text",
+          "mawdu": "Fabricated - not a genuine hadith"
+        }
+      },
+      "narrator": {
+        "selector": ".hadith_narrated",
+        "description": "The companion who narrated this hadith from the Prophet",
+        "type": "string"
+      }
+    },
+    "contentNotes": "The main content contains the English translation. Arabic text is separate. The narrator line typically starts with 'Narrated [Name]:'. Grades are crucial for authenticity - prioritize sahih and hasan hadith."
+  },
+  "navigation": {
+    "relatedLinks": [
+      "a[href*='bukhari:']",
+      "a[href*='muslim:']",
+      "a[href*='tirmidhi:']",
+      "a[href*='/bukhari/']",
+      "a[href*='/muslim/']"
+    ],
+    "excludePatterns": ["/search", "?q=", "/about", "/contact", "/downloads", "/developers"],
+    "maxDepth": 2
+  },
+  "aiNotes": "Sunnah.com is the most reliable online hadith source. Always include the hadith grade when citing. The format 'collection:number' (e.g., Bukhari:1) is the standard citation format. Sahih al-Bukhari and Sahih Muslim are considered the most authentic collections."
+}

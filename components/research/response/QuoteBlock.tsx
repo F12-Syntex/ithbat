@@ -1,7 +1,13 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { BookOpen, FileText, User, MessageSquare, ExternalLink } from "lucide-react";
+import {
+  BookOpen,
+  FileText,
+  User,
+  MessageSquare,
+  ExternalLink,
+} from "lucide-react";
 
 type QuoteType = "hadith" | "quran" | "scholar" | "general";
 
@@ -88,7 +94,9 @@ export function QuoteBlock({
 
       {/* Header with type indicator */}
       <div className="flex items-center gap-2.5 px-4 pt-4 pb-2 pl-5">
-        <span className={`p-1.5 rounded-lg ${config.iconBg} ${config.iconColor}`}>
+        <span
+          className={`p-1.5 rounded-lg ${config.iconBg} ${config.iconColor}`}
+        >
           {config.icon}
         </span>
         <span className="text-[11px] uppercase tracking-wider font-semibold text-neutral-500 dark:text-neutral-400">
@@ -120,8 +128,12 @@ export function QuoteBlock({
         <div className="flex items-center justify-between px-5 py-3 bg-white/50 dark:bg-black/10 border-t border-neutral-200/30 dark:border-neutral-700/30">
           <span className="text-xs text-neutral-600 dark:text-neutral-400">
             {source && <span className="font-medium">{source}</span>}
-            {source && reference && <span className="mx-1.5 text-neutral-400">•</span>}
-            {reference && <span className="font-mono text-[11px]">{reference}</span>}
+            {source && reference && (
+              <span className="mx-1.5 text-neutral-400">•</span>
+            )}
+            {reference && (
+              <span className="font-mono text-[11px]">{reference}</span>
+            )}
           </span>
 
           {url && (
