@@ -189,11 +189,16 @@ export async function POST(request: NextRequest) {
     conversationHistory = [],
     sessionId: providedSessionId,
     includeAISummary = false,
+    searchTimeout = 60000, // Default 1 minute
+    evidenceFilters,
   } = await request.json();
   const history = conversationHistory as ConversationTurn[];
   const sessionId = providedSessionId || crypto.randomUUID();
   const isFollowUp = history.length > 0;
   const wantsAISummary = includeAISummary === true;
+  // 0 = unlimited, otherwise respect the timeout
+  // Fast mode (30s) will skip deep verification
+  const isFastMode = searchTimeout > 0 && searchTimeout <= 30000;
 
   if (!query || typeof query !== "string") {
     return new Response(JSON.stringify({ error: "Query is required" }), {
@@ -1074,6 +1079,7 @@ export async function POST(request: NextRequest) {
         });
 
         // Step 6: Verification - validate all references
+        // Use QUICK model for fast mode, HIGH for thorough
         const verificationPrompt = buildPrompt(VERIFICATION_PROMPT, {
           response: synthesisResponse,
           research: combinedResearch,
@@ -1090,7 +1096,7 @@ export async function POST(request: NextRequest) {
             },
             { role: "user", content: verificationPrompt },
           ],
-          "HIGH",
+          isFastMode ? "QUICK" : "HIGH", // Use QUICK for fast mode
         )) {
           verifiedResponse += chunk;
         }
@@ -1105,15 +1111,21 @@ export async function POST(request: NextRequest) {
           content: `Verifying citations...\n`,
         });
 
-        // Extract URLs from the response
-        const citedUrls = extractUrlsFromMarkdown(cleanedResponse);
+        // Skip deep verification in fast mode
+        if (isFastMode) {
+          // Fast mode: skip deep URL verification, just clean up the response
+          cleanedResponse = convertReferencesToLinks(cleanedResponse);
+        } else {
+          // Full mode: deep verification with URL crawling
+          // Extract URLs from the response
+          const citedUrls = extractUrlsFromMarkdown(cleanedResponse);
 
-        // Extract Quran references for tafsir fetching
-        const quranRefs = extractQuranReferences(cleanedResponse);
+          // Extract Quran references for tafsir fetching
+          const quranRefs = extractQuranReferences(cleanedResponse);
 
-        if (citedUrls.length > 0 || quranRefs.length > 0) {
-          // Crawl cited URLs silently (limit to 10)
-          const urlsToCrawl = citedUrls.slice(0, 10);
+          if (citedUrls.length > 0 || quranRefs.length > 0) {
+            // Crawl cited URLs silently (limit to 5 for medium mode)
+            const urlsToCrawl = citedUrls.slice(0, 5);
           const verificationPages: CrawledPage[] = [];
           const fetchedUrls: string[] = [];
           const failedUrls: string[] = [];
@@ -1373,6 +1385,7 @@ export async function POST(request: NextRequest) {
             }
           }
         }
+        } // Close else block for isFastMode
 
         // Done with synthesis
         send({

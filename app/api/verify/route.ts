@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { initialSearch } from "@/lib/crawler";
+import { getOpenRouterClient } from "@/lib/openrouter";
 
 interface VerifyRequest {
   query: string;
@@ -14,102 +14,127 @@ interface VerificationResult {
   content: string;
   source: string;
   relevance: "high" | "medium" | "low";
-}
-
-/**
- * Calculate relevance score between claim and found content
- */
-function calculateRelevance(
-  claim: string,
-  content: string,
-  title: string,
-): "high" | "medium" | "low" {
-  const claimWords = claim
-    .toLowerCase()
-    .split(/\s+/)
-    .filter((w) => w.length > 3);
-  const contentLower = (content + " " + title).toLowerCase();
-
-  let matchCount = 0;
-
-  for (const word of claimWords) {
-    if (contentLower.includes(word)) {
-      matchCount++;
-    }
-  }
-
-  const matchRatio = claimWords.length > 0 ? matchCount / claimWords.length : 0;
-
-  if (matchRatio > 0.5) return "high";
-  if (matchRatio > 0.25) return "medium";
-
-  return "low";
-}
-
-/**
- * Extract the most relevant snippet from content
- */
-function extractRelevantSnippet(content: string, query: string): string {
-  const words = query
-    .toLowerCase()
-    .split(/\s+/)
-    .filter((w) => w.length > 3);
-  const contentLower = content.toLowerCase();
-
-  // Find the best starting position
-  let bestPos = 0;
-  let bestScore = 0;
-
-  for (let i = 0; i < content.length - 200; i += 50) {
-    const window = contentLower.slice(i, i + 300);
-    let score = 0;
-
-    for (const word of words) {
-      if (window.includes(word)) score++;
-    }
-    if (score > bestScore) {
-      bestScore = score;
-      bestPos = i;
-    }
-  }
-
-  // Extract snippet around best position
-  const start = Math.max(0, bestPos);
-  const end = Math.min(content.length, start + 300);
-  let snippet = content.slice(start, end).trim();
-
-  // Clean up snippet
-  if (start > 0) snippet = "..." + snippet;
-  if (end < content.length) snippet = snippet + "...";
-
-  return snippet;
+  verified: boolean;
 }
 
 /**
  * Build optimized search query based on claim type
  */
 function buildSearchQuery(query: string, claimType: string): string {
-  // Add type-specific keywords to improve search
   switch (claimType) {
     case "hadith":
-      // Check if query already mentions hadith terms
       if (!/bukhari|muslim|tirmidhi|hadith|prophet|messenger/i.test(query)) {
-        return `${query} hadith`;
+        return `${query} hadith sunnah.com authentic`;
       }
-      break;
+      return `${query} sunnah.com authentic hadith`;
     case "quran":
       if (!/quran|surah|ayah|verse/i.test(query)) {
-        return `${query} quran`;
+        return `${query} quran verse quran.com`;
       }
-      break;
+      return `${query} quran.com`;
     case "scholar":
       if (!/fatwa|ruling|scholar|sheikh/i.test(query)) {
-        return `${query} islamic ruling`;
+        return `${query} islamic ruling islamqa`;
       }
-      break;
+      return `${query} islamqa fatwa`;
+    default:
+      return `${query} islamic source`;
+  }
+}
+
+/**
+ * Parse Perplexity response to extract sources and verification
+ */
+function parsePerplexityResponse(
+  response: string,
+  originalClaim: string,
+): { results: VerificationResult[]; summary: string } {
+  const results: VerificationResult[] = [];
+
+  // Extract URLs from markdown links [text](url)
+  const linkPattern = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
+  let match;
+  const seenUrls = new Set<string>();
+
+  while ((match = linkPattern.exec(response)) !== null) {
+    const title = match[1];
+    const url = match[2];
+
+    if (seenUrls.has(url)) continue;
+    seenUrls.add(url);
+
+    // Extract domain for source
+    let source = "web";
+    try {
+      const domain = new URL(url).hostname.replace("www.", "");
+      if (domain.includes("sunnah")) source = "sunnah.com";
+      else if (domain.includes("quran")) source = "quran.com";
+      else if (domain.includes("islamqa")) source = "islamqa.info";
+      else source = domain;
+    } catch {
+      // Keep default
+    }
+
+    // Find surrounding context for this link (snippet)
+    const linkIndex = response.indexOf(match[0]);
+    const start = Math.max(0, linkIndex - 100);
+    const end = Math.min(response.length, linkIndex + match[0].length + 200);
+    let snippet = response.slice(start, end).replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").trim();
+    if (start > 0) snippet = "..." + snippet;
+    if (end < response.length) snippet = snippet + "...";
+
+    // Calculate relevance based on trusted domains
+    const isTrusted = ["sunnah.com", "quran.com", "islamqa.info", "islamweb.net"].some(d => url.includes(d));
+    const relevance: "high" | "medium" | "low" = isTrusted ? "high" : "medium";
+
+    results.push({
+      url,
+      title: title.slice(0, 100),
+      content: snippet.slice(0, 300),
+      source,
+      relevance,
+      verified: isTrusted,
+    });
   }
 
-  return query;
+  // Also look for plain URLs
+  const plainUrlPattern = /(?<!\()https?:\/\/[^\s\)]+/g;
+  while ((match = plainUrlPattern.exec(response)) !== null) {
+    const url = match[0].replace(/[.,;!?]+$/, "");
+    if (seenUrls.has(url)) continue;
+    seenUrls.add(url);
+
+    let source = "web";
+    try {
+      const domain = new URL(url).hostname.replace("www.", "");
+      if (domain.includes("sunnah")) source = "sunnah.com";
+      else if (domain.includes("quran")) source = "quran.com";
+      else if (domain.includes("islamqa")) source = "islamqa.info";
+      else source = domain;
+    } catch {
+      continue;
+    }
+
+    const isTrusted = ["sunnah.com", "quran.com", "islamqa.info", "islamweb.net"].some(d => url.includes(d));
+
+    results.push({
+      url,
+      title: source,
+      content: "Source found by search",
+      source,
+      relevance: isTrusted ? "high" : "low",
+      verified: isTrusted,
+    });
+  }
+
+  // Extract summary (first paragraph or response without links)
+  const summary = response
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/https?:\/\/[^\s]+/g, "")
+    .split("\n")[0]
+    .slice(0, 500);
+
+  return { results, summary };
 }
 
 export async function POST(request: NextRequest) {
@@ -121,66 +146,59 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Query too short" }, { status: 400 });
     }
 
-    // Build optimized search query
     const searchQuery = buildSearchQuery(query.trim(), claimType);
 
-    console.log(
-      `[Verify] Searching for: "${searchQuery}" (type: ${claimType})`,
-    );
+    console.log(`[Verify] Using Perplexity SEARCH for: "${searchQuery}"`);
 
-    // Search trusted sources
-    const pages = await initialSearch(searchQuery, (progress) => {
-      console.log(
-        `[Verify] ${progress.type}: ${progress.url || progress.message || ""}`,
-      );
-    });
+    const client = getOpenRouterClient();
 
-    // Process results
-    const results: VerificationResult[] = [];
+    // Use Perplexity SEARCH model for fast web search
+    const prompt = `Verify this Islamic reference by searching authentic sources:
 
-    for (const page of pages) {
-      // Skip pages with no meaningful content
-      if (!page.content || page.content.length < 100) continue;
+"${originalClaim}"
 
-      // Calculate relevance
-      const relevance = calculateRelevance(
-        originalClaim,
-        page.content,
-        page.title,
-      );
+Search query: ${searchQuery}
 
-      // Extract relevant snippet
-      const snippet = extractRelevantSnippet(page.content, query);
+Instructions:
+1. Search for this reference on sunnah.com, quran.com, islamqa.info, and other authentic Islamic sources
+2. Find the EXACT hadith/verse/fatwa if possible
+3. Provide direct URLs to the sources
+4. Confirm if the reference is authentic (sahih/hasan) or weak (daif)
+5. Include the actual text from the source if found
 
-      results.push({
-        url: page.url,
-        title: page.title || "Untitled",
-        content: snippet,
-        source: page.source,
-        relevance,
-      });
+Format your response with:
+- Source URLs as markdown links
+- Brief summary of what was found
+- Authenticity grade if applicable`;
+
+    let response = "";
+    for await (const chunk of client.streamChat(
+      [{ role: "user", content: prompt }],
+      "SEARCH",
+    )) {
+      response += chunk;
     }
 
-    // Sort by relevance (high first)
-    results.sort((a, b) => {
-      const order = { high: 0, medium: 1, low: 2 };
+    const { results, summary } = parsePerplexityResponse(response, originalClaim);
 
+    // Sort: trusted sources first
+    results.sort((a, b) => {
+      if (a.verified && !b.verified) return -1;
+      if (!a.verified && b.verified) return 1;
+      const order = { high: 0, medium: 1, low: 2 };
       return order[a.relevance] - order[b.relevance];
     });
 
-    // Limit results
-    const topResults = results.slice(0, 10);
-
-    console.log(`[Verify] Found ${topResults.length} results`);
+    console.log(`[Verify] Found ${results.length} sources via Perplexity`);
 
     return NextResponse.json({
-      results: topResults,
+      results: results.slice(0, 10),
       query: searchQuery,
+      summary,
       totalFound: results.length,
     });
   } catch (error) {
     console.error("[Verify] Error:", error);
-
     return NextResponse.json({ error: "Verification failed" }, { status: 500 });
   }
 }

@@ -64,7 +64,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       try {
         const parsed = JSON.parse(saved);
 
-        setSettings({ ...DEFAULT_SETTINGS, ...parsed });
+        // Deep merge to ensure nested objects like evidenceFilters are properly merged
+        setSettings({
+          ...DEFAULT_SETTINGS,
+          ...parsed,
+          // Ensure evidenceFilters is properly merged with defaults
+          evidenceFilters: {
+            ...DEFAULT_SETTINGS.evidenceFilters,
+            ...(parsed.evidenceFilters || {}),
+          },
+        });
       } catch {
         // Invalid JSON, use defaults
       }

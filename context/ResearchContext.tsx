@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { streamResearch } from "@/lib/api";
+import { streamResearch, type ResearchSettings } from "@/lib/api";
 import {
   type ResearchState,
   type ResearchStep,
@@ -50,8 +50,8 @@ type ResearchAction =
 
 interface ResearchContextValue {
   state: ResearchState;
-  startResearch: (query: string, includeAISummary?: boolean) => Promise<void>;
-  askFollowUp: (question: string, includeAISummary?: boolean) => Promise<void>;
+  startResearch: (query: string, includeAISummary?: boolean, settings?: ResearchSettings) => Promise<void>;
+  askFollowUp: (question: string, includeAISummary?: boolean, settings?: ResearchSettings) => Promise<void>;
   requestAIAnalysis: () => Promise<void>;
   cancelResearch: () => void;
   reset: () => void;
@@ -238,7 +238,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
   const [depth] = useState<ResearchDepth>("deep");
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const startResearch = async (query: string, includeAISummary?: boolean) => {
+  const startResearch = async (query: string, includeAISummary?: boolean, settings?: ResearchSettings) => {
     // Cancel any existing research
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
@@ -253,6 +253,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
         undefined,
         includeAISummary,
         undefined, // No session ID for new research
+        settings,
       )) {
         switch (event.type) {
           case "session_init":
@@ -378,7 +379,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const askFollowUp = async (question: string, includeAISummary?: boolean) => {
+  const askFollowUp = async (question: string, includeAISummary?: boolean, settings?: ResearchSettings) => {
     // Cancel any existing research
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
@@ -411,6 +412,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
         conversationHistory,
         includeAISummary,
         currentSessionId || undefined, // Pass existing session ID for follow-ups
+        settings,
       )) {
         switch (event.type) {
           case "session_init":

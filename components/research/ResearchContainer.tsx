@@ -29,6 +29,7 @@ import { IntroModal } from "@/components/IntroModal";
 import { HowItWorks } from "@/components/HowItWorks";
 import { useResearch } from "@/hooks/useResearch";
 import { useTheme } from "@/context/ThemeContext";
+import { useSettings, SEARCH_DURATION_MS } from "@/context/SettingsContext";
 
 // Pool of common Islamic questions
 const EXAMPLE_QUESTIONS = [
@@ -99,15 +100,22 @@ export function ResearchContainer() {
     reset,
   } = useResearch();
   const { theme, setTheme, themes } = useTheme();
+  const { settings } = useSettings();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [suggestedQuery, setSuggestedQuery] = useState<string | undefined>();
 
-  // Wrapper functions - never include AI summary by default
+  // Convert settings to API format
+  const getResearchSettings = useCallback(() => ({
+    searchTimeout: SEARCH_DURATION_MS[settings.searchDuration],
+    evidenceFilters: settings.evidenceFilters,
+  }), [settings.searchDuration, settings.evidenceFilters]);
+
+  // Wrapper functions - pass settings to API
   const startResearch = useCallback(
-    (query: string) => baseStartResearch(query, false),
-    [baseStartResearch],
+    (query: string) => baseStartResearch(query, false, getResearchSettings()),
+    [baseStartResearch, getResearchSettings],
   );
-  const askFollowUp = (question: string) => baseAskFollowUp(question, false);
+  const askFollowUp = (question: string) => baseAskFollowUp(question, false, getResearchSettings());
 
   // Handler to clear suggested query after it's been applied to the input
   const handleSuggestedQueryApplied = useCallback(

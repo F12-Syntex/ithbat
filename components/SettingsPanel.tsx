@@ -1,10 +1,23 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sun, Moon } from "lucide-react";
+import { X, Sun, Moon, Zap, Timer, Infinity, Check } from "lucide-react";
 
 import { useTheme, type ThemeAccent } from "@/context/ThemeContext";
-import { useSettings } from "@/context/SettingsContext";
+import { useSettings, type SearchDuration, type EvidenceTypeFilters } from "@/context/SettingsContext";
+
+const DURATION_OPTIONS: { value: SearchDuration; label: string; icon: typeof Zap; desc: string }[] = [
+  { value: "low", label: "Quick", icon: Zap, desc: "~30s" },
+  { value: "medium", label: "Standard", icon: Timer, desc: "~1min" },
+  { value: "unlimited", label: "Thorough", icon: Infinity, desc: "No limit" },
+];
+
+const EVIDENCE_TYPES: { key: keyof EvidenceTypeFilters; label: string }[] = [
+  { key: "quran", label: "Quran" },
+  { key: "hadith", label: "Hadith" },
+  { key: "scholar", label: "Scholars" },
+  { key: "fatwa", label: "Fatwas" },
+];
 
 const ACCENT_COLORS: Record<ThemeAccent, { bg: string; ring: string }> = {
   emerald: { bg: "bg-emerald-500", ring: "ring-emerald-500/30" },
@@ -122,7 +135,7 @@ function SettingsPanelContent({
         </button>
       </div>
 
-      <div className="px-5 pb-5 space-y-6 overflow-y-auto max-h-[calc(80vh-60px)]">
+      <div className="px-5 pb-5 space-y-5 overflow-y-auto max-h-[calc(80vh-60px)]">
         {/* Theme Colors */}
         <div>
           <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-4">
@@ -203,18 +216,55 @@ function SettingsPanelContent({
             Research
           </p>
 
-          {/* Sources Slider */}
-          <div className="bg-neutral-50 dark:bg-neutral-800/50 rounded-xl p-4 mb-3">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-neutral-700 dark:text-neutral-300">
+          {/* Search Depth - Compact horizontal layout */}
+          <div className="flex gap-2">
+            {DURATION_OPTIONS.map((option) => {
+              const isSelected = settings.searchDuration === option.value;
+              const Icon = option.icon;
+              return (
+                <button
+                  key={option.value}
+                  className={`flex-1 flex flex-col items-center gap-1 p-2.5 rounded-xl transition-all ${
+                    isSelected
+                      ? "bg-accent-50 dark:bg-accent-900/20 ring-1 ring-accent-200 dark:ring-accent-800"
+                      : "bg-neutral-50 dark:bg-neutral-800/50 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                  }`}
+                  onClick={() => updateSetting("searchDuration", option.value)}
+                >
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                    isSelected
+                      ? "bg-accent-500 text-white"
+                      : "bg-neutral-200 dark:bg-neutral-700 text-neutral-500"
+                  }`}>
+                    <Icon className="w-4 h-4" strokeWidth={2} />
+                  </div>
+                  <div className={`text-xs font-medium ${
+                    isSelected
+                      ? "text-accent-700 dark:text-accent-300"
+                      : "text-neutral-700 dark:text-neutral-300"
+                  }`}>
+                    {option.label}
+                  </div>
+                  <div className="text-[10px] text-neutral-400">
+                    {option.desc}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Sources Slider - Compact */}
+          <div className="bg-neutral-50 dark:bg-neutral-800/50 rounded-xl p-3 mt-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-neutral-600 dark:text-neutral-400">
                 Max sources
               </span>
-              <span className="text-sm font-semibold text-neutral-900 dark:text-white bg-neutral-200 dark:bg-neutral-700 px-2 py-0.5 rounded-md">
+              <span className="text-xs font-semibold text-neutral-900 dark:text-white bg-neutral-200 dark:bg-neutral-700 px-1.5 py-0.5 rounded">
                 {settings.maxWebsiteNodes}
               </span>
             </div>
             <input
-              className="w-full h-2 bg-neutral-200 dark:bg-neutral-700 rounded-full appearance-none cursor-pointer"
+              className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-700 rounded-full appearance-none cursor-pointer"
               max="100"
               min="3"
               style={{ accentColor: "var(--accent-500)" }}
@@ -224,16 +274,43 @@ function SettingsPanelContent({
                 updateSetting("maxWebsiteNodes", parseInt(e.target.value))
               }
             />
-            <div className="flex justify-between text-[10px] text-neutral-400 mt-2">
-              <span>Faster</span>
-              <span>More thorough</span>
+          </div>
+
+          {/* Evidence Type Filters */}
+          <div className="mt-3">
+            <span className="text-xs text-neutral-500 dark:text-neutral-400 block mb-2">
+              Include in results
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {EVIDENCE_TYPES.map(({ key, label }) => {
+                const isActive = settings.evidenceFilters[key];
+                return (
+                  <button
+                    key={key}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+                      isActive
+                        ? "bg-accent-500 text-white shadow-sm"
+                        : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                    }`}
+                    onClick={() =>
+                      updateSetting("evidenceFilters", {
+                        ...settings.evidenceFilters,
+                        [key]: !isActive,
+                      })
+                    }
+                  >
+                    {isActive && <Check className="w-3 h-3" strokeWidth={3} />}
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Toggle Options */}
-          <div className="space-y-2">
-            <label className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
-              <span className="text-sm text-neutral-700 dark:text-neutral-300">
+          <div className="mt-3">
+            <label className="flex items-center justify-between p-2.5 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+              <span className="text-xs text-neutral-700 dark:text-neutral-300">
                 Show timestamps
               </span>
               <div

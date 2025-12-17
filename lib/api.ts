@@ -4,6 +4,16 @@ import type {
   ConversationTurn,
 } from "@/types/research";
 
+export interface ResearchSettings {
+  searchTimeout?: number; // 0 = unlimited, or ms
+  evidenceFilters?: {
+    hadith: boolean;
+    quran: boolean;
+    scholar: boolean;
+    fatwa: boolean;
+  };
+}
+
 export async function* streamResearch(
   query: string,
   depth: ResearchDepth,
@@ -11,6 +21,7 @@ export async function* streamResearch(
   conversationHistory?: ConversationTurn[],
   includeAISummary?: boolean,
   sessionId?: string,
+  settings?: ResearchSettings,
 ): AsyncGenerator<ResearchStepEvent> {
   const response = await fetch("/api/research", {
     method: "POST",
@@ -23,6 +34,8 @@ export async function* streamResearch(
       conversationHistory,
       includeAISummary,
       sessionId,
+      searchTimeout: settings?.searchTimeout,
+      evidenceFilters: settings?.evidenceFilters,
     }),
     signal,
   });

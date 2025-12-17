@@ -1,15 +1,17 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
-  X,
   ExternalLink,
   CheckCircle2,
   AlertCircle,
   Loader2,
   Shield,
+  ChevronDown,
+  ChevronUp,
+  Globe,
 } from "lucide-react";
 
 interface VerifyResult {
@@ -49,40 +51,38 @@ function extractSearchQuery(text: string): string {
   );
 
   if (scholarMatch) {
-    // Extract first 50 chars after scholar name for context
     const idx = text.toLowerCase().indexOf(scholarMatch[1].toLowerCase());
     const context = text
       .slice(idx, idx + 80)
       .replace(/[^\w\s]/g, " ")
       .trim();
-
     return context;
   }
 
-  // Fallback: use first 60 characters, cleaned up
   return text
     .slice(0, 100)
     .replace(/[*_#\[\]]/g, "")
     .trim();
 }
 
-export function VerifyButton({
+// Inline verification panel component
+function InlineVerifyPanel({
   evidenceText,
   referenceType,
-}: VerifyEvidenceProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  isExpanded,
+  onClose,
+}: VerifyEvidenceProps & { isExpanded: boolean; onClose: () => void }) {
+  const [isLoading, setIsLoading] = useState(true);
   const [results, setResults] = useState<VerifyResult[]>([]);
+  const [summary, setSummary] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const handleVerify = useCallback(async () => {
-    setIsOpen(true);
+  const doSearch = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     const query = extractSearchQuery(evidenceText);
-
     setSearchQuery(query);
 
     try {
@@ -101,20 +101,21 @@ export function VerifyButton({
       }
 
       const data = await response.json();
-      // Map API results to our interface
+      setSummary(data.summary || "");
+
       const mappedResults: VerifyResult[] = (data.results || []).map(
         (r: {
           title: string;
           url: string;
           content: string;
           source: string;
-          relevance: string;
+          verified?: boolean;
         }) => ({
           title: r.title,
           url: r.url,
           snippet: r.content,
           domain: r.source,
-          verified: r.relevance === "high",
+          verified: r.verified,
         }),
       );
 
@@ -126,164 +127,126 @@ export function VerifyButton({
     }
   }, [evidenceText, referenceType]);
 
+  // Start search when expanded
+  useEffect(() => {
+    if (isExpanded) {
+      doSearch();
+    }
+  }, [isExpanded, doSearch]);
+
+  if (!isExpanded) return null;
+
+  return (
+    <motion.div
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: "auto", opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      transition={{ duration: 0.15, ease: "easeOut" }}
+      className="overflow-hidden"
+    >
+      <div className="mt-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 overflow-hidden">
+        {/* Content */}
+        <div className="p-2.5">
+          {isLoading ? (
+            <div className="flex items-center gap-2 py-2">
+              <Loader2 className="w-3.5 h-3.5 text-accent-500 animate-spin" />
+              <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                Verifying...
+              </span>
+            </div>
+          ) : error ? (
+            <div className="flex items-center gap-2 py-1">
+              <AlertCircle className="w-3.5 h-3.5 text-red-500" />
+              <span className="text-[11px] text-red-600 dark:text-red-400">{error}</span>
+              <button
+                onClick={doSearch}
+                className="ml-auto text-[10px] font-medium text-accent-600 hover:text-accent-700"
+              >
+                Retry
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Results */}
+              {results.length === 0 ? (
+                <div className="flex items-center gap-2 py-1 text-[11px] text-neutral-500">
+                  <Globe className="w-3.5 h-3.5" />
+                  No sources found
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {results.slice(0, 3).map((result, idx) => (
+                    <a
+                      key={idx}
+                      href={result.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 p-1.5 -mx-1 rounded-md
+                        hover:bg-neutral-100 dark:hover:bg-neutral-800
+                        transition-colors group"
+                    >
+                      {result.verified ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                      ) : (
+                        <Globe className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
+                      )}
+                      <span className="text-[11px] text-neutral-700 dark:text-neutral-300 truncate group-hover:text-accent-600 dark:group-hover:text-accent-400">
+                        {result.title}
+                      </span>
+                      <span className="text-[10px] text-neutral-400 ml-auto flex-shrink-0">
+                        {result.domain}
+                      </span>
+                      <ExternalLink className="w-3 h-3 text-neutral-400 group-hover:text-accent-500 flex-shrink-0" />
+                    </a>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+export function VerifyButton({
+  evidenceText,
+  referenceType,
+}: VerifyEvidenceProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   return (
     <>
       {/* Verify Button */}
       <button
-        className="inline-flex items-center gap-1 ml-2 px-2 py-0.5 text-[10px] font-medium
-          text-neutral-500 dark:text-neutral-400
-          bg-neutral-100 dark:bg-neutral-800
-          hover:bg-accent-100 dark:hover:bg-accent-900/30
-          hover:text-accent-600 dark:hover:text-accent-400
+        onClick={() => setIsExpanded(!isExpanded)}
+        className={`inline-flex items-center gap-1 ml-2 px-2 py-0.5 text-[10px] font-medium
           rounded-full transition-all duration-200
-          opacity-0 group-hover:opacity-100"
-        title="Verify this reference"
-        onClick={handleVerify}
+          ${
+            isExpanded
+              ? "bg-accent-100 dark:bg-accent-900/40 text-accent-600 dark:text-accent-400 opacity-100"
+              : "text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 hover:bg-accent-100 dark:hover:bg-accent-900/30 hover:text-accent-600 dark:hover:text-accent-400 opacity-0 group-hover:opacity-100"
+          }`}
+        title={isExpanded ? "Hide verification" : "Verify this reference"}
       >
         <Shield className="w-3 h-3" />
-        Verify
+        {isExpanded ? "Hide" : "Verify"}
+        {isExpanded ? (
+          <ChevronUp className="w-3 h-3" />
+        ) : (
+          <ChevronDown className="w-3 h-3" />
+        )}
       </button>
 
-      {/* Verification Modal */}
+      {/* Inline Verification Panel */}
       <AnimatePresence>
-        {isOpen && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              animate={{ opacity: 1 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
-              exit={{ opacity: 0 }}
-              initial={{ opacity: 0 }}
-              onClick={() => setIsOpen(false)}
-            />
-
-            {/* Modal */}
-            <motion.div
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2
-                w-full max-w-2xl max-h-[80vh]
-                bg-white dark:bg-neutral-900
-                rounded-2xl shadow-2xl z-50 overflow-hidden
-                flex flex-col"
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-800">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center">
-                    <Shield className="w-5 h-5 text-accent-600 dark:text-accent-400" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
-                      Reference Verification
-                    </h2>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                      Cross-checking with authentic sources
-                    </p>
-                  </div>
-                </div>
-                <button
-                  className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <X className="w-5 h-5 text-neutral-500" />
-                </button>
-              </div>
-
-              {/* Search Query Display */}
-              <div className="px-6 py-3 bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-200 dark:border-neutral-800">
-                <div className="flex items-center gap-2 text-sm">
-                  <Search className="w-4 h-4 text-neutral-400" />
-                  <span className="text-neutral-500 dark:text-neutral-400">
-                    Searching:
-                  </span>
-                  <span className="font-medium text-neutral-700 dark:text-neutral-300 truncate">
-                    {searchQuery || "..."}
-                  </span>
-                </div>
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 overflow-y-auto px-6 py-4">
-                {isLoading ? (
-                  <div className="flex flex-col items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 text-accent-500 animate-spin mb-4" />
-                    <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                      Searching authentic Islamic sources...
-                    </p>
-                  </div>
-                ) : error ? (
-                  <div className="flex flex-col items-center justify-center py-12">
-                    <AlertCircle className="w-8 h-8 text-red-500 mb-4" />
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {error}
-                    </p>
-                    <button
-                      className="mt-4 px-4 py-2 text-sm font-medium text-white bg-accent-600 rounded-lg hover:bg-accent-700 transition-colors"
-                      onClick={handleVerify}
-                    >
-                      Try Again
-                    </button>
-                  </div>
-                ) : results.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12">
-                    <Search className="w-8 h-8 text-neutral-300 dark:text-neutral-600 mb-4" />
-                    <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                      No results found. Try a different reference.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {results.map((result, idx) => (
-                      <motion.a
-                        key={idx}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="block p-4 rounded-xl border border-neutral-200 dark:border-neutral-800
-                          hover:border-accent-300 dark:hover:border-accent-700
-                          hover:bg-accent-50/50 dark:hover:bg-accent-900/10
-                          transition-all duration-200 group"
-                        href={result.url}
-                        initial={{ opacity: 0, y: 10 }}
-                        rel="noopener noreferrer"
-                        target="_blank"
-                        transition={{ delay: idx * 0.05 }}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              {result.verified && (
-                                <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-                              )}
-                              <h3 className="font-medium text-neutral-900 dark:text-neutral-100 truncate group-hover:text-accent-600 dark:group-hover:text-accent-400">
-                                {result.title}
-                              </h3>
-                            </div>
-                            <p className="text-xs text-accent-600 dark:text-accent-400 mb-2 truncate">
-                              {result.domain}
-                            </p>
-                            <p className="text-sm text-neutral-600 dark:text-neutral-400 line-clamp-2">
-                              {result.snippet}
-                            </p>
-                          </div>
-                          <ExternalLink className="w-4 h-4 text-neutral-400 group-hover:text-accent-500 flex-shrink-0 mt-1" />
-                        </div>
-                      </motion.a>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Footer */}
-              <div className="px-6 py-3 bg-neutral-50 dark:bg-neutral-800/50 border-t border-neutral-200 dark:border-neutral-800">
-                <p className="text-[10px] text-neutral-400 dark:text-neutral-500 text-center">
-                  Results from sunnah.com, quran.com, islamqa.info and other
-                  trusted Islamic sources
-                </p>
-              </div>
-            </motion.div>
-          </>
+        {isExpanded && (
+          <InlineVerifyPanel
+            evidenceText={evidenceText}
+            referenceType={referenceType}
+            isExpanded={isExpanded}
+            onClose={() => setIsExpanded(false)}
+          />
         )}
       </AnimatePresence>
     </>
@@ -310,10 +273,12 @@ export function EvidenceParagraph({
   }
 
   return (
-    <p className="text-sm sm:text-base text-neutral-700 dark:text-neutral-300 leading-relaxed my-4 group relative">
-      {children}
-      <VerifyButton evidenceText={evidenceText} referenceType={referenceType} />
-    </p>
+    <div className="my-4 group">
+      <p className="text-sm sm:text-base text-neutral-700 dark:text-neutral-300 leading-relaxed relative">
+        {children}
+        <VerifyButton evidenceText={evidenceText} referenceType={referenceType} />
+      </p>
+    </div>
   );
 }
 
@@ -321,7 +286,6 @@ export function EvidenceParagraph({
 function detectEvidenceType(
   text: string,
 ): "hadith" | "quran" | "scholar" | "general" {
-  // Check for Hadith indicators
   if (
     /bukhari|muslim|tirmidhi|abu dawud|nasa['']?i|ibn majah|ahmad|malik|darimi|hadith|sunnah\.com|narrated|prophet.*said|messenger.*said/i.test(
       text,
@@ -330,7 +294,6 @@ function detectEvidenceType(
     return "hadith";
   }
 
-  // Check for Quran indicators
   if (
     /quran|surah|ayah|verse\s*\d+:\d+|^\d+:\d+|al-baqarah|an-nisa|al-imran|al-maidah|quran\.com/i.test(
       text,
@@ -339,7 +302,6 @@ function detectEvidenceType(
     return "quran";
   }
 
-  // Check for Scholar indicators
   if (
     /sheikh|imam|scholar|ibn taymiyyah|ibn qayyim|al-nawawi|ibn kathir|fatwa|ruling|opinion|islamqa/i.test(
       text,
