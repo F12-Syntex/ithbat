@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { SearchInput } from "./SearchInput";
@@ -84,10 +84,20 @@ export function ResearchContainer() {
   } = useResearch();
   const { theme, setTheme, themes } = useTheme();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [suggestedQuery, setSuggestedQuery] = useState<string | undefined>();
 
   // Wrapper functions - never include AI summary by default
-  const startResearch = (query: string) => baseStartResearch(query, false);
+  const startResearch = useCallback(
+    (query: string) => baseStartResearch(query, false),
+    [baseStartResearch],
+  );
   const askFollowUp = (question: string) => baseAskFollowUp(question, false);
+
+  // Handler to clear suggested query after it's been applied to the input
+  const handleSuggestedQueryApplied = useCallback(
+    () => setSuggestedQuery(undefined),
+    [],
+  );
 
   // Random example questions - set client-side only to avoid hydration mismatch
   const [exampleQuestions, setExampleQuestions] = useState<string[]>([
@@ -436,8 +446,10 @@ export function ResearchContainer() {
               <div className="flex-1">
                 <SearchInput
                   isLoading={isResearching}
+                  suggestedQuery={suggestedQuery}
                   onCancel={cancelResearch}
                   onSearch={startResearch}
+                  onSuggestedQueryApplied={handleSuggestedQueryApplied}
                 />
               </div>
               {/* Mobile settings button - matches search input (px-4 py-3 with h-8 content) */}
@@ -484,7 +496,7 @@ export function ResearchContainer() {
                       className="px-2.5 sm:px-3 py-1.5 text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg hover:border-accent-400 hover:text-accent-600 dark:hover:text-accent-400 transition-all active:scale-95 sm:hover:scale-105"
                       initial={{ opacity: 0, y: 10 }}
                       transition={{ delay: i * 0.05 }}
-                      onClick={() => startResearch(example)}
+                      onClick={() => setSuggestedQuery(example)}
                     >
                       {example}
                     </motion.button>

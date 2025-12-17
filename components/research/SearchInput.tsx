@@ -1,20 +1,33 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface SearchInputProps {
   onSearch: (query: string) => void;
   onCancel?: () => void;
   isLoading?: boolean;
+  suggestedQuery?: string;
+  onSuggestedQueryApplied?: () => void;
 }
 
 export function SearchInput({
   onSearch,
   onCancel,
   isLoading,
+  suggestedQuery,
+  onSuggestedQueryApplied,
 }: SearchInputProps) {
   const [query, setQuery] = useState("");
+
+  // Apply suggested query when it changes and submit it
+  useEffect(() => {
+    if (suggestedQuery) {
+      setQuery(suggestedQuery);
+      onSearch(suggestedQuery);
+      onSuggestedQueryApplied?.();
+    }
+  }, [suggestedQuery, onSuggestedQueryApplied, onSearch]);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingQuery, setPendingQuery] = useState("");
 
