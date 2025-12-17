@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   BookOpen,
@@ -7,7 +8,9 @@ import {
   User,
   MessageSquare,
   ExternalLink,
+  Search,
 } from "lucide-react";
+import { VerifyClaimModal } from "./VerifyClaimModal";
 
 type QuoteType = "hadith" | "quran" | "scholar" | "general";
 
@@ -79,8 +82,35 @@ export function QuoteBlock({
   url,
 }: QuoteBlockProps) {
   const config = typeConfig[type];
+  const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
+
+  // Extract text content from children for verification
+  const getTextContent = useCallback((): string => {
+    if (typeof children === "string") return children;
+    // Try to extract text from React elements
+    const extractText = (node: React.ReactNode): string => {
+      if (typeof node === "string") return node;
+      if (typeof node === "number") return String(node);
+      if (Array.isArray(node)) return node.map(extractText).join(" ");
+      if (node && typeof node === "object" && "props" in node) {
+        return extractText((node as React.ReactElement).props.children);
+      }
+      return "";
+    };
+    return extractText(children);
+  }, [children]);
+
+  // Only show verify button for hadith and quran types
+  const canVerify = type === "hadith" || type === "quran" || type === "scholar";
 
   return (
+    <>
+      <VerifyClaimModal
+        isOpen={isVerifyModalOpen}
+        onClose={() => setIsVerifyModalOpen(false)}
+        claimText={getTextContent()}
+        claimType={type}
+      />
     <motion.blockquote
       animate={{ opacity: 1, y: 0 }}
       className={`relative my-5 rounded-xl overflow-hidden ${config.bg} ${config.border} border shadow-sm`}
@@ -123,18 +153,29 @@ export function QuoteBlock({
         </div>
       </div>
 
-      {/* Footer with source and reference */}
-      {(source || reference || url) && (
-        <div className="flex items-center justify-between px-5 py-3 bg-white/50 dark:bg-black/10 border-t border-neutral-200/30 dark:border-neutral-700/30">
-          <span className="text-xs text-neutral-600 dark:text-neutral-400">
-            {source && <span className="font-medium">{source}</span>}
-            {source && reference && (
-              <span className="mx-1.5 text-neutral-400">•</span>
-            )}
-            {reference && (
-              <span className="font-mono text-[11px]">{reference}</span>
-            )}
-          </span>
+      {/* Footer with source, reference, and verify button */}
+      <div className="flex items-center justify-between px-5 py-3 bg-white/50 dark:bg-black/10 border-t border-neutral-200/30 dark:border-neutral-700/30">
+        <span className="text-xs text-neutral-600 dark:text-neutral-400">
+          {source && <span className="font-medium">{source}</span>}
+          {source && reference && (
+            <span className="mx-1.5 text-neutral-400">•</span>
+          )}
+          {reference && (
+            <span className="font-mono text-[11px]">{reference}</span>
+          )}
+        </span>
+
+        <div className="flex items-center gap-2">
+          {/* Verify button */}
+          {canVerify && (
+            <button
+              onClick={() => setIsVerifyModalOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-accent-600 dark:text-accent-400 hover:bg-accent-100 dark:hover:bg-accent-900/30 transition-colors"
+            >
+              <Search className="w-3 h-3" strokeWidth={2} />
+              <span>Verify</span>
+            </button>
+          )}
 
           {url && (
             <a
@@ -148,7 +189,8 @@ export function QuoteBlock({
             </a>
           )}
         </div>
-      )}
+      </div>
     </motion.blockquote>
+    </>
   );
 }
