@@ -1,0 +1,50 @@
+{
+  "domain": "google.com",
+  "name": "Google Search - General Islamic Knowledge Search",
+  "description": "Google Search can be used to find a wide variety of Islamic content from various websites. It's a general search tool, not a dedicated Islamic knowledge repository, but can be used to find hadith, fatwas, and other resources.",
+  "languages": [
+    "en"
+  ],
+  "evidenceTypes": [
+    "hadith",
+    "fatwa",
+    "quran",
+    "tafsir",
+    "scholarly_opinion",
+    "fiqh"
+  ],
+  "categories": [],
+  "search": {
+    "urlTemplate": "https://www.google.com/search?q={query}",
+    "resultSelector": "div.g",
+    "resultLinkSelector": "div.g a",
+    "searchTips": "Use relevant keywords and specific terms (e.g., 'hadith sahih bukhari', 'fatwa on fasting'). Use site: to restrict search to specific domains."
+  },
+  "contentPage": {
+    "urlPatterns": [
+      ".*"
+    ],
+    "description": "Content pages can vary widely depending on the website. Google Search results link to external websites that contain the desired content."
+  },
+  "extraction": {
+    "title": [
+      "h3.LC20lb.MBeuO.DKV0Md"
+    ],
+    "mainContent": [],
+    "metadata": {},
+    "contentNotes": "Content will need to be extracted from the linked pages. Google Search itself does not provide content, only links."
+  },
+  "navigation": {
+    "relatedLinks": [
+      "div.g a"
+    ],
+    "excludePatterns": [
+      "/search",
+      "?q=",
+      "/about",
+      "/login"
+    ],
+    "maxDepth": 1
+  },
+  "aiNotes": "Google Search results should be treated as links to external websites. The content and citation format will depend entirely on the linked sites. Verify the credibility of sources."
+}

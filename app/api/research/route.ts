@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
     conversationHistory = [],
     sessionId: providedSessionId,
     includeAISummary = false,
-    searchTimeout = 60000, // Default 1 minute
+    searchTimeout = 180000, // Default 3 minutes (standard mode)
     evidenceFilters,
   } = await request.json();
   const history = conversationHistory as ConversationTurn[];
@@ -197,8 +197,8 @@ export async function POST(request: NextRequest) {
   const isFollowUp = history.length > 0;
   const wantsAISummary = includeAISummary === true;
   // 0 = unlimited, otherwise respect the timeout
-  // Fast mode (30s) will skip deep verification
-  const isFastMode = searchTimeout > 0 && searchTimeout <= 30000;
+  // Fast mode (1min) will skip deep verification
+  const isFastMode = searchTimeout > 0 && searchTimeout <= 60000;
 
   if (!query || typeof query !== "string") {
     return new Response(JSON.stringify({ error: "Query is required" }), {

@@ -145,21 +145,32 @@ export const EXPLORATION_PROMPT = `You are analyzing crawled web content to answ
 ## AVAILABLE LINKS TO EXPLORE:
 {availableLinks}
 
-## WHAT TO LOOK FOR:
+## WHAT TO LOOK FOR (MUST BE DIRECTLY RELEVANT TO THE QUESTION):
+
+**CRITICAL: Only count evidence that DIRECTLY addresses the research question.**
+- A hadith about a different topic does NOT count toward your minimum requirements
+- General Islamic wisdom that doesn't answer the specific question does NOT count
+- Evidence must specifically help answer: "{query}"
+
 1. **Hadith evidence** - Look for specific hadith with numbers (Bukhari 1234, Muslim 5678)
+   - Must directly address the question, not just be on a related topic
 2. **Quran verses** - Look for relevant ayat with surah:verse references
+   - Must directly relate to the question being asked
 3. **Scholarly opinions with QUOTES** - Look for:
    - Named scholars (Ibn Baz, Ibn Uthaymeen, al-Nawawi, Ibn Taymiyyah, etc.)
    - Direct quotes from fatwa answers that explain the ruling
    - Explanations of WHY something is halal/haram
    - The reasoning and evidence scholars used
+   - Must specifically address the question, not just general advice
 4. **Fatwa rulings with explanations** - Not just the ruling, but the detailed explanation
+   - Must be about the SPECIFIC topic being asked
 
 ## DECISION CRITERIA - When to STOP searching (hasEnoughInfo = true):
 
-**MINIMUM REQUIREMENTS (ALL must be met):**
-- At least 3 specific hadith with numbers (e.g., Bukhari 1234, Muslim 5678) - THIS IS MANDATORY
-- At least 1 scholarly fatwa/opinion with reasoning (from IslamQA, etc.)
+**MINIMUM REQUIREMENTS (ALL must be met) - EVIDENCE MUST BE RELEVANT:**
+- At least 3 specific hadith with numbers (e.g., Bukhari 1234, Muslim 5678) that DIRECTLY address the question - THIS IS MANDATORY
+- At least 1 scholarly fatwa/opinion with reasoning (from IslamQA, etc.) that specifically answers the question
+- ALL evidence must be DIRECTLY relevant to the research question, not just on a similar topic
 
 **IDEAL (try to achieve):**
 - Quranic ayah with reference when relevant to the topic
@@ -167,16 +178,19 @@ export const EXPLORATION_PROMPT = `You are analyzing crawled web content to answ
 - Hadith from different collections (Bukhari, Muslim, etc.)
 
 Set hasEnoughInfo = TRUE only if you have:
-- 3+ specific hadith with numbers
-- AND at least 1 scholarly opinion/fatwa
+- 3+ specific hadith with numbers that DIRECTLY answer the question
+- AND at least 1 scholarly opinion/fatwa that DIRECTLY addresses the question
 
 Set hasEnoughInfo = FALSE if:
-- You have fewer than 3 hadith - KEEP SEARCHING
-- You have scholarly opinion but NO hadith - KEEP SEARCHING (1 scholarly opinion alone is NOT enough)
+- You have fewer than 3 RELEVANT hadith - KEEP SEARCHING
+- You have hadith but they are on a DIFFERENT topic - KEEP SEARCHING
+- You have scholarly opinion but NO relevant hadith - KEEP SEARCHING
 - The content is completely off-topic
 - You found search results but no actual content
 
-**IMPORTANT:** 1 scholarly opinion with 0 hadith is NOT sufficient. You MUST have at least 3 hadith.
+**IMPORTANT:**
+- 1 scholarly opinion with 0 hadith is NOT sufficient. You MUST have at least 3 hadith.
+- 10 hadith on the WRONG topic is worse than 0 hadith. Only count RELEVANT evidence.
 
 ## IMPORTANT - DON'T OVER-SEARCH:
 - Once you have 3+ hadith AND 1+ scholarly opinion, you can stop
@@ -225,7 +239,10 @@ Even if no DIRECT ruling exists on this exact topic, you MUST:
 Before including ANY hadith or Quran verse:
 1. **VERIFY IT EXISTS IN CRAWLED DATA** - Only cite hadiths/verses that ACTUALLY appear in the crawled content
 2. **USE EXACT TEXT FROM SOURCE** - Copy the EXACT text from the crawled data. DO NOT paraphrase or use memorized text.
-3. **CHECK RELEVANCE** - Is this hadith/verse actually about the same topic?
+3. **CHECK DIRECT RELEVANCE** - Does this hadith/verse DIRECTLY help answer the research question?
+   - If it's about a DIFFERENT topic, DO NOT include it
+   - If it's tangentially related but doesn't answer the question, DO NOT include it
+   - Only include evidence that a reader would find directly useful for the question asked
 4. **VERIFY AUTHENTICITY** - For hadith, check the grading (sahih, hasan, da'if)
 5. **NO DUPLICATES** - Do NOT cite the same hadith/verse twice
 
@@ -233,6 +250,11 @@ Before including ANY hadith or Quran verse:
 - If the crawled content shows "The Prophet (ﷺ) said: 'Actions are by intentions...'" then quote EXACTLY that
 - DO NOT rewrite or paraphrase hadith text from memory
 - If you can't find the exact text in the crawled data, DO NOT quote it
+
+**CRITICAL - RELEVANCE FILTER:**
+Ask for EACH piece of evidence: "Does this DIRECTLY answer: {query}?"
+- If YES → Include it
+- If NO → Skip it completely, even if it's a valid hadith/verse
 
 If a hadith or verse doesn't pass these checks, DO NOT include it.
 
@@ -358,36 +380,42 @@ Highlight:
 **CRITICAL: Do NOT include an "Answer" section. Do NOT provide your own conclusions or interpretations.**
 **Your role is ONLY to present the evidence directly from the sources. Let the reader draw their own conclusions.**
 
-## PRESENT ALL EVIDENCE - MANDATORY - THIS IS CRITICAL:
+## PRESENT ALL RELEVANT EVIDENCE - MANDATORY - THIS IS CRITICAL:
 
-**YOU MUST include EVERY piece of evidence provided in the EXTRACTED EVIDENCE section below.**
+**YOU MUST include EVERY piece of RELEVANT evidence provided in the EXTRACTED EVIDENCE section below.**
+
+**RELEVANCE FILTER FIRST:**
+The extraction step should have filtered for relevance, but VERIFY each piece:
+- Does this hadith/verse DIRECTLY help answer "{query}"?
+- If YES → Include it
+- If NO → Skip it (even if it was extracted)
 
 **ZERO SUMMARIZATION ALLOWED:**
-The extraction step has already identified all the evidence. Your job is to FORMAT and PRESENT it, NOT to filter or summarize it.
+For relevant evidence, your job is to FORMAT and PRESENT it, NOT to summarize it.
 
 **RULES:**
-1. If extraction found 46 hadith → include ALL 46 hadith in your response
-2. If extraction found 11 scholarly opinions → include ALL 11 scholarly opinions
-3. If extraction found 8 Quran verses → include ALL 8 Quran verses
-4. Do NOT pick "the best" examples - include EVERYTHING
-5. Do NOT summarize multiple pieces into one - list each separately
-6. Do NOT skip anything because it's "similar" - similar evidence is GOOD
+1. If extraction found 10 RELEVANT hadith → include ALL 10 RELEVANT hadith in your response
+2. If extraction found 5 RELEVANT scholarly opinions → include ALL 5 RELEVANT scholarly opinions
+3. Skip any evidence that is about a DIFFERENT topic than the question
+4. Do NOT summarize multiple pieces into one - list each separately
+5. Quality over quantity - 5 relevant hadith are better than 50 unrelated ones
 
-**QUANTITY REQUIREMENT:**
-- Your response should have roughly the SAME NUMBER of citations as the extracted evidence
-- If 46 hadith were extracted, expect ~40-46 hadith citations in your response
-- If evidence gets "lost" between extraction and response, you have FAILED
+**RELEVANCE EXAMPLES:**
+- Question: "Is eating shrimp halal?"
+  - ✅ INCLUDE: Hadith about seafood being halal
+  - ❌ SKIP: Hadith about prayer (completely different topic)
+  - ❌ SKIP: Hadith about general food blessing (doesn't address shrimp specifically)
 
 **YOUR ROLE IS:**
-- Format the extracted evidence into readable paragraphs
+- Filter out any irrelevant evidence that slipped through
+- Format the relevant evidence into readable paragraphs
 - Add the proper URLs/links
 - Organize by topic flow (NOT by source type)
-- Present ALL of it
+- Present ALL RELEVANT evidence
 
 **YOUR ROLE IS NOT:**
-- To judge what's "most important"
-- To select a representative subset
-- To summarize or condense
+- To include irrelevant evidence just because it was extracted
+- To pad the response with unrelated hadith
 
 ## FORBIDDEN HEADERS - ABSOLUTE BAN:
 - ❌ "## Quranic Evidence" - BANNED
@@ -753,7 +781,7 @@ export function extractExternalUrls(text: string): string[] {
 }
 
 // Prompt for AI-powered content extraction from crawled pages
-export const CONTENT_EXTRACTION_PROMPT = `Analyze this crawled page content and extract ONLY the Islamic evidence that is relevant to the research question.
+export const CONTENT_EXTRACTION_PROMPT = `Analyze this crawled page content and extract ONLY the Islamic evidence that DIRECTLY answers the research question.
 
 ## RESEARCH QUESTION:
 {query}
@@ -765,6 +793,14 @@ export const CONTENT_EXTRACTION_PROMPT = `Analyze this crawled page content and 
 {content}
 
 ## YOUR TASK:
+
+Extract ONLY evidence that DIRECTLY helps answer the research question above.
+
+**CRITICAL RELEVANCE FILTER:**
+- Read the question carefully first
+- Only include evidence that specifically addresses the question
+- Skip hadith/verses that are merely on a similar topic but don't answer the question
+- Quality over quantity - 3 relevant pieces of evidence are better than 30 irrelevant ones
 
 Extract and return a JSON object with the following structure:
 
@@ -806,12 +842,16 @@ Extract and return a JSON object with the following structure:
 }
 
 ## RULES:
-1. Only extract content that is DIRECTLY relevant to the research question
-2. For hadith, try to identify the grade (sahih, hasan, daif) from the page content
-3. For Quran verses, include the surah and ayah numbers
-4. For scholarly quotes, include the scholar's name if mentioned
-5. If the page has NO relevant content, set relevance to "none" and return empty arrays
-6. Return ONLY valid JSON, no other text`;
+1. **RELEVANCE IS MANDATORY** - Only extract content that DIRECTLY answers the research question
+2. Skip evidence that is merely on a similar topic but doesn't address the specific question
+3. For hadith, try to identify the grade (sahih, hasan, daif) from the page content
+4. For Quran verses, include the surah and ayah numbers
+5. For scholarly quotes, include the scholar's name if mentioned
+6. If the page has NO RELEVANT content for THIS question, set relevance to "none" and return empty arrays
+7. Return ONLY valid JSON, no other text
+
+**RELEVANCE TEST:** For each piece of evidence, ask: "Does this help answer '{query}'?"
+- If NO → Do not include it`;
 
 // Prompt for batch analysis of multiple pages
 export const BATCH_CONTENT_ANALYSIS_PROMPT = `Analyze these crawled pages and identify which ones contain the MOST relevant evidence for the research question.
@@ -847,7 +887,7 @@ Focus on finding pages with:
 Return ONLY valid JSON.`;
 
 // Prompt for AI to analyze pages at each exploration round and extract evidence
-export const ROUND_ANALYSIS_PROMPT = `You are analyzing crawled Islamic source pages to extract evidence for a research question.
+export const ROUND_ANALYSIS_PROMPT = `You are analyzing crawled Islamic source pages to extract ONLY evidence that DIRECTLY answers the research question.
 
 ## RESEARCH QUESTION:
 {query}
@@ -857,11 +897,13 @@ export const ROUND_ANALYSIS_PROMPT = `You are analyzing crawled Islamic source p
 
 ## YOUR TASK:
 
-Analyze each page and extract:
-1. **Hadith found**: List ANY hadith mentioned with collection name and number if available
-2. **Quran verses found**: List ANY verses mentioned with surah:ayah
-3. **Scholar quotes found**: List ANY scholarly statements with attribution
-4. **Overall relevance**: Rate each page as "high", "medium", "low", or "none"
+Analyze each page and extract ONLY evidence that DIRECTLY helps answer the research question:
+1. **Hadith found**: List ONLY hadith that directly address the question (skip unrelated hadith)
+2. **Quran verses found**: List ONLY verses that directly relate to the question
+3. **Scholar quotes found**: List ONLY scholarly statements that specifically answer the question
+4. **Overall relevance**: Rate each page as "high", "medium", "low", or "none" based on how well it answers the question
+
+**CRITICAL:** Do NOT list hadith/verses that are merely on a similar topic. Only count evidence that DIRECTLY answers: "{query}"
 
 Return a JSON object:
 
@@ -895,6 +937,7 @@ Return a JSON object:
 - Look for hadith numbers like "Bukhari 1234", "Muslim 567", "Tirmidhi 89"
 - Look for Quran references like "Quran 4:93", "Surah Al-Baqarah verse 255"
 - Look for scholar names like "Ibn Baz", "Ibn Uthaymeen", "al-Nawawi"
-- Mark hasEnoughEvidence=true ONLY if you found 3+ hadith AND 1+ scholarly opinion
+- Mark hasEnoughEvidence=true ONLY if you found 3+ RELEVANT hadith AND 1+ RELEVANT scholarly opinion
+- **RELEVANCE IS KEY:** 10 hadith on the wrong topic counts as 0. Only count evidence that directly answers the question.
 
 Return ONLY valid JSON.`;

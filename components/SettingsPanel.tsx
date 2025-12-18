@@ -1,15 +1,16 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sun, Moon, Zap, Timer, Infinity, Check } from "lucide-react";
+import { X, Sun, Moon, Zap, Timer, Clock, Infinity, Check } from "lucide-react";
 
 import { useTheme, type ThemeAccent } from "@/context/ThemeContext";
 import { useSettings, type SearchDuration, type EvidenceTypeFilters } from "@/context/SettingsContext";
 
 const DURATION_OPTIONS: { value: SearchDuration; label: string; icon: typeof Zap; desc: string }[] = [
-  { value: "low", label: "Quick", icon: Zap, desc: "~30s" },
-  { value: "medium", label: "Standard", icon: Timer, desc: "~1min" },
-  { value: "unlimited", label: "Thorough", icon: Infinity, desc: "No limit" },
+  { value: "fast", label: "Fast", icon: Zap, desc: "~1min" },
+  { value: "standard", label: "Standard", icon: Timer, desc: "~3min" },
+  { value: "thorough", label: "Thorough", icon: Clock, desc: "~8min" },
+  { value: "unlimited", label: "Unlimited", icon: Infinity, desc: "No limit" },
 ];
 
 const EVIDENCE_TYPES: { key: keyof EvidenceTypeFilters; label: string }[] = [

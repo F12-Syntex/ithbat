@@ -2,6 +2,7 @@
   "sites": [
     "sunnah.com.json",
     "quran.com.json",
-    "islamqa.info.json"
+    "islamqa.info.json",
+    "google.com.json"
   ]
 }

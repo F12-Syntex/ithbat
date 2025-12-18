@@ -75,7 +75,10 @@ export interface ExtractedEvidence {
 // EXTRACTION PROMPT
 // ============================================
 
-const EXTRACTION_PROMPT = `You are an Islamic evidence extractor. Extract ALL relevant Islamic evidence from this page content.
+const EXTRACTION_PROMPT = `You are an Islamic evidence extractor. Extract ONLY Islamic evidence that is DIRECTLY RELEVANT to answering the research question.
+
+## RESEARCH QUESTION:
+{query}
 
 ## PAGE URL:
 {url}
@@ -83,12 +86,27 @@ const EXTRACTION_PROMPT = `You are an Islamic evidence extractor. Extract ALL re
 ## PAGE CONTENT:
 {content}
 
-## RESEARCH QUESTION:
-{query}
-
 ## YOUR TASK:
 
-Extract EVERY piece of Islamic evidence from this page. Be EXHAUSTIVE - do not skip anything.
+Extract ONLY evidence that DIRECTLY addresses or relates to the research question above.
+
+**CRITICAL RELEVANCE FILTER:**
+- Read the research question carefully first
+- Only extract hadith/verses/opinions that help answer THIS SPECIFIC question
+- Skip evidence that is merely on the same general topic but doesn't address the question
+- Skip evidence that is about completely different subjects
+- If a hadith is about a related but different topic, DO NOT include it
+
+**RELEVANCE EXAMPLES:**
+- Question: "Is eating shrimp halal?"
+  - ✅ INCLUDE: Hadith about seafood being halal, verses about food permissibility
+  - ❌ SKIP: Hadith about general halal/haram that doesn't mention seafood
+  - ❌ SKIP: Hadith about meat slaughter (different topic)
+
+- Question: "How to pray Isha?"
+  - ✅ INCLUDE: Hadith about Isha prayer times, rakats, method
+  - ❌ SKIP: General hadith about prayer virtue that doesn't explain Isha specifically
+  - ❌ SKIP: Hadith about Fajr prayer (different prayer)
 
 Return a JSON object with this EXACT structure:
 
@@ -135,7 +153,14 @@ Return a JSON object with this EXACT structure:
 
 ## EXTRACTION RULES:
 
-1. **HADITH**: Extract EVERY hadith mentioned, even if similar to others
+**RULE #0 - RELEVANCE IS MANDATORY:**
+Before extracting ANY evidence, ask: "Does this DIRECTLY help answer the research question?"
+- If YES → Extract it
+- If NO → Skip it completely
+- If MAYBE → Only include if it's closely related, not tangentially related
+
+1. **HADITH**: Extract ONLY hadith that directly address the research question
+   - Skip hadith that are merely on the same general topic
    - Include the full text, not summaries
    - Identify the grade (sahih, hasan, daif) if mentioned
    - **CRITICAL - HADITH NUMBER**: Look VERY carefully for the actual number:
@@ -144,17 +169,20 @@ Return a JSON object with this EXACT structure:
      * Look for reference numbers in the text like "(1234)" or "No. 567"
      * If you find a number, use it. If NOT found, set number to null (don't guess!)
 
-2. **QURAN VERSES**: Extract ALL Quran verses referenced
+2. **QURAN VERSES**: Extract ONLY Quran verses that directly relate to the question
+   - Skip verses that are about different topics
    - Include surah number and ayah number
    - Include both Arabic and translation if available
    - For verse ranges, specify ayahStart and ayahEnd
 
-3. **SCHOLARLY OPINIONS**: Extract ALL scholar quotes/statements
+3. **SCHOLARLY OPINIONS**: Extract ONLY scholar quotes that address the specific question
+   - Skip general Islamic advice that doesn't answer the question
    - Include the scholar's name if mentioned
    - Quote their exact words
    - Note the context
 
-4. **FATWAS**: Extract fatwa rulings
+4. **FATWAS**: Extract ONLY fatwas that answer the research question
+   - Skip fatwas on related but different topics
    - Include the ruling (halal/haram/makruh/etc)
    - Include the explanation and evidence cited
 
@@ -172,10 +200,16 @@ Return a JSON object with this EXACT structure:
 - A wrong number is worse than no number
 
 ## IMPORTANT:
-- Extract ALL evidence, not just 1-2 examples
+- Extract ONLY evidence that DIRECTLY answers the research question
+- Quality over quantity - 3 relevant hadith are better than 30 unrelated ones
+- Skip evidence that is merely on a similar topic but doesn't address the question
 - Use EXACT text from the content, do not paraphrase
-- If no evidence of a type is found, use empty array []
+- If no RELEVANT evidence of a type is found, use empty array []
 - Return ONLY valid JSON, no other text
+
+## FINAL CHECK:
+Before returning, review each extracted item and ask: "Does this help answer '{query}'?"
+If not, remove it from the output.
 
 JSON:`;
 

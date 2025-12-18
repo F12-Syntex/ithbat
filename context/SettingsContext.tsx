@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 
-export type SearchDuration = "low" | "medium" | "unlimited";
+export type SearchDuration = "fast" | "standard" | "thorough" | "unlimited";
 
 export interface EvidenceTypeFilters {
   hadith: boolean;
@@ -25,10 +25,12 @@ interface Settings {
   evidenceFilters: EvidenceTypeFilters;
 }
 
-// Map duration to timeout in ms (30s, 60s, unlimited)
+// Map duration to timeout in ms
+// Islamic research can take longer due to source verification
 export const SEARCH_DURATION_MS: Record<SearchDuration, number> = {
-  low: 30000,
-  medium: 60000,
+  fast: 60000, // 1 minute - quick results, may skip verification
+  standard: 180000, // 3 minutes - normal research
+  thorough: 480000, // 8 minutes - thorough research with full verification
   unlimited: 0, // 0 means no timeout
 };
 
@@ -36,7 +38,7 @@ const DEFAULT_SETTINGS: Settings = {
   maxWebsiteNodes: 8,
   showTimestamps: true,
   includeAISummary: false,
-  searchDuration: "medium",
+  searchDuration: "standard",
   evidenceFilters: {
     hadith: true,
     quran: true,
