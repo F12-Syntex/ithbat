@@ -40,6 +40,11 @@ import {
   DEPTH_CONFIG,
 } from "@/types/research";
 import { logConversation } from "@/lib/conversation-logger";
+import {
+  fetchQuranVerse,
+  parseQuranReference,
+  type QuranVerse,
+} from "@/lib/quran-api";
 
 interface ResearchStepEvent {
   type:
@@ -91,6 +96,83 @@ function cleanupNestedLinks(text: string): string {
   // Pattern: [[inner text](inner url)](outer url)
   // Replace with: [inner text](inner url)
   return text.replace(/\[\[([^\]]+)\]\(([^)]+)\)\]\([^)]+\)/g, "[$1]($2)");
+}
+
+/**
+ * Enrich Quran verses in the response by fetching accurate text from the API
+ * This ensures verse text is accurate and not paraphrased from AI memory
+ */
+async function enrichQuranVerses(
+  response: string,
+  onProgress?: (message: string) => void,
+): Promise<string> {
+  // Find all Quran references with their quoted text
+  // Matches patterns like: [Quran 2:255](url) followed by quoted text
+  const quranRefPattern =
+    /\[(?:Quran|Qur'an)\s*(\d{1,3}):(\d{1,3})(?:-(\d{1,3}))?\]\(([^)]+)\)/gi;
+
+  const matches = [...response.matchAll(quranRefPattern)];
+
+  if (matches.length === 0) {
+    return response;
+  }
+
+  onProgress?.(`Fetching ${matches.length} Quran verse(s) from API...`);
+
+  let enrichedResponse = response;
+  const fetchedRefs = new Set<string>();
+
+  for (const match of matches) {
+    const [fullMatch, surahStr, ayahStartStr, ayahEndStr] = match;
+    const surah = parseInt(surahStr, 10);
+    const ayahStart = parseInt(ayahStartStr, 10);
+    const ayahEnd = ayahEndStr ? parseInt(ayahEndStr, 10) : undefined;
+
+    const refKey = ayahEnd ? `${surah}:${ayahStart}-${ayahEnd}` : `${surah}:${ayahStart}`;
+
+    // Skip if already fetched this reference
+    if (fetchedRefs.has(refKey)) continue;
+    fetchedRefs.add(refKey);
+
+    try {
+      const verses = await fetchQuranVerse(surah, ayahStart, ayahEnd);
+
+      if (verses && verses.length > 0) {
+        // Build the enriched verse text
+        const verseText = verses.map((v) => v.translation).join(" ");
+        const arabicText = verses
+          .filter((v) => v.arabicText)
+          .map((v) => v.arabicText)
+          .join(" ");
+        const surahName = verses[0].surahName;
+        const translationSource = verses[0].translationSource;
+
+        // Find and replace the quoted text after this reference
+        // Look for patterns like: [Quran X:Y](url) — "quoted text" or [Quran X:Y](url): "quoted text"
+        const quotePattern = new RegExp(
+          `(\\[(?:Quran|Qur'an)\\s*${surah}:${ayahStart}(?:-${ayahEnd || ""})?\\]\\([^)]+\\))\\s*(?:—|:)?\\s*["'""]([^"""\n]+)["'""]`,
+          "gi",
+        );
+
+        const replacement = arabicText
+          ? `$1\n\n**Arabic:** ${arabicText}\n\n**Translation (${translationSource}):** "${verseText}"`
+          : `$1 — "${verseText}" *(${translationSource})*`;
+
+        const newResponse = enrichedResponse.replace(quotePattern, replacement);
+
+        // Only update if we made a change
+        if (newResponse !== enrichedResponse) {
+          enrichedResponse = newResponse;
+          onProgress?.(`✓ Enriched ${refKey} (${surahName})`);
+        }
+      }
+    } catch (error) {
+      // Silent fail - keep original text if API fails
+      onProgress?.(`⚠ Could not fetch ${refKey}`);
+    }
+  }
+
+  return enrichedResponse;
 }
 
 function parsePlanningResponse(response: string): PlanningDecision {
@@ -1398,6 +1480,17 @@ export async function POST(request: NextRequest) {
         // Post-process: Convert any remaining references to clickable links
         // This handles cases like [al-Isra 17:23-24] -> [al-Isra 17:23-24](https://quran.com/...)
         cleanedResponse = convertReferencesToLinks(cleanedResponse);
+
+        // Enrich Quran verses with accurate text from API (skip in fast mode)
+        if (!isFastMode) {
+          cleanedResponse = await enrichQuranVerses(cleanedResponse, (msg) => {
+            send({
+              type: "step_content",
+              step: synthesizeStep.id,
+              content: `${msg}\n`,
+            });
+          });
+        }
 
         // Stream the cleaned response
         send({ type: "response_start" });

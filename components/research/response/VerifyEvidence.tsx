@@ -225,7 +225,7 @@ export function VerifyButton({
           ${
             isExpanded
               ? "bg-accent-100 dark:bg-accent-900/40 text-accent-600 dark:text-accent-400 opacity-100"
-              : "text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 hover:bg-accent-100 dark:hover:bg-accent-900/30 hover:text-accent-600 dark:hover:text-accent-400 opacity-0 group-hover:opacity-100"
+              : "text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 hover:bg-accent-100 dark:hover:bg-accent-900/30 hover:text-accent-600 dark:hover:text-accent-400 sm:opacity-0 sm:group-hover:opacity-100"
           }`}
         title={isExpanded ? "Hide verification" : "Verify this reference"}
       >
