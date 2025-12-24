@@ -8,17 +8,15 @@ import {
   EXPLORATION_PROMPT,
   SYNTHESIS_PROMPT,
   AI_SUMMARY_ADDENDUM,
-  VERIFICATION_PROMPT,
-  DEEP_VERIFICATION_PROMPT,
   ROUND_ANALYSIS_PROMPT,
   buildPrompt,
-  extractUrlsFromMarkdown,
   extractQuranReferences,
 } from "@/lib/prompts";
 import { convertReferencesToLinks } from "@/lib/reference-parser";
 import {
   EvidenceAccumulator,
   extractEvidenceFromPage,
+  type ExtractedEvidence,
 } from "@/lib/evidence-extractor";
 import {
   initialSearch,
@@ -40,11 +38,16 @@ import {
   DEPTH_CONFIG,
 } from "@/types/research";
 import { logConversation } from "@/lib/conversation-logger";
-import {
-  fetchQuranVerse,
-  parseQuranReference,
-  type QuranVerse,
-} from "@/lib/quran-api";
+
+// Evidence item for streaming
+interface StreamedEvidence {
+  type: "hadith" | "quran" | "scholar" | "fatwa";
+  title: string;
+  content: string;
+  source: string;
+  url: string;
+  grade?: string;
+}
 
 interface ResearchStepEvent {
   type:
@@ -54,6 +57,7 @@ interface ResearchStepEvent {
     | "step_complete"
     | "source"
     | "crawl_link"
+    | "evidence"
     | "response_start"
     | "response_content"
     | "error"
@@ -64,6 +68,7 @@ interface ResearchStepEvent {
   content?: string;
   source?: Source;
   crawlLink?: CrawledLink;
+  evidence?: StreamedEvidence;
   error?: string;
 }
 
@@ -98,81 +103,71 @@ function cleanupNestedLinks(text: string): string {
   return text.replace(/\[\[([^\]]+)\]\(([^)]+)\)\]\([^)]+\)/g, "[$1]($2)");
 }
 
-/**
- * Enrich Quran verses in the response by fetching accurate text from the API
- * This ensures verse text is accurate and not paraphrased from AI memory
- */
-async function enrichQuranVerses(
-  response: string,
-  onProgress?: (message: string) => void,
-): Promise<string> {
-  // Find all Quran references with their quoted text
-  // Matches patterns like: [Quran 2:255](url) followed by quoted text
-  const quranRefPattern =
-    /\[(?:Quran|Qur'an)\s*(\d{1,3}):(\d{1,3})(?:-(\d{1,3}))?\]\(([^)]+)\)/gi;
-
-  const matches = [...response.matchAll(quranRefPattern)];
-
-  if (matches.length === 0) {
-    return response;
+// Helper to stream evidence items from extracted data
+function streamExtractedEvidence(
+  extracted: Partial<ExtractedEvidence>,
+  send: (event: ResearchStepEvent) => void,
+): void {
+  // Stream hadith
+  for (const h of extracted.hadith || []) {
+    const title = h.number ? `${h.collection} ${h.number}` : h.collection;
+    send({
+      type: "evidence",
+      evidence: {
+        type: "hadith",
+        title,
+        content: h.text?.slice(0, 200) + (h.text?.length > 200 ? "..." : ""),
+        source: h.collection,
+        url: h.url || h.sourceUrl,
+        grade: h.grade,
+      },
+    });
   }
 
-  onProgress?.(`Fetching ${matches.length} Quran verse(s) from API...`);
-
-  let enrichedResponse = response;
-  const fetchedRefs = new Set<string>();
-
-  for (const match of matches) {
-    const [fullMatch, surahStr, ayahStartStr, ayahEndStr] = match;
-    const surah = parseInt(surahStr, 10);
-    const ayahStart = parseInt(ayahStartStr, 10);
-    const ayahEnd = ayahEndStr ? parseInt(ayahEndStr, 10) : undefined;
-
-    const refKey = ayahEnd ? `${surah}:${ayahStart}-${ayahEnd}` : `${surah}:${ayahStart}`;
-
-    // Skip if already fetched this reference
-    if (fetchedRefs.has(refKey)) continue;
-    fetchedRefs.add(refKey);
-
-    try {
-      const verses = await fetchQuranVerse(surah, ayahStart, ayahEnd);
-
-      if (verses && verses.length > 0) {
-        // Build the enriched verse text
-        const verseText = verses.map((v) => v.translation).join(" ");
-        const arabicText = verses
-          .filter((v) => v.arabicText)
-          .map((v) => v.arabicText)
-          .join(" ");
-        const surahName = verses[0].surahName;
-        const translationSource = verses[0].translationSource;
-
-        // Find and replace the quoted text after this reference
-        // Look for patterns like: [Quran X:Y](url) — "quoted text" or [Quran X:Y](url): "quoted text"
-        const quotePattern = new RegExp(
-          `(\\[(?:Quran|Qur'an)\\s*${surah}:${ayahStart}(?:-${ayahEnd || ""})?\\]\\([^)]+\\))\\s*(?:—|:)?\\s*["'""]([^"""\n]+)["'""]`,
-          "gi",
-        );
-
-        const replacement = arabicText
-          ? `$1\n\n**Arabic:** ${arabicText}\n\n**Translation (${translationSource}):** "${verseText}"`
-          : `$1 — "${verseText}" *(${translationSource})*`;
-
-        const newResponse = enrichedResponse.replace(quotePattern, replacement);
-
-        // Only update if we made a change
-        if (newResponse !== enrichedResponse) {
-          enrichedResponse = newResponse;
-          onProgress?.(`✓ Enriched ${refKey} (${surahName})`);
-        }
-      }
-    } catch (error) {
-      // Silent fail - keep original text if API fails
-      onProgress?.(`⚠ Could not fetch ${refKey}`);
-    }
+  // Stream Quran verses
+  for (const v of extracted.quranVerses || []) {
+    const ref = v.ayahEnd
+      ? `${v.surah}:${v.ayahStart}-${v.ayahEnd}`
+      : `${v.surah}:${v.ayahStart}`;
+    send({
+      type: "evidence",
+      evidence: {
+        type: "quran",
+        title: `Quran ${ref}${v.surahName ? ` (${v.surahName})` : ""}`,
+        content: v.translation?.slice(0, 200) + (v.translation?.length > 200 ? "..." : ""),
+        source: v.translationSource || "Quran",
+        url: v.url,
+      },
+    });
   }
 
-  return enrichedResponse;
+  // Stream scholarly opinions
+  for (const o of extracted.scholarlyOpinions || []) {
+    send({
+      type: "evidence",
+      evidence: {
+        type: "scholar",
+        title: o.scholar || "Scholarly Opinion",
+        content: o.quote?.slice(0, 200) + (o.quote?.length > 200 ? "..." : ""),
+        source: o.source,
+        url: o.url,
+      },
+    });
+  }
+
+  // Stream fatwas
+  for (const f of extracted.fatwas || []) {
+    send({
+      type: "evidence",
+      evidence: {
+        type: "fatwa",
+        title: f.title || "Fatwa",
+        content: f.explanation?.slice(0, 200) + (f.explanation?.length > 200 ? "..." : ""),
+        source: f.source,
+        url: f.url,
+      },
+    });
+  }
 }
 
 function parsePlanningResponse(response: string): PlanningDecision {
@@ -271,16 +266,11 @@ export async function POST(request: NextRequest) {
     conversationHistory = [],
     sessionId: providedSessionId,
     includeAISummary = false,
-    searchTimeout = 180000, // Default 3 minutes (standard mode)
-    evidenceFilters,
   } = await request.json();
   const history = conversationHistory as ConversationTurn[];
   const sessionId = providedSessionId || crypto.randomUUID();
   const isFollowUp = history.length > 0;
   const wantsAISummary = includeAISummary === true;
-  // 0 = unlimited, otherwise respect the timeout
-  // Fast mode (1min) will skip deep verification
-  const isFastMode = searchTimeout > 0 && searchTimeout <= 60000;
 
   if (!query || typeof query !== "string") {
     return new Response(JSON.stringify({ error: "Query is required" }), {
@@ -327,7 +317,7 @@ export async function POST(request: NextRequest) {
       const allSteps: ResearchStep[] = [];
       const evidenceAccumulator = new EvidenceAccumulator(); // Structured evidence storage
       let sourceId = 1;
-      const maxIterations = 5; // Reduced - AI now decides to stop when enough evidence found
+      const maxIterations = 1; // Single pass - fast research
 
       try {
         // Send session ID to client immediately
@@ -535,9 +525,13 @@ export async function POST(request: NextRequest) {
               ),
             );
 
-            // Add to accumulator
+            // Add to accumulator and stream evidence as found
             for (let j = 0; j < batch.length; j++) {
-              evidenceAccumulator.addEvidence(extractions[j], batch[j].url);
+              const extracted = extractions[j];
+              evidenceAccumulator.addEvidence(extracted, batch[j].url);
+
+              // Stream evidence items to UI immediately
+              streamExtractedEvidence(extracted, send);
             }
           }
 
@@ -727,7 +721,7 @@ export async function POST(request: NextRequest) {
               content: `  Found ${newPages.length} new pages\n`,
             });
 
-            // Extract evidence from new pages
+            // Extract evidence from new pages and stream as found
             if (newPages.length > 0) {
               for (const page of newPages) {
                 const extracted = await extractEvidenceFromPage(
@@ -737,6 +731,8 @@ export async function POST(request: NextRequest) {
                 );
 
                 evidenceAccumulator.addEvidence(extracted, page.url);
+                // Stream evidence items to UI immediately
+                streamExtractedEvidence(extracted, send);
               }
               send({
                 type: "step_content",
@@ -780,7 +776,7 @@ export async function POST(request: NextRequest) {
 
               allCrawledPages.push(...altPages);
 
-              // Extract evidence from altPages
+              // Extract evidence from altPages and stream as found
               for (const page of altPages) {
                 const extracted = await extractEvidenceFromPage(
                   page.url,
@@ -789,6 +785,8 @@ export async function POST(request: NextRequest) {
                 );
 
                 evidenceAccumulator.addEvidence(extracted, page.url);
+                // Stream evidence items to UI immediately
+                streamExtractedEvidence(extracted, send);
               }
             }
           }
@@ -841,7 +839,7 @@ export async function POST(request: NextRequest) {
               content: `  Found ${googlePages.length} pages from Google\n`,
             });
 
-            // Extract evidence from Google pages
+            // Extract evidence from Google pages and stream as found
             for (const page of googlePages) {
               const extracted = await extractEvidenceFromPage(
                 page.url,
@@ -850,6 +848,8 @@ export async function POST(request: NextRequest) {
               );
 
               evidenceAccumulator.addEvidence(extracted, page.url);
+              // Stream evidence items to UI immediately
+              streamExtractedEvidence(extracted, send);
             }
           }
 
@@ -1154,320 +1154,9 @@ export async function POST(request: NextRequest) {
           synthesisResponse += chunk;
         }
 
-        send({
-          type: "step_content",
-          step: synthesizeStep.id,
-          content: `Finalizing response...\n`,
-        });
-
-        // Step 6: Verification - validate all references
-        // Use QUICK model for fast mode, HIGH for thorough
-        const verificationPrompt = buildPrompt(VERIFICATION_PROMPT, {
-          response: synthesisResponse,
-          research: combinedResearch,
-        });
-
-        let verifiedResponse = "";
-
-        for await (const chunk of client.streamChat(
-          [
-            {
-              role: "system",
-              content:
-                "You are a reference verification assistant. Return the complete verified response.",
-            },
-            { role: "user", content: verificationPrompt },
-          ],
-          isFastMode ? "QUICK" : "HIGH", // Use QUICK for fast mode
-        )) {
-          verifiedResponse += chunk;
-        }
-
-        // Clean up any nested/duplicate links that slipped through
-        let cleanedResponse = cleanupNestedLinks(verifiedResponse);
-
-        // Continue finalizing in synthesize step (verification runs silently)
-        send({
-          type: "step_content",
-          step: synthesizeStep.id,
-          content: `Verifying citations...\n`,
-        });
-
-        // Skip deep verification in fast mode
-        if (isFastMode) {
-          // Fast mode: skip deep URL verification, just clean up the response
-          cleanedResponse = convertReferencesToLinks(cleanedResponse);
-        } else {
-          // Full mode: deep verification with URL crawling
-          // Extract URLs from the response
-          const citedUrls = extractUrlsFromMarkdown(cleanedResponse);
-
-          // Extract Quran references for tafsir fetching
-          const quranRefs = extractQuranReferences(cleanedResponse);
-
-          if (citedUrls.length > 0 || quranRefs.length > 0) {
-            // Crawl cited URLs silently (limit to 5 for medium mode)
-            const urlsToCrawl = citedUrls.slice(0, 5);
-          const verificationPages: CrawledPage[] = [];
-          const fetchedUrls: string[] = [];
-          const failedUrls: string[] = [];
-
-          for (const url of urlsToCrawl) {
-            try {
-              const pages = await crawlUrls([url]);
-
-              if (pages.length > 0) {
-                verificationPages.push(...pages);
-                fetchedUrls.push(url);
-              } else {
-                failedUrls.push(url);
-              }
-            } catch {
-              failedUrls.push(url);
-            }
-          }
-
-          // Fetch tafsir for Quran verses silently (limit to 5)
-          const tafsirPages: CrawledPage[] = [];
-
-          for (const ref of quranRefs.slice(0, 5)) {
-            try {
-              const pages = await crawlUrls([ref.tafsirUrl]);
-
-              if (pages.length > 0) {
-                tafsirPages.push(...pages);
-              }
-            } catch {
-              // Silent fail
-            }
-          }
-
-          // Combine all verification sources
-          const allVerificationPages = [...verificationPages, ...tafsirPages];
-
-          if (allVerificationPages.length > 0) {
-            // Format the crawled source content for verification
-            const sourceContent = allVerificationPages
-              .map(
-                (page) =>
-                  `\n--- SOURCE: ${page.url} ---\nTitle: ${page.title}\nContent:\n${page.content.slice(0, 3000)}\n`,
-              )
-              .join("\n");
-
-            // Format tafsir content separately for context enrichment
-            const tafsirContent =
-              tafsirPages.length > 0
-                ? `\n\n## TAFSIR (Ibn Kathir) CONTEXT:\n${tafsirPages
-                    .map(
-                      (page) =>
-                        `\n--- TAFSIR: ${page.url} ---\n${page.content.slice(0, 4000)}\n`,
-                    )
-                    .join("\n")}`
-                : "";
-
-            // Run deep verification (include tafsir content for context)
-            const deepVerificationPrompt = buildPrompt(
-              DEEP_VERIFICATION_PROMPT,
-              {
-                response: cleanedResponse,
-                sourceContent: sourceContent + tafsirContent,
-              },
-            );
-
-            let deepVerifiedResponse = "";
-
-            for await (const chunk of client.streamChat(
-              [
-                {
-                  role: "system",
-                  content:
-                    "You are a citation verification assistant. Silently remove any content that cannot be verified against the provided sources. Do not add notes about removed content.",
-                },
-                { role: "user", content: deepVerificationPrompt },
-              ],
-              "HIGH",
-            )) {
-              deepVerifiedResponse += chunk;
-            }
-
-            // Use the deep verified response if it's valid
-            if (deepVerifiedResponse.length > 100) {
-              const previousResponse = cleanedResponse;
-
-              cleanedResponse = cleanupNestedLinks(deepVerifiedResponse);
-
-              // Count citations before and after to show what was removed
-              const citationsBefore =
-                extractUrlsFromMarkdown(previousResponse).length;
-              const citationsAfter =
-                extractUrlsFromMarkdown(cleanedResponse).length;
-              const removed = citationsBefore - citationsAfter;
-
-              if (removed > 0) {
-                send({
-                  type: "step_content",
-                  step: synthesizeStep.id,
-                  content: `\n✗ Removed ${removed} unverified citation${removed > 1 ? "s" : ""}\n`,
-                });
-              }
-              send({
-                type: "step_content",
-                step: synthesizeStep.id,
-                content: `✓ ${citationsAfter} citation${citationsAfter !== 1 ? "s" : ""} verified\n`,
-              });
-
-              // Check if we need to re-research due to insufficient evidence
-              const removalRate =
-                citationsBefore > 0 ? removed / citationsBefore : 0;
-              const needsMoreResearch = citationsAfter < 2 || removalRate > 0.5;
-
-              if (needsMoreResearch && citationsBefore > 0) {
-                send({ type: "step_complete", step: synthesizeStep.id });
-
-                // Start re-research step
-                send({
-                  type: "step_start",
-                  step: synthesizeStep.id,
-                  stepTitle: "Finding more evidence",
-                });
-
-                send({
-                  type: "step_content",
-                  step: synthesizeStep.id,
-                  content: `Insufficient verified evidence (${citationsAfter} citations). Searching for more specific sources...\n\n`,
-                });
-
-                // Search with more specific queries
-                const specificQueries = [
-                  `${query} hadith evidence`,
-                  `${query} scholarly ruling fatwa`,
-                  `${query} islamqa`,
-                ];
-
-                const additionalPages: CrawledPage[] = [];
-
-                for (const specificQuery of specificQueries.slice(0, 2)) {
-                  send({
-                    type: "step_content",
-                    step: synthesizeStep.id,
-                    content: `→ Searching: "${specificQuery}"\n`,
-                  });
-
-                  const newPages = await searchQuery(
-                    specificQuery,
-                    (progress) => {
-                      if (progress.type === "found") {
-                        send({
-                          type: "step_content",
-                          step: synthesizeStep.id,
-                          content: `  ✓ ${progress.title?.slice(0, 50) || "Page"}\n`,
-                        });
-
-                        const source: Source = {
-                          id: sourceId++,
-                          title: progress.title || "Page",
-                          url: progress.url!,
-                          domain: new URL(progress.url!).hostname.replace(
-                            "www.",
-                            "",
-                          ),
-                          trusted: true,
-                        };
-
-                        send({ type: "source", source });
-                      }
-                    },
-                  );
-
-                  additionalPages.push(...newPages);
-                }
-
-                if (additionalPages.length > 0) {
-                  allCrawledPages.push(...additionalPages);
-
-                  send({
-                    type: "step_content",
-                    step: synthesizeStep.id,
-                    content: `\nFound ${additionalPages.length} additional sources. Re-synthesizing...\n`,
-                  });
-
-                  // Re-synthesize with all evidence
-                  const updatedCrawledContent =
-                    formatCrawlResultsForAI(allCrawledPages);
-                  const reSynthesisBasePrompt = wantsAISummary
-                    ? SYNTHESIS_PROMPT + AI_SUMMARY_ADDENDUM
-                    : SYNTHESIS_PROMPT;
-                  const reSynthesisPrompt = buildPrompt(reSynthesisBasePrompt, {
-                    query:
-                      history.length > 0
-                        ? `[Follow-up Question] ${query}`
-                        : query,
-                    research: updatedCrawledContent + conversationContext,
-                  });
-
-                  let reSynthesisResponse = "";
-
-                  for await (const chunk of client.streamChat(
-                    [
-                      {
-                        role: "system",
-                        content: ISLAMIC_RESEARCH_SYSTEM_PROMPT,
-                      },
-                      { role: "user", content: reSynthesisPrompt },
-                    ],
-                    "HIGH",
-                  )) {
-                    reSynthesisResponse += chunk;
-                  }
-
-                  // Quick verification of the new response
-                  const reVerificationPrompt = buildPrompt(
-                    VERIFICATION_PROMPT,
-                    {
-                      response: reSynthesisResponse,
-                      research: updatedCrawledContent,
-                    },
-                  );
-
-                  let reVerifiedResponse = "";
-
-                  for await (const chunk of client.streamChat(
-                    [
-                      {
-                        role: "system",
-                        content:
-                          "You are a reference verification assistant. Return the complete verified response.",
-                      },
-                      { role: "user", content: reVerificationPrompt },
-                    ],
-                    "HIGH",
-                  )) {
-                    reVerifiedResponse += chunk;
-                  }
-
-                  if (reVerifiedResponse.length > 100) {
-                    cleanedResponse = cleanupNestedLinks(reVerifiedResponse);
-                    const newCitations =
-                      extractUrlsFromMarkdown(cleanedResponse).length;
-
-                    send({
-                      type: "step_content",
-                      step: synthesizeStep.id,
-                      content: `✓ Re-synthesis complete with ${newCitations} citations\n`,
-                    });
-                  }
-                } else {
-                  send({
-                    type: "step_content",
-                    step: synthesizeStep.id,
-                    content: `⚠ No additional sources found. Using best available evidence.\n`,
-                  });
-                }
-              }
-            }
-          }
-        }
-        } // Close else block for isFastMode
+        // No verification - just clean up the response and convert references to links
+        let cleanedResponse = cleanupNestedLinks(synthesisResponse);
+        cleanedResponse = convertReferencesToLinks(cleanedResponse);
 
         // Done with synthesis
         send({
@@ -1480,17 +1169,6 @@ export async function POST(request: NextRequest) {
         // Post-process: Convert any remaining references to clickable links
         // This handles cases like [al-Isra 17:23-24] -> [al-Isra 17:23-24](https://quran.com/...)
         cleanedResponse = convertReferencesToLinks(cleanedResponse);
-
-        // Enrich Quran verses with accurate text from API (skip in fast mode)
-        if (!isFastMode) {
-          cleanedResponse = await enrichQuranVerses(cleanedResponse, (msg) => {
-            send({
-              type: "step_content",
-              step: synthesizeStep.id,
-              content: `${msg}\n`,
-            });
-          });
-        }
 
         // Stream the cleaned response
         send({ type: "response_start" });

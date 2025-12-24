@@ -1144,8 +1144,8 @@ export async function initialSearch(
         depth: 0,
       });
 
-      // Crawl up to 5 content pages from each source
-      for (const link of contentLinks.slice(0, 5)) {
+      // Crawl up to 3 content pages from each source (faster)
+      for (const link of contentLinks.slice(0, 3)) {
         if (crawledUrls.has(link)) continue;
         crawledUrls.add(link);
 

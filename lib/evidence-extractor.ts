@@ -214,6 +214,76 @@ If not, remove it from the output.
 JSON:`;
 
 // ============================================
+// URL PARSING HELPERS
+// ============================================
+
+/**
+ * Extract hadith number from sunnah.com URL
+ * Examples:
+ * - https://sunnah.com/bukhari:1234 → { collection: "Sahih Bukhari", number: "1234" }
+ * - https://sunnah.com/muslim/5/123 → { collection: "Sahih Muslim", number: "123" }
+ */
+function parseHadithUrl(url: string): { collection: string; number: string } | null {
+  if (!url.includes("sunnah.com")) return null;
+
+  // Pattern 1: sunnah.com/collection:number
+  const colonPattern = /sunnah\.com\/(bukhari|muslim|tirmidhi|abudawud|nasai|ibnmajah|malik|ahmad|darimi|nawawi40|riyadussalihin|mishkat):(\d+)/i;
+  const colonMatch = url.match(colonPattern);
+  if (colonMatch) {
+    return {
+      collection: normalizeCollectionName(colonMatch[1]),
+      number: colonMatch[2],
+    };
+  }
+
+  // Pattern 2: sunnah.com/collection/book/number
+  const slashPattern = /sunnah\.com\/(bukhari|muslim|tirmidhi|abudawud|nasai|ibnmajah|malik|ahmad)\/\d+\/(\d+)/i;
+  const slashMatch = url.match(slashPattern);
+  if (slashMatch) {
+    return {
+      collection: normalizeCollectionName(slashMatch[1]),
+      number: slashMatch[2],
+    };
+  }
+
+  return null;
+}
+
+function normalizeCollectionName(slug: string): string {
+  const names: Record<string, string> = {
+    bukhari: "Sahih Bukhari",
+    muslim: "Sahih Muslim",
+    tirmidhi: "Jami at-Tirmidhi",
+    abudawud: "Sunan Abu Dawud",
+    nasai: "Sunan an-Nasa'i",
+    ibnmajah: "Sunan Ibn Majah",
+    malik: "Muwatta Malik",
+    ahmad: "Musnad Ahmad",
+    darimi: "Sunan ad-Darimi",
+    nawawi40: "40 Hadith Nawawi",
+    riyadussalihin: "Riyad as-Salihin",
+    mishkat: "Mishkat al-Masabih",
+  };
+  return names[slug.toLowerCase()] || slug;
+}
+
+/**
+ * Extract fatwa number from IslamQA URL
+ * Example: https://islamqa.info/en/answers/12345 → "12345"
+ */
+function parseFatwaUrl(url: string): string | null {
+  // IslamQA pattern
+  const islamqaMatch = url.match(/islamqa\.info\/\w+\/answers\/(\d+)/);
+  if (islamqaMatch) return islamqaMatch[1];
+
+  // IslamWeb pattern
+  const islamwebMatch = url.match(/islamweb\.net\/\w+\/fatwa\/(\d+)/);
+  if (islamwebMatch) return islamwebMatch[1];
+
+  return null;
+}
+
+// ============================================
 // EXTRACTION FUNCTION
 // ============================================
 
@@ -225,11 +295,24 @@ export async function extractEvidenceFromPage(
 ): Promise<Partial<ExtractedEvidence>> {
   const client = getOpenRouterClient();
 
+  // Parse hadith info from URL if it's a sunnah.com page
+  const urlHadithInfo = parseHadithUrl(url);
+  const urlFatwaNumber = parseFatwaUrl(url);
+
   // Limit content length to avoid token limits
   const truncatedContent = content.slice(0, 15000);
 
+  // Add URL hint to help AI extract the right reference numbers
+  let urlHint = "";
+  if (urlHadithInfo) {
+    urlHint = `\n\n**IMPORTANT: This page URL indicates this is ${urlHadithInfo.collection} hadith #${urlHadithInfo.number}. Use this exact number!**\n`;
+  }
+  if (urlFatwaNumber) {
+    urlHint += `\n\n**IMPORTANT: This page URL indicates this is fatwa/answer #${urlFatwaNumber}. Include this number in your extraction!**\n`;
+  }
+
   const prompt = EXTRACTION_PROMPT.replace("{url}", url)
-    .replace("{content}", truncatedContent)
+    .replace("{content}", urlHint + truncatedContent)
     .replace("{query}", query);
 
   try {
@@ -262,13 +345,27 @@ export async function extractEvidenceFromPage(
 
     // Process and add URLs/IDs
     const result: Partial<ExtractedEvidence> = {
-      hadith: (extracted.hadith || []).map((h: any, i: number) => ({
-        ...h,
-        id: `${h.collection?.toLowerCase().replace(/\s+/g, "-")}-${h.number || i}`,
-        grade: normalizeGrade(h.grade),
-        url: buildHadithUrl(h.collection, h.number),
-        sourceUrl: url,
-      })),
+      hadith: (extracted.hadith || []).map((h: any, i: number) => {
+        // Use URL-parsed info if AI didn't extract a number
+        let collection = h.collection;
+        let number = h.number;
+
+        // If we have URL-parsed info and AI didn't get the number, use URL info
+        if (urlHadithInfo && (!number || number === "null")) {
+          collection = urlHadithInfo.collection;
+          number = urlHadithInfo.number;
+        }
+
+        return {
+          ...h,
+          collection,
+          number,
+          id: `${collection?.toLowerCase().replace(/\s+/g, "-")}-${number || i}`,
+          grade: normalizeGrade(h.grade),
+          url: buildHadithUrl(collection, number),
+          sourceUrl: url,
+        };
+      }),
       quranVerses: (extracted.quranVerses || []).map((v: any) => ({
         ...v,
         id: `${v.surah}:${v.ayahStart}${v.ayahEnd ? `-${v.ayahEnd}` : ""}`,
@@ -384,14 +481,16 @@ export class EvidenceAccumulator {
   }
 
   /**
-   * Check if we have minimum evidence
+   * Check if we have minimum evidence (relaxed for faster results)
    */
   hasMinimumEvidence(): boolean {
-    return (
-      this.evidence.hadith.length >= 3 &&
-      (this.evidence.scholarlyOpinions.length >= 1 ||
-        this.evidence.fatwas.length >= 1)
-    );
+    // Any evidence is enough - don't block on minimums
+    const totalEvidence =
+      this.evidence.hadith.length +
+      this.evidence.quranVerses.length +
+      this.evidence.scholarlyOpinions.length +
+      this.evidence.fatwas.length;
+    return totalEvidence >= 1;
   }
 
   /**

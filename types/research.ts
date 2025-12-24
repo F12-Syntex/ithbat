@@ -43,6 +43,7 @@ export interface ResearchState {
   steps: ResearchStep[];
   sources: Source[];
   crawledLinks: CrawledLink[];
+  evidence: StreamedEvidence[];
   response: string;
   error: string | null;
   depth: ResearchDepth;
@@ -58,6 +59,15 @@ export interface CrawledLink {
   source?: string;
 }
 
+export interface StreamedEvidence {
+  type: "hadith" | "quran" | "scholar" | "fatwa";
+  title: string;
+  content: string;
+  source: string;
+  url: string;
+  grade?: string;
+}
+
 export interface ResearchStepEvent {
   type:
     | "session_init"
@@ -66,6 +76,7 @@ export interface ResearchStepEvent {
     | "step_complete"
     | "source"
     | "crawl_link"
+    | "evidence"
     | "response_start"
     | "response_content"
     | "error"
@@ -76,6 +87,7 @@ export interface ResearchStepEvent {
   content?: string;
   source?: Source;
   crawlLink?: CrawledLink;
+  evidence?: StreamedEvidence;
   error?: string;
 }
 
@@ -102,21 +114,21 @@ export const DEPTH_CONFIG: Record<
     description: "Search pages only, no deep crawling",
     sourcesToFetch: 3,
     crawlDepth: 0,
-    maxPages: 20,
+    maxPages: 10,
   },
   standard: {
     label: "Standard",
     description: "Follow 1 level of links",
-    sourcesToFetch: 8,
+    sourcesToFetch: 5,
     crawlDepth: 1,
-    maxPages: 40,
+    maxPages: 15,
   },
   deep: {
     label: "Deep",
     description: "Thorough research with Google search",
-    sourcesToFetch: 20,
-    crawlDepth: 3,
-    maxPages: 60,
+    sourcesToFetch: 10,
+    crawlDepth: 2,
+    maxPages: 25,
   },
 };
 

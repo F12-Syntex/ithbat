@@ -17,6 +17,7 @@ import {
   type ResearchDepth,
   type Source,
   type CrawledLink,
+  type StreamedEvidence,
   createStep,
 } from "@/types/research";
 
@@ -39,6 +40,7 @@ type ResearchAction =
   | { type: "APPEND_STEP_CONTENT"; stepType: ResearchStepType; content: string }
   | { type: "ADD_SOURCE"; source: Source }
   | { type: "ADD_CRAWL_LINK"; crawlLink: CrawledLink }
+  | { type: "ADD_EVIDENCE"; evidence: StreamedEvidence }
   | { type: "SET_RESPONSE"; content: string }
   | { type: "APPEND_RESPONSE"; content: string }
   | { type: "SET_ERROR"; error: string }
@@ -67,6 +69,7 @@ const initialState: ExtendedResearchState = {
   steps: [],
   sources: [],
   crawledLinks: [],
+  evidence: [],
   response: "",
   error: null,
   depth: "deep",
@@ -178,6 +181,12 @@ function researchReducer(
       return {
         ...state,
         crawledLinks: [...state.crawledLinks, action.crawlLink],
+      };
+
+    case "ADD_EVIDENCE":
+      return {
+        ...state,
+        evidence: [...state.evidence, action.evidence],
       };
 
     case "SET_RESPONSE":
@@ -301,6 +310,12 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
           case "crawl_link":
             if (event.crawlLink) {
               dispatch({ type: "ADD_CRAWL_LINK", crawlLink: event.crawlLink });
+            }
+            break;
+
+          case "evidence":
+            if (event.evidence) {
+              dispatch({ type: "ADD_EVIDENCE", evidence: event.evidence });
             }
             break;
 
@@ -461,6 +476,12 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
           case "crawl_link":
             if (event.crawlLink) {
               dispatch({ type: "ADD_CRAWL_LINK", crawlLink: event.crawlLink });
+            }
+            break;
+
+          case "evidence":
+            if (event.evidence) {
+              dispatch({ type: "ADD_EVIDENCE", evidence: event.evidence });
             }
             break;
 
