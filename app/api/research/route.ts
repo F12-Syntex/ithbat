@@ -6,13 +6,10 @@ import {
   UNDERSTANDING_PROMPT,
   PLANNING_PROMPT,
   EXPLORATION_PROMPT,
-  SYNTHESIS_PROMPT,
-  AI_SUMMARY_ADDENDUM,
   ROUND_ANALYSIS_PROMPT,
   buildPrompt,
   extractQuranReferences,
 } from "@/lib/prompts";
-import { convertReferencesToLinks } from "@/lib/reference-parser";
 import {
   EvidenceAccumulator,
   extractEvidenceFromPage,
@@ -26,7 +23,6 @@ import {
   getAllLinks,
   summarizeCrawledPages,
   formatAvailableLinks,
-  formatCrawlResultsForAI,
   formatPagesForAIAnalysis,
   type CrawledPage,
 } from "@/lib/crawler";
@@ -95,14 +91,6 @@ function encodeSSE(event: ResearchStepEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
 }
 
-// Clean up nested/duplicate markdown links
-// Fixes patterns like [[Text](url)](url) -> [Text](url)
-function cleanupNestedLinks(text: string): string {
-  // Pattern: [[inner text](inner url)](outer url)
-  // Replace with: [inner text](inner url)
-  return text.replace(/\[\[([^\]]+)\]\(([^)]+)\)\]\([^)]+\)/g, "[$1]($2)");
-}
-
 // Helper to stream evidence items from extracted data
 function streamExtractedEvidence(
   extracted: Partial<ExtractedEvidence>,
@@ -168,6 +156,116 @@ function streamExtractedEvidence(
       },
     });
   }
+}
+
+// Format evidence directly as markdown (no AI needed)
+function formatEvidenceAsMarkdown(accumulator: EvidenceAccumulator): string {
+  const evidence = accumulator.getEvidence();
+  const parts: string[] = [];
+
+  // Quran verses section
+  if (evidence.quranVerses.length > 0) {
+    parts.push("## Quran\n");
+    for (const v of evidence.quranVerses) {
+      const ref = v.ayahEnd
+        ? `${v.surah}:${v.ayahStart}-${v.ayahEnd}`
+        : `${v.surah}:${v.ayahStart}`;
+      const surahName = v.surahName ? ` (${v.surahName})` : "";
+      const url = v.url || `https://quran.com/${v.surah}/${v.ayahStart}`;
+
+      parts.push(`**[Quran ${ref}${surahName}](${url})**`);
+      if (v.arabicText) {
+        parts.push(`\n> ${v.arabicText}`);
+      }
+      if (v.translation) {
+        parts.push(`\n"${v.translation}"`);
+      }
+      parts.push("\n");
+    }
+  }
+
+  // Hadith section
+  if (evidence.hadith.length > 0) {
+    parts.push("\n## Hadith\n");
+    for (const h of evidence.hadith) {
+      const title = h.number ? `${h.collection} ${h.number}` : h.collection;
+      const gradeLabel = h.grade && h.grade !== "unknown" ? ` — *${h.grade}*` : "";
+      const url = h.url || h.sourceUrl;
+
+      if (url) {
+        parts.push(`**[${title}](${url})**${gradeLabel}`);
+      } else {
+        parts.push(`**${title}**${gradeLabel}`);
+      }
+
+      if (h.arabicText) {
+        parts.push(`\n> ${h.arabicText}`);
+      }
+      if (h.text) {
+        parts.push(`\n"${h.text}"`);
+      }
+      if (h.narrator) {
+        parts.push(`\n— Narrated by ${h.narrator}`);
+      }
+      parts.push("\n");
+    }
+  }
+
+  // Scholarly opinions section
+  if (evidence.scholarlyOpinions.length > 0) {
+    parts.push("\n## Scholarly Opinions\n");
+    for (const o of evidence.scholarlyOpinions) {
+      const scholar = o.scholar || "Scholar";
+      const url = o.url;
+
+      if (url) {
+        parts.push(`**[${scholar}](${url})**`);
+      } else {
+        parts.push(`**${scholar}**`);
+      }
+
+      if (o.quote) {
+        parts.push(`\n"${o.quote}"`);
+      }
+      if (o.source && o.source !== scholar) {
+        parts.push(`\n— ${o.source}`);
+      }
+      parts.push("\n");
+    }
+  }
+
+  // Fatwas section
+  if (evidence.fatwas.length > 0) {
+    parts.push("\n## Fatwas\n");
+    for (const f of evidence.fatwas) {
+      const title = f.title || "Fatwa";
+      const url = f.url;
+
+      if (url) {
+        parts.push(`**[${title}](${url})**`);
+      } else {
+        parts.push(`**${title}**`);
+      }
+
+      if (f.ruling) {
+        parts.push(`\n**Ruling:** ${f.ruling}`);
+      }
+      if (f.explanation) {
+        parts.push(`\n${f.explanation}`);
+      }
+      if (f.source) {
+        parts.push(`\n— ${f.source}`);
+      }
+      parts.push("\n");
+    }
+  }
+
+  // If no evidence found
+  if (parts.length === 0) {
+    return "No direct evidence was found in the researched sources regarding this topic. Try rephrasing your question or searching for related topics.";
+  }
+
+  return parts.join("\n");
 }
 
 function parsePlanningResponse(response: string): PlanningDecision {
@@ -265,12 +363,10 @@ export async function POST(request: NextRequest) {
     depth = "deep",
     conversationHistory = [],
     sessionId: providedSessionId,
-    includeAISummary = false,
   } = await request.json();
   const history = conversationHistory as ConversationTurn[];
   const sessionId = providedSessionId || crypto.randomUUID();
   const isFollowUp = history.length > 0;
-  const wantsAISummary = includeAISummary === true;
 
   if (!query || typeof query !== "string") {
     return new Response(JSON.stringify({ error: "Query is required" }), {
@@ -1098,67 +1194,23 @@ export async function POST(request: NextRequest) {
 
         send({ type: "step_complete", step: exploreStep.id });
 
-        // Step 5: Synthesizing (dynamic title)
+        // Step 5: Format evidence (no AI needed - direct formatting)
         send({
           type: "step_start",
           step: synthesizeStep.id,
-          stepTitle: synthesizeStep.title,
+          stepTitle: "Formatting evidence",
         });
-        // Format structured evidence for synthesis
-        const structuredEvidence = evidenceAccumulator.formatForSynthesis();
-        const evidenceSummary = evidenceAccumulator.getSummary();
 
+        const evidenceSummary = evidenceAccumulator.getSummary();
         send({
           type: "step_content",
           step: synthesizeStep.id,
-          content: `Compiling ${evidenceSummary} from ${allCrawledPages.length} sources...\n`,
+          content: `Found ${evidenceSummary}\n`,
         });
 
-        // Also include raw content for context (but structured evidence takes priority)
-        const rawContent = formatCrawlResultsForAI(allCrawledPages);
-        const combinedResearch = `${structuredEvidence}\n\n# RAW SOURCE CONTENT (for additional context)\n\n${rawContent}`;
+        // Format evidence directly as markdown (no AI call needed!)
+        const formattedResponse = formatEvidenceAsMarkdown(evidenceAccumulator);
 
-        // Build conversation context for follow-up questions
-        let conversationContext = "";
-
-        if (history.length > 0) {
-          conversationContext = "\n\n## CONVERSATION HISTORY (for context):\n";
-          for (const turn of history) {
-            conversationContext += `\n**Previous Question:** ${turn.query}\n`;
-            conversationContext += `**Previous Answer:** ${turn.response.slice(0, 2000)}${turn.response.length > 2000 ? "..." : ""}\n`;
-          }
-          conversationContext +=
-            "\n---\nUse the above context to inform your answer to the current follow-up question. Reference previous answers when relevant.\n";
-        }
-
-        // Build synthesis prompt, optionally adding AI summary instructions
-        const baseSynthesisPrompt = wantsAISummary
-          ? SYNTHESIS_PROMPT + AI_SUMMARY_ADDENDUM
-          : SYNTHESIS_PROMPT;
-
-        const synthesisPrompt = buildPrompt(baseSynthesisPrompt, {
-          query: history.length > 0 ? `[Follow-up Question] ${query}` : query,
-          research: combinedResearch + conversationContext,
-        });
-
-        // Collect the initial synthesis response
-        let synthesisResponse = "";
-
-        for await (const chunk of client.streamChat(
-          [
-            { role: "system", content: ISLAMIC_RESEARCH_SYSTEM_PROMPT },
-            { role: "user", content: synthesisPrompt },
-          ],
-          "HIGH",
-        )) {
-          synthesisResponse += chunk;
-        }
-
-        // No verification - just clean up the response and convert references to links
-        let cleanedResponse = cleanupNestedLinks(synthesisResponse);
-        cleanedResponse = convertReferencesToLinks(cleanedResponse);
-
-        // Done with synthesis
         send({
           type: "step_content",
           step: synthesizeStep.id,
@@ -1166,29 +1218,25 @@ export async function POST(request: NextRequest) {
         });
         send({ type: "step_complete", step: synthesizeStep.id });
 
-        // Post-process: Convert any remaining references to clickable links
-        // This handles cases like [al-Isra 17:23-24] -> [al-Isra 17:23-24](https://quran.com/...)
-        cleanedResponse = convertReferencesToLinks(cleanedResponse);
-
-        // Stream the cleaned response
+        // Stream the formatted response
         send({ type: "response_start" });
 
         // Stream it in chunks for better UX
-        const chunkSize = 20;
+        const chunkSize = 50;
 
-        for (let i = 0; i < cleanedResponse.length; i += chunkSize) {
-          const chunk = cleanedResponse.slice(i, i + chunkSize);
+        for (let i = 0; i < formattedResponse.length; i += chunkSize) {
+          const chunk = formattedResponse.slice(i, i + chunkSize);
 
           send({ type: "response_content", content: chunk });
           // Small delay for smoother streaming effect
-          await new Promise((resolve) => setTimeout(resolve, 5));
+          await new Promise((resolve) => setTimeout(resolve, 3));
         }
 
         // Log conversation to Supabase (non-blocking)
         logConversation(
           sessionId,
           query,
-          cleanedResponse,
+          formattedResponse,
           allSteps,
           allSources,
           isFollowUp,

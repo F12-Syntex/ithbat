@@ -22,7 +22,6 @@ import { FollowUpInput } from "./FollowUpInput";
 import { ResearchPipeline } from "./pipeline";
 import { SourceFlow } from "./sources";
 import { ResearchLog } from "./ResearchLog";
-import { EvidencePanel } from "./EvidencePanel";
 
 import { ContextMenu } from "@/components/ContextMenu";
 import { SettingsPanel } from "@/components/SettingsPanel";
@@ -525,18 +524,6 @@ export function ResearchContainer() {
                               trusted: source.trusted,
                             }))}
                           />
-                        </motion.div>
-                      )}
-
-                      {/* Evidence Panel - Streamed evidence as found */}
-                      {state.evidence.length > 0 && (
-                        <motion.div
-                          animate={{ opacity: 1, y: 0 }}
-                          className="mb-4"
-                          initial={{ opacity: 0, y: 20 }}
-                          transition={{ delay: 0.2 }}
-                        >
-                          <EvidencePanel evidence={state.evidence} />
                         </motion.div>
                       )}
 
