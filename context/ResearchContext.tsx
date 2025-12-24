@@ -52,11 +52,12 @@ type ResearchAction =
 
 interface ResearchContextValue {
   state: ResearchState;
-  startResearch: (query: string, includeAISummary?: boolean, settings?: ResearchSettings) => Promise<void>;
-  askFollowUp: (question: string, includeAISummary?: boolean, settings?: ResearchSettings) => Promise<void>;
+  startResearch: (query: string, includeAISummary?: boolean, settings?: ResearchSettings, researchDepth?: ResearchDepth) => Promise<void>;
+  askFollowUp: (question: string, includeAISummary?: boolean, settings?: ResearchSettings, researchDepth?: ResearchDepth) => Promise<void>;
   requestAIAnalysis: () => Promise<void>;
   cancelResearch: () => void;
   reset: () => void;
+  setDepth: (depth: ResearchDepth) => void;
 }
 
 interface ExtendedResearchState extends ResearchState {
@@ -244,20 +245,25 @@ const ResearchContext = createContext<ResearchContextValue | null>(null);
 
 export function ResearchProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(researchReducer, initialState);
-  const [depth] = useState<ResearchDepth>("deep");
+  const [depth, setDepthState] = useState<ResearchDepth>("deep");
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const startResearch = async (query: string, includeAISummary?: boolean, settings?: ResearchSettings) => {
+  const setDepth = (newDepth: ResearchDepth) => {
+    setDepthState(newDepth);
+  };
+
+  const startResearch = async (query: string, includeAISummary?: boolean, settings?: ResearchSettings, researchDepth?: ResearchDepth) => {
+    const effectiveDepth = researchDepth || depth;
     // Cancel any existing research
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
 
-    dispatch({ type: "START_RESEARCH", query, depth });
+    dispatch({ type: "START_RESEARCH", query, depth: effectiveDepth });
 
     try {
       for await (const event of streamResearch(
         query,
-        depth,
+        effectiveDepth,
         abortControllerRef.current.signal,
         undefined,
         includeAISummary,
@@ -394,7 +400,8 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const askFollowUp = async (question: string, includeAISummary?: boolean, settings?: ResearchSettings) => {
+  const askFollowUp = async (question: string, includeAISummary?: boolean, settings?: ResearchSettings, researchDepth?: ResearchDepth) => {
+    const effectiveDepth = researchDepth || depth;
     // Cancel any existing research
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
@@ -411,7 +418,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
     dispatch({
       type: "START_FOLLOWUP",
       query: question,
-      depth,
+      depth: effectiveDepth,
       previousQuery,
       previousResponse,
     });
@@ -422,7 +429,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
     try {
       for await (const event of streamResearch(
         question,
-        depth,
+        effectiveDepth,
         abortControllerRef.current.signal,
         conversationHistory,
         includeAISummary,
@@ -523,6 +530,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
         requestAIAnalysis,
         cancelResearch,
         reset,
+        setDepth,
       }}
     >
       {children}

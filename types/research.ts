@@ -6,7 +6,7 @@ export type ResearchStepStatus =
   | "completed"
   | "error";
 export type ResearchStatus = "idle" | "researching" | "completed" | "error";
-export type ResearchDepth = "quick" | "standard" | "deep";
+export type ResearchDepth = "fast" | "quick" | "standard" | "deep";
 
 export interface Source {
   id: number;
@@ -109,6 +109,13 @@ export const DEPTH_CONFIG: Record<
     maxPages: number;
   }
 > = {
+  fast: {
+    label: "Fast",
+    description: "Direct AI search with Perplexity - no crawling",
+    sourcesToFetch: 0,
+    crawlDepth: 0,
+    maxPages: 0,
+  },
   quick: {
     label: "Quick",
     description: "Search pages only, no deep crawling",

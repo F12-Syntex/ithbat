@@ -7,6 +7,8 @@ import {
   PLANNING_PROMPT,
   EXPLORATION_PROMPT,
   ROUND_ANALYSIS_PROMPT,
+  PERPLEXITY_FAST_PROMPT,
+  PERPLEXITY_SYSTEM_PROMPT,
   buildPrompt,
   extractQuranReferences,
 } from "@/lib/prompts";
@@ -419,6 +421,158 @@ export async function POST(request: NextRequest) {
         // Send session ID to client immediately
         send({ type: "session_init", sessionId });
 
+        // FAST MODE: Use Perplexity directly without crawling
+        if (depth === "fast") {
+          // Step 1: Understanding (brief)
+          send({
+            type: "step_start",
+            step: "understanding",
+            stepTitle: "Understanding your question",
+          });
+          send({
+            type: "step_content",
+            step: "understanding",
+            content: `Analyzing: "${query}"...\n`,
+          });
+          send({ type: "step_complete", step: "understanding" });
+
+          // Step 2: Searching with Perplexity
+          send({
+            type: "step_start",
+            step: "searching",
+            stepTitle: "Searching with Perplexity AI",
+          });
+          send({
+            type: "step_content",
+            step: "searching",
+            content: "Using Perplexity AI to search Islamic sources directly...\n",
+          });
+
+          // Build the prompt for Perplexity
+          const perplexityPrompt = buildPrompt(PERPLEXITY_FAST_PROMPT, { query });
+
+          let perplexityResponse = "";
+
+          // Stream from Perplexity using the SEARCH tier
+          for await (const chunk of client.streamChat(
+            [
+              { role: "system", content: PERPLEXITY_SYSTEM_PROMPT },
+              { role: "user", content: perplexityPrompt },
+            ],
+            "SEARCH",
+          )) {
+            perplexityResponse += chunk;
+            send({ type: "step_content", step: "searching", content: chunk });
+          }
+
+          send({
+            type: "step_content",
+            step: "searching",
+            content: "\n\n✓ Search complete\n",
+          });
+          send({ type: "step_complete", step: "searching" });
+
+          // Post-process: Fix null URLs in markdown links
+          // Try to generate proper URLs for hadith references
+          const hadithCollectionMap: Record<string, string> = {
+            "bukhari": "bukhari",
+            "sahih bukhari": "bukhari",
+            "muslim": "muslim",
+            "sahih muslim": "muslim",
+            "nasai": "nasai",
+            "nasa'i": "nasai",
+            "an-nasa'i": "nasai",
+            "sunan an-nasa'i": "nasai",
+            "sunan nasai": "nasai",
+            "tirmidhi": "tirmidhi",
+            "jami at-tirmidhi": "tirmidhi",
+            "abu dawud": "abudawud",
+            "abudawud": "abudawud",
+            "sunan abu dawud": "abudawud",
+            "ibn majah": "ibnmajah",
+            "ibnmajah": "ibnmajah",
+            "sunan ibn majah": "ibnmajah",
+            "malik": "malik",
+            "muwatta malik": "malik",
+            "ahmad": "ahmad",
+            "musnad ahmad": "ahmad",
+            "darimi": "darimi",
+            "riyad as-salihin": "riyadussalihin",
+            "riyadussalihin": "riyadussalihin",
+          };
+
+          // Function to generate sunnah.com URL from hadith reference text
+          const generateHadithUrl = (text: string): string | null => {
+            const lowerText = text.toLowerCase();
+            // Match patterns like "Sahih Bukhari 1234" or "Nasai 27" or "Sunan an-Nasa'i 27"
+            for (const [pattern, collection] of Object.entries(hadithCollectionMap)) {
+              const regex = new RegExp(`${pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*(\\d+)`, 'i');
+              const match = lowerText.match(regex);
+              if (match) {
+                return `https://sunnah.com/${collection}:${match[1]}`;
+              }
+            }
+            // Also try to match just numbers if it looks like a hadith reference
+            const simpleMatch = text.match(/(\d+)/);
+            if (simpleMatch) {
+              // Try to identify collection from context
+              for (const [pattern, collection] of Object.entries(hadithCollectionMap)) {
+                if (lowerText.includes(pattern)) {
+                  return `https://sunnah.com/${collection}:${simpleMatch[1]}`;
+                }
+              }
+            }
+            return null;
+          };
+
+          let processedResponse = perplexityResponse
+            // First, try to fix null URLs by generating proper hadith URLs
+            .replace(/\[([^\]]+)\]\(null\)/g, (_match, text) => {
+              const url = generateHadithUrl(text);
+              return url ? `[${text}](${url})` : `**${text}**`;
+            })
+            .replace(/\[([^\]]+)\]\(undefined\)/g, (_match, text) => {
+              const url = generateHadithUrl(text);
+              return url ? `[${text}](${url})` : `**${text}**`;
+            })
+            .replace(/\[([^\]]+)\]\(\)/g, (_match, text) => {
+              const url = generateHadithUrl(text);
+              return url ? `[${text}](${url})` : `**${text}**`;
+            })
+            // Also handle cases where URL is literally "null" as a string
+            .replace(/\[([^\]]+)\]\("null"\)/g, (_match, text) => {
+              const url = generateHadithUrl(text);
+              return url ? `[${text}](${url})` : `**${text}**`;
+            });
+
+          // Stream the response
+          send({ type: "response_start" });
+
+          // Stream the full response in chunks for better UX
+          const chunkSize = 50;
+          for (let i = 0; i < processedResponse.length; i += chunkSize) {
+            const chunk = processedResponse.slice(i, i + chunkSize);
+            send({ type: "response_content", content: chunk });
+            await new Promise((resolve) => setTimeout(resolve, 3));
+          }
+
+          // Log conversation to Supabase (non-blocking)
+          logConversation(
+            sessionId,
+            query,
+            processedResponse,
+            allSteps,
+            allSources,
+            isFollowUp,
+            { ip, userAgent },
+          ).catch((err) => console.error("Failed to log conversation:", err));
+
+          send({ type: "done" });
+          controller.close();
+          return;
+        }
+
+        // STANDARD MODE: Full crawling and evidence extraction
         // Build conversation context for follow-up questions
         let conversationContextForUnderstanding = "";
 
