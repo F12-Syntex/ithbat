@@ -20,7 +20,6 @@ export interface EvidenceTypeFilters {
 interface Settings {
   maxWebsiteNodes: number;
   showTimestamps: boolean;
-  includeAISummary: boolean;
   searchDuration: SearchDuration;
   evidenceFilters: EvidenceTypeFilters;
 }
@@ -37,7 +36,6 @@ export const SEARCH_DURATION_MS: Record<SearchDuration, number> = {
 const DEFAULT_SETTINGS: Settings = {
   maxWebsiteNodes: 8,
   showTimestamps: true,
-  includeAISummary: false,
   searchDuration: "standard",
   evidenceFilters: {
     hadith: true,

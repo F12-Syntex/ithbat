@@ -347,7 +347,7 @@ export async function analyzeSite(
       },
       { role: "user", content: prompt },
     ],
-    "HIGH",
+    "QUICK",
   )) {
     response += chunk;
   }

@@ -5,28 +5,23 @@ import {
   useContext,
   useReducer,
   useRef,
-  useState,
   type ReactNode,
 } from "react";
 
-import { streamResearch, type ResearchSettings } from "@/lib/api";
+import { streamResearch } from "@/lib/api";
 import {
   type ResearchState,
   type ResearchStep,
   type ResearchStepType,
-  type ResearchDepth,
   type Source,
-  type CrawledLink,
-  type StreamedEvidence,
   createStep,
 } from "@/types/research";
 
 type ResearchAction =
-  | { type: "START_RESEARCH"; query: string; depth: ResearchDepth }
+  | { type: "START_RESEARCH"; query: string }
   | {
       type: "START_FOLLOWUP";
       query: string;
-      depth: ResearchDepth;
       previousQuery: string;
       previousResponse: string;
     }
@@ -39,8 +34,6 @@ type ResearchAction =
     }
   | { type: "APPEND_STEP_CONTENT"; stepType: ResearchStepType; content: string }
   | { type: "ADD_SOURCE"; source: Source }
-  | { type: "ADD_CRAWL_LINK"; crawlLink: CrawledLink }
-  | { type: "ADD_EVIDENCE"; evidence: StreamedEvidence }
   | { type: "SET_RESPONSE"; content: string }
   | { type: "APPEND_RESPONSE"; content: string }
   | { type: "SET_ERROR"; error: string }
@@ -52,12 +45,11 @@ type ResearchAction =
 
 interface ResearchContextValue {
   state: ResearchState;
-  startResearch: (query: string, includeAISummary?: boolean, settings?: ResearchSettings, researchDepth?: ResearchDepth) => Promise<void>;
-  askFollowUp: (question: string, includeAISummary?: boolean, settings?: ResearchSettings, researchDepth?: ResearchDepth) => Promise<void>;
+  startResearch: (query: string) => Promise<void>;
+  askFollowUp: (question: string) => Promise<void>;
   requestAIAnalysis: () => Promise<void>;
   cancelResearch: () => void;
   reset: () => void;
-  setDepth: (depth: ResearchDepth) => void;
 }
 
 interface ExtendedResearchState extends ResearchState {
@@ -69,11 +61,8 @@ const initialState: ExtendedResearchState = {
   status: "idle",
   steps: [],
   sources: [],
-  crawledLinks: [],
-  evidence: [],
   response: "",
   error: null,
-  depth: "deep",
   conversationHistory: [],
   completedSessions: [],
   sessionId: null,
@@ -89,8 +78,7 @@ function researchReducer(
         ...initialState,
         query: action.query,
         status: "researching",
-        depth: action.depth,
-        sessionId: null, // Will be set by session_init event
+        sessionId: null,
       };
 
     case "SET_SESSION_ID":
@@ -99,8 +87,7 @@ function researchReducer(
         sessionId: action.sessionId,
       };
 
-    case "START_FOLLOWUP":
-      // Save the current session to completed sessions before starting new one
+    case "START_FOLLOWUP": {
       const currentSession = {
         query: action.previousQuery,
         response: action.previousResponse,
@@ -111,24 +98,24 @@ function researchReducer(
         ...initialState,
         query: action.query,
         status: "researching",
-        depth: action.depth,
         conversationHistory: [
           ...(state.conversationHistory || []),
           { query: action.previousQuery, response: action.previousResponse },
         ],
         completedSessions: [...(state.completedSessions || []), currentSession],
-        sessionId: state.sessionId, // Preserve session ID for follow-ups
+        sessionId: state.sessionId,
       };
+    }
 
-    case "ADD_STEP":
+    case "ADD_STEP": {
       const newStep = createStep(action.stepType, action.stepTitle);
-
       newStep.startTime = Date.now();
 
       return {
         ...state,
         steps: [...state.steps, newStep],
       };
+    }
 
     case "UPDATE_STEP_STATUS":
       return {
@@ -163,31 +150,6 @@ function researchReducer(
       return {
         ...state,
         sources: [...state.sources, action.source],
-      };
-
-    case "ADD_CRAWL_LINK":
-      // Update existing link or add new one
-      const existingIndex = state.crawledLinks.findIndex(
-        (l) => l.url === action.crawlLink.url,
-      );
-
-      if (existingIndex >= 0) {
-        const updated = [...state.crawledLinks];
-
-        updated[existingIndex] = action.crawlLink;
-
-        return { ...state, crawledLinks: updated };
-      }
-
-      return {
-        ...state,
-        crawledLinks: [...state.crawledLinks, action.crawlLink],
-      };
-
-    case "ADD_EVIDENCE":
-      return {
-        ...state,
-        evidence: [...state.evidence, action.evidence],
       };
 
     case "SET_RESPONSE":
@@ -245,30 +207,19 @@ const ResearchContext = createContext<ResearchContextValue | null>(null);
 
 export function ResearchProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(researchReducer, initialState);
-  const [depth, setDepthState] = useState<ResearchDepth>("deep");
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const setDepth = (newDepth: ResearchDepth) => {
-    setDepthState(newDepth);
-  };
-
-  const startResearch = async (query: string, includeAISummary?: boolean, settings?: ResearchSettings, researchDepth?: ResearchDepth) => {
-    const effectiveDepth = researchDepth || depth;
+  const startResearch = async (query: string) => {
     // Cancel any existing research
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
 
-    dispatch({ type: "START_RESEARCH", query, depth: effectiveDepth });
+    dispatch({ type: "START_RESEARCH", query });
 
     try {
       for await (const event of streamResearch(
         query,
-        effectiveDepth,
         abortControllerRef.current.signal,
-        undefined,
-        includeAISummary,
-        undefined, // No session ID for new research
-        settings,
       )) {
         switch (event.type) {
           case "session_init":
@@ -310,18 +261,6 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
           case "source":
             if (event.source) {
               dispatch({ type: "ADD_SOURCE", source: event.source });
-            }
-            break;
-
-          case "crawl_link":
-            if (event.crawlLink) {
-              dispatch({ type: "ADD_CRAWL_LINK", crawlLink: event.crawlLink });
-            }
-            break;
-
-          case "evidence":
-            if (event.evidence) {
-              dispatch({ type: "ADD_EVIDENCE", evidence: event.evidence });
             }
             break;
 
@@ -400,8 +339,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const askFollowUp = async (question: string, includeAISummary?: boolean, settings?: ResearchSettings, researchDepth?: ResearchDepth) => {
-    const effectiveDepth = researchDepth || depth;
+  const askFollowUp = async (question: string) => {
     // Cancel any existing research
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
@@ -418,27 +356,21 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
     dispatch({
       type: "START_FOLLOWUP",
       query: question,
-      depth: effectiveDepth,
       previousQuery,
       previousResponse,
     });
 
-    // Get current session ID to pass to follow-up
     const currentSessionId = (state as ExtendedResearchState).sessionId;
 
     try {
       for await (const event of streamResearch(
         question,
-        effectiveDepth,
         abortControllerRef.current.signal,
         conversationHistory,
-        includeAISummary,
-        currentSessionId || undefined, // Pass existing session ID for follow-ups
-        settings,
+        currentSessionId || undefined,
       )) {
         switch (event.type) {
           case "session_init":
-            // For follow-ups, we already have the session ID, but update if server sends a new one
             if (event.sessionId) {
               dispatch({ type: "SET_SESSION_ID", sessionId: event.sessionId });
             }
@@ -480,18 +412,6 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
             }
             break;
 
-          case "crawl_link":
-            if (event.crawlLink) {
-              dispatch({ type: "ADD_CRAWL_LINK", crawlLink: event.crawlLink });
-            }
-            break;
-
-          case "evidence":
-            if (event.evidence) {
-              dispatch({ type: "ADD_EVIDENCE", evidence: event.evidence });
-            }
-            break;
-
           case "response_start":
             dispatch({ type: "SET_RESPONSE", content: "" });
             break;
@@ -530,7 +450,6 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
         requestAIAnalysis,
         cancelResearch,
         reset,
-        setDepth,
       }}
     >
       {children}

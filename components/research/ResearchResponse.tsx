@@ -52,6 +52,7 @@ function getTextFragmentUrl(href: string, linkText: string): string {
 interface ResearchResponseProps {
   content: string;
   isStreaming?: boolean;
+  apiSources?: Array<{ id: number; title: string; url: string; domain: string }>;
 }
 
 // Helper to extract text from React children
@@ -196,14 +197,26 @@ function parseSourcesFromContent(
 export function ResearchResponse({
   content,
   isStreaming,
+  apiSources,
 }: ResearchResponseProps) {
   const { processedContent, sources } = useMemo(() => {
     if (!content) return { processedContent: "", sources: [] };
     const result = extractReferences(content);
     const parsedSources = parseSourcesFromContent(content);
 
+    // Merge API sources if markdown parsing didn't find a Sources section
+    if (parsedSources.length === 0 && apiSources && apiSources.length > 0) {
+      const merged = apiSources.map((s, i) => ({
+        number: i + 1,
+        title: s.title,
+        url: s.url,
+        domain: s.domain,
+      }));
+      return { processedContent: result.processedText, sources: merged };
+    }
+
     return { processedContent: result.processedText, sources: parsedSources };
-  }, [content]);
+  }, [content, apiSources]);
 
   if (!content) return null;
 

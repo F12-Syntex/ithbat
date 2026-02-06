@@ -1,4 +1,4 @@
-export type ModelTier = "QUICK" | "HIGH" | "REASONING" | "SEARCH";
+export type ModelTier = "QUICK" | "SEARCH";
 
 export interface AIModel {
   id: string;
@@ -20,7 +20,7 @@ export const aiConfig: AIConfig = {
   models: {
     QUICK: {
       id: "google/gemini-2.0-flash-lite-001",
-      name: "Gemini 2.5 Flash",
+      name: "Gemini 2.0 Flash Lite",
       description:
         "Fast responses for question understanding and quick lookups",
       supportsStreaming: true,
@@ -28,36 +28,17 @@ export const aiConfig: AIConfig = {
       maxTokens: 4096,
       temperature: 0.7,
     },
-    HIGH: {
-      id: "google/gemini-2.0-flash-lite-001",
-      name: "Gemini 2.5 Flash",
-      description: "High quality responses for synthesis and detailed analysis",
-      supportsStreaming: true,
-      supportsWebSearch: false,
-      maxTokens: 8192,
-      temperature: 0.7,
-    },
-    REASONING: {
-    id: "google/gemini-2.0-flash-lite-001",
-      name: "Gemini 2.5 Flash",
-      description:
-        "Deep research with built-in web search for comprehensive Islamic sources",
-      supportsStreaming: true,
-      supportsWebSearch: true,
-      maxTokens: 8192,
-      temperature: 0.7,
-    },
     SEARCH: {
       id: "perplexity/sonar",
       name: "Perplexity Sonar",
-      description: "Model optimized for web search and retrieval",
+      description: "Web search model for comprehensive Islamic source research",
       supportsStreaming: true,
       supportsWebSearch: true,
-      maxTokens: 4096,
+      maxTokens: 8192,
       temperature: 0.5,
     },
   },
-  defaultTier: "HIGH",
+  defaultTier: "SEARCH",
   trustedDomains: [
     "quran.com",
     "sunnah.com",

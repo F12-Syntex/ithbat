@@ -10,6 +10,13 @@ interface StreamOptions {
   temperature?: number;
 }
 
+export interface UrlCitation {
+  url: string;
+  title: string;
+  start_index?: number;
+  end_index?: number;
+}
+
 export class OpenRouterClient {
   private apiKey: string;
   private baseUrl = "https://openrouter.ai/api/v1";
@@ -90,6 +97,122 @@ export class OpenRouterClient {
     } finally {
       reader.releaseLock();
     }
+  }
+
+  /**
+   * Stream chat and collect URL citations from web search models.
+   * Yields content chunks, and collects annotations (url_citations) returned by the model.
+   * Call getAnnotations() after the generator completes to retrieve citations.
+   */
+  streamChatWithCitations(
+    messages: ChatMessage[],
+    tier: ModelTier,
+    options: StreamOptions = {},
+  ): { stream: AsyncGenerator<string>; getAnnotations: () => UrlCitation[] } {
+    const annotations: UrlCitation[] = [];
+    const model = aiConfig.models[tier];
+    const apiKey = this.apiKey;
+    const baseUrl = this.baseUrl;
+
+    async function* generator(): AsyncGenerator<string> {
+      const response = await fetch(`${baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+          "HTTP-Referer": "https://ithbat.app",
+          "X-Title": "Ithbat - Islamic Knowledge Research",
+        },
+        body: JSON.stringify({
+          model: model.id,
+          messages,
+          stream: true,
+          max_tokens: options.maxTokens || model.maxTokens,
+          temperature: options.temperature || model.temperature,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("No response body");
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6).trim();
+              if (data === "[DONE]") return;
+
+              try {
+                const parsed = JSON.parse(data);
+                const choice = parsed.choices?.[0];
+
+                // Extract content
+                const content = choice?.delta?.content;
+                if (content) {
+                  yield content;
+                }
+
+                // Collect annotations/citations from delta or message
+                const deltaAnnotations = choice?.delta?.annotations;
+                if (Array.isArray(deltaAnnotations)) {
+                  for (const ann of deltaAnnotations) {
+                    if (ann.type === "url_citation" && ann.url) {
+                      annotations.push({
+                        url: ann.url,
+                        title: ann.title || "",
+                        start_index: ann.start_index,
+                        end_index: ann.end_index,
+                      });
+                    }
+                  }
+                }
+
+                // Also check for citations in the message field (some models put them there)
+                const messageAnnotations = choice?.message?.annotations;
+                if (Array.isArray(messageAnnotations)) {
+                  for (const ann of messageAnnotations) {
+                    if (ann.type === "url_citation" && ann.url) {
+                      annotations.push({
+                        url: ann.url,
+                        title: ann.title || "",
+                        start_index: ann.start_index,
+                        end_index: ann.end_index,
+                      });
+                    }
+                  }
+                }
+              } catch {
+                // Skip malformed chunks
+              }
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
+    }
+
+    return {
+      stream: generator(),
+      getAnnotations: () => annotations,
+    };
   }
 }
 

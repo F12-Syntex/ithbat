@@ -68,7 +68,7 @@ export async function POST(request: Request) {
         },
         { role: "user", content: prompt },
       ],
-      "HIGH",
+      "QUICK",
     )) {
       analysis += chunk;
     }
