@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
         }
         send({ type: "step_complete", step: "understanding" });
 
-        // ── Step 2: Perplexity Search ──────────────────────────────────
+        // ── Step 2: Perplexity Search (stream directly to user) ────────
         send({
           type: "step_start",
           step: "searching",
@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
           content: `Found ${foundUrls.length} source links\n`,
         });
 
-        // Send Perplexity-found sources immediately
+        // Send Perplexity-found sources
         for (const { title, url } of foundUrls) {
           send({
             type: "source",
@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
 
         send({ type: "step_complete", step: "searching" });
 
-        // ── Step 3: Format Response ────────────────────────────────────
+        // ── Step 3: Format & stream the final response ───────────────
         send({
           type: "step_start",
           step: "formatting",
@@ -216,17 +216,14 @@ export async function POST(request: NextRequest) {
 
         send({ type: "step_complete", step: "formatting" });
 
-        // ── Stream Formatted Response ──────────────────────────────────
         send({ type: "response_start" });
 
-        let fullResponse = "";
+        let formattedResponse = "";
         for await (const chunk of client.streamChat(
-          [
-            { role: "user", content: formattingPrompt },
-          ],
+          [{ role: "user", content: formattingPrompt }],
           "QUICK",
         )) {
-          fullResponse += chunk;
+          formattedResponse += chunk;
           send({ type: "response_content", content: chunk });
         }
 
@@ -234,7 +231,7 @@ export async function POST(request: NextRequest) {
         logConversation(
           sessionId,
           query,
-          fullResponse,
+          formattedResponse,
           allSteps,
           allSources,
           isFollowUp,

@@ -5,6 +5,7 @@ import {
   useContext,
   useReducer,
   useRef,
+  useCallback,
   type ReactNode,
 } from "react";
 
@@ -13,6 +14,7 @@ import {
   type ResearchState,
   type ResearchStep,
   type ResearchStepType,
+  type ResearchStepEvent,
   type Source,
   createStep,
 } from "@/types/research";
@@ -203,14 +205,89 @@ function researchReducer(
   }
 }
 
+function handleSSEEvent(
+  event: ResearchStepEvent,
+  dispatch: React.Dispatch<ResearchAction>,
+) {
+  switch (event.type) {
+    case "session_init":
+      if (event.sessionId) {
+        dispatch({ type: "SET_SESSION_ID", sessionId: event.sessionId });
+      }
+      break;
+
+    case "step_start":
+      if (event.step) {
+        dispatch({
+          type: "ADD_STEP",
+          stepType: event.step,
+          stepTitle: event.stepTitle,
+        });
+      }
+      break;
+
+    case "step_content":
+      if (event.step && event.content) {
+        dispatch({
+          type: "APPEND_STEP_CONTENT",
+          stepType: event.step,
+          content: event.content,
+        });
+      }
+      break;
+
+    case "step_complete":
+      if (event.step) {
+        dispatch({
+          type: "UPDATE_STEP_STATUS",
+          stepType: event.step,
+          status: "completed",
+        });
+      }
+      break;
+
+    case "source":
+      if (event.source) {
+        dispatch({ type: "ADD_SOURCE", source: event.source });
+      }
+      break;
+
+    case "response_start":
+      dispatch({ type: "SET_RESPONSE", content: "" });
+      break;
+
+    case "response_content":
+      if (event.content) {
+        dispatch({ type: "APPEND_RESPONSE", content: event.content });
+      }
+      break;
+
+    case "response_replace":
+      if (event.content) {
+        dispatch({ type: "SET_RESPONSE", content: event.content });
+      }
+      break;
+
+    case "error":
+      dispatch({
+        type: "SET_ERROR",
+        error: event.error || "Unknown error",
+      });
+      break;
+
+    case "done":
+      dispatch({ type: "COMPLETE" });
+      break;
+  }
+}
+
 const ResearchContext = createContext<ResearchContextValue | null>(null);
 
 export function ResearchProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(researchReducer, initialState);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const startResearch = async (query: string) => {
-    // Cancel any existing research
+  const startResearch = useCallback(async (query: string) => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
 
@@ -221,89 +298,26 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
         query,
         abortControllerRef.current.signal,
       )) {
-        switch (event.type) {
-          case "session_init":
-            if (event.sessionId) {
-              dispatch({ type: "SET_SESSION_ID", sessionId: event.sessionId });
-            }
-            break;
-
-          case "step_start":
-            if (event.step) {
-              dispatch({
-                type: "ADD_STEP",
-                stepType: event.step,
-                stepTitle: event.stepTitle,
-              });
-            }
-            break;
-
-          case "step_content":
-            if (event.step && event.content) {
-              dispatch({
-                type: "APPEND_STEP_CONTENT",
-                stepType: event.step,
-                content: event.content,
-              });
-            }
-            break;
-
-          case "step_complete":
-            if (event.step) {
-              dispatch({
-                type: "UPDATE_STEP_STATUS",
-                stepType: event.step,
-                status: "completed",
-              });
-            }
-            break;
-
-          case "source":
-            if (event.source) {
-              dispatch({ type: "ADD_SOURCE", source: event.source });
-            }
-            break;
-
-          case "response_start":
-            dispatch({ type: "SET_RESPONSE", content: "" });
-            break;
-
-          case "response_content":
-            if (event.content) {
-              dispatch({ type: "APPEND_RESPONSE", content: event.content });
-            }
-            break;
-
-          case "error":
-            dispatch({
-              type: "SET_ERROR",
-              error: event.error || "Unknown error",
-            });
-            break;
-
-          case "done":
-            dispatch({ type: "COMPLETE" });
-            break;
-        }
+        handleSSEEvent(event, dispatch);
       }
     } catch (error) {
       if (error instanceof Error && error.name !== "AbortError") {
         dispatch({ type: "SET_ERROR", error: error.message });
       }
     }
-  };
+  }, []);
 
-  const cancelResearch = () => {
+  const cancelResearch = useCallback(() => {
     abortControllerRef.current?.abort();
     dispatch({ type: "RESET" });
-  };
+  }, []);
 
-  const reset = () => {
+  const reset = useCallback(() => {
     abortControllerRef.current?.abort();
     dispatch({ type: "RESET" });
-  };
+  }, []);
 
-  const requestAIAnalysis = async () => {
+  const requestAIAnalysis = useCallback(async () => {
     if (!state.query || !state.response || state.status !== "completed") {
       return;
     }
@@ -337,17 +351,15 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
         error: error instanceof Error ? error.message : "Analysis failed",
       });
     }
-  };
+  }, [state.query, state.response, state.status]);
 
-  const askFollowUp = async (question: string) => {
-    // Cancel any existing research
+  const askFollowUp = useCallback(async (question: string) => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
 
     const previousQuery = state.query;
     const previousResponse = state.response;
 
-    // Build conversation history including current Q&A
     const conversationHistory = [
       ...(state.conversationHistory || []),
       { query: previousQuery, response: previousResponse },
@@ -369,77 +381,14 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
         conversationHistory,
         currentSessionId || undefined,
       )) {
-        switch (event.type) {
-          case "session_init":
-            if (event.sessionId) {
-              dispatch({ type: "SET_SESSION_ID", sessionId: event.sessionId });
-            }
-            break;
-
-          case "step_start":
-            if (event.step) {
-              dispatch({
-                type: "ADD_STEP",
-                stepType: event.step,
-                stepTitle: event.stepTitle,
-              });
-            }
-            break;
-
-          case "step_content":
-            if (event.step && event.content) {
-              dispatch({
-                type: "APPEND_STEP_CONTENT",
-                stepType: event.step,
-                content: event.content,
-              });
-            }
-            break;
-
-          case "step_complete":
-            if (event.step) {
-              dispatch({
-                type: "UPDATE_STEP_STATUS",
-                stepType: event.step,
-                status: "completed",
-              });
-            }
-            break;
-
-          case "source":
-            if (event.source) {
-              dispatch({ type: "ADD_SOURCE", source: event.source });
-            }
-            break;
-
-          case "response_start":
-            dispatch({ type: "SET_RESPONSE", content: "" });
-            break;
-
-          case "response_content":
-            if (event.content) {
-              dispatch({ type: "APPEND_RESPONSE", content: event.content });
-            }
-            break;
-
-          case "error":
-            dispatch({
-              type: "SET_ERROR",
-              error: event.error || "Unknown error",
-            });
-            break;
-
-          case "done":
-            dispatch({ type: "COMPLETE" });
-            break;
-        }
+        handleSSEEvent(event, dispatch);
       }
     } catch (error) {
       if (error instanceof Error && error.name !== "AbortError") {
         dispatch({ type: "SET_ERROR", error: error.message });
       }
     }
-  };
+  }, [state.query, state.response, state.conversationHistory, state.sessionId]);
 
   return (
     <ResearchContext.Provider

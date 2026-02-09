@@ -7,7 +7,6 @@ import {
   FileText,
   User,
   MessageSquare,
-  ExternalLink,
   Search,
   Globe,
 } from "lucide-react";
@@ -16,18 +15,13 @@ import { VerifyClaimModal } from "./VerifyClaimModal";
 
 type QuoteType = "hadith" | "quran" | "scholar" | "general";
 
-/**
- * Build a Google search URL to find the source of a quote
- */
 function buildGoogleSearchUrl(text: string, type: QuoteType): string {
-  // Extract key phrases for search
   let searchQuery = text
-    .replace(/["""'']/g, "") // Remove quotes
-    .replace(/\([^)]*\)/g, "") // Remove parenthetical notes
-    .replace(/\[[^\]]*\]/g, "") // Remove bracket references
+    .replace(/["""'']/g, "")
+    .replace(/\([^)]*\)/g, "")
+    .replace(/\[[^\]]*\]/g, "")
     .trim();
 
-  // Take first 100 chars or first sentence for search
   const firstSentence = searchQuery.split(/[.!?]/)[0];
 
   if (firstSentence.length > 20 && firstSentence.length < 150) {
@@ -36,7 +30,6 @@ function buildGoogleSearchUrl(text: string, type: QuoteType): string {
     searchQuery = searchQuery.slice(0, 100);
   }
 
-  // Add type-specific keywords to improve search
   const typeKeywords: Record<QuoteType, string> = {
     hadith: "hadith sunnah",
     quran: "quran verse",
@@ -61,49 +54,39 @@ interface QuoteBlockProps {
 const typeConfig: Record<
   QuoteType,
   {
-    gradient: string;
-    bg: string;
     border: string;
-    iconBg: string;
+    accent: string;
     iconColor: string;
     icon: React.ReactNode;
     label: string;
   }
 > = {
   quran: {
-    gradient: "from-sky-500 to-blue-600",
-    bg: "bg-gradient-to-br from-sky-50/80 to-blue-50/50 dark:from-sky-950/30 dark:to-blue-950/20",
-    border: "border-sky-200/50 dark:border-sky-800/50",
-    iconBg: "bg-sky-100 dark:bg-sky-900/50",
-    iconColor: "text-sky-600 dark:text-sky-400",
-    icon: <BookOpen className="w-4 h-4" strokeWidth={1.5} />,
+    border: "border-l-sky-500",
+    accent: "text-sky-600 dark:text-sky-400",
+    iconColor: "text-sky-500 dark:text-sky-400",
+    icon: <BookOpen className="w-3.5 h-3.5" strokeWidth={2} />,
     label: "Quran",
   },
   hadith: {
-    gradient: "from-amber-500 to-orange-600",
-    bg: "bg-gradient-to-br from-amber-50/80 to-orange-50/50 dark:from-amber-950/30 dark:to-orange-950/20",
-    border: "border-amber-200/50 dark:border-amber-800/50",
-    iconBg: "bg-amber-100 dark:bg-amber-900/50",
-    iconColor: "text-amber-600 dark:text-amber-400",
-    icon: <FileText className="w-4 h-4" strokeWidth={1.5} />,
+    border: "border-l-amber-500",
+    accent: "text-amber-600 dark:text-amber-400",
+    iconColor: "text-amber-500 dark:text-amber-400",
+    icon: <FileText className="w-3.5 h-3.5" strokeWidth={2} />,
     label: "Hadith",
   },
   scholar: {
-    gradient: "from-purple-500 to-violet-600",
-    bg: "bg-gradient-to-br from-purple-50/80 to-violet-50/50 dark:from-purple-950/30 dark:to-violet-950/20",
-    border: "border-purple-200/50 dark:border-purple-800/50",
-    iconBg: "bg-purple-100 dark:bg-purple-900/50",
-    iconColor: "text-purple-600 dark:text-purple-400",
-    icon: <User className="w-4 h-4" strokeWidth={1.5} />,
+    border: "border-l-purple-500",
+    accent: "text-purple-600 dark:text-purple-400",
+    iconColor: "text-purple-500 dark:text-purple-400",
+    icon: <User className="w-3.5 h-3.5" strokeWidth={2} />,
     label: "Scholar",
   },
   general: {
-    gradient: "from-neutral-400 to-neutral-600",
-    bg: "bg-gradient-to-br from-neutral-50/80 to-neutral-100/50 dark:from-neutral-900/50 dark:to-neutral-800/30",
-    border: "border-neutral-200/50 dark:border-neutral-700/50",
-    iconBg: "bg-neutral-100 dark:bg-neutral-800",
-    iconColor: "text-neutral-500 dark:text-neutral-400",
-    icon: <MessageSquare className="w-4 h-4" strokeWidth={1.5} />,
+    border: "border-l-neutral-400 dark:border-l-neutral-600",
+    accent: "text-neutral-500 dark:text-neutral-400",
+    iconColor: "text-neutral-400 dark:text-neutral-500",
+    icon: <MessageSquare className="w-3.5 h-3.5" strokeWidth={2} />,
     label: "Quote",
   },
 };
@@ -119,10 +102,8 @@ export function QuoteBlock({
   const config = typeConfig[type];
   const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
 
-  // Extract text content from children for verification
   const getTextContent = useCallback((): string => {
     if (typeof children === "string") return children;
-    // Try to extract text from React elements
     const extractText = (node: React.ReactNode): string => {
       if (typeof node === "string") return node;
       if (typeof node === "number") return String(node);
@@ -130,14 +111,11 @@ export function QuoteBlock({
       if (node && typeof node === "object" && "props" in node) {
         return extractText((node as React.ReactElement).props.children);
       }
-
       return "";
     };
-
     return extractText(children);
   }, [children]);
 
-  // Only show verify button for hadith and quran types
   const canVerify = type === "hadith" || type === "quran" || type === "scholar";
 
   return (
@@ -149,95 +127,79 @@ export function QuoteBlock({
         onClose={() => setIsVerifyModalOpen(false)}
       />
       <motion.blockquote
-        animate={{ opacity: 1, y: 0 }}
-        className={`relative my-5 rounded-xl overflow-hidden ${config.bg} ${config.border} border shadow-sm`}
-        initial={{ opacity: 0, y: 10 }}
-        transition={{ duration: 0.3 }}
+        animate={{ opacity: 1 }}
+        className={`relative my-4 border-l-3 ${config.border} pl-4 pr-3 py-3 bg-transparent`}
+        initial={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
       >
-        {/* Gradient left border */}
-        <div
-          className={`absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b ${config.gradient}`}
-        />
-
-        {/* Header with type indicator */}
-        <div className="flex items-center gap-2.5 px-4 pt-4 pb-2 pl-5">
-          <span
-            className={`p-1.5 rounded-lg ${config.iconBg} ${config.iconColor}`}
-          >
-            {config.icon}
-          </span>
-          <span className="text-[11px] uppercase tracking-wider font-semibold text-neutral-500 dark:text-neutral-400">
+        {/* Type label */}
+        <div className="flex items-center gap-1.5 mb-2">
+          <span className={config.iconColor}>{config.icon}</span>
+          <span className={`text-[10px] uppercase tracking-widest font-semibold ${config.accent}`}>
             {config.label}
           </span>
         </div>
 
-        {/* Arabic text (if provided) */}
+        {/* Arabic text */}
         {arabicText && (
-          <div className="px-5 pb-3">
-            <p
-              className="text-right text-xl leading-loose text-neutral-800 dark:text-neutral-100 font-arabic"
-              dir="rtl"
-            >
-              {arabicText}
-            </p>
-          </div>
+          <p
+            className="text-lg leading-loose text-neutral-800 dark:text-neutral-100 font-arabic mb-2"
+            dir="rtl"
+          >
+            {arabicText}
+          </p>
         )}
 
-        {/* Main content (translation or quote) */}
-        <div className="px-5 pb-4 pl-5">
-          <div className="text-sm sm:text-[15px] text-neutral-700 dark:text-neutral-200 leading-relaxed">
-            {children}
-          </div>
+        {/* Quote content */}
+        <div className="text-sm sm:text-[15px] text-neutral-700 dark:text-neutral-200 leading-relaxed italic">
+          {children}
         </div>
 
-        {/* Footer with source, reference, and verify button */}
-        <div className="flex items-center justify-between px-5 py-3 bg-white/50 dark:bg-black/10 border-t border-neutral-200/30 dark:border-neutral-700/30">
-          <span className="text-xs text-neutral-600 dark:text-neutral-400">
-            {source && <span className="font-medium">{source}</span>}
-            {source && reference && (
-              <span className="mx-1.5 text-neutral-400">•</span>
-            )}
-            {reference && (
-              <span className="font-mono text-[11px]">{reference}</span>
-            )}
-          </span>
+        {/* Footer: source info + actions */}
+        {(source || reference || canVerify) && (
+          <div className="flex items-center justify-between mt-3 pt-2 border-t border-neutral-200/50 dark:border-neutral-700/30">
+            <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
+              {source && <span className="font-medium">{source}</span>}
+              {source && reference && <span className="mx-1">·</span>}
+              {reference && (
+                <span className="font-mono text-[10px]">{reference}</span>
+              )}
+            </span>
 
-          <div className="flex items-center gap-2">
-            {/* Find Source button - opens Google search */}
-            <a
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-              href={buildGoogleSearchUrl(getTextContent(), type)}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <Globe className="w-3 h-3" strokeWidth={2} />
-              <span>Find Source</span>
-            </a>
-
-            {/* Verify button */}
-            {canVerify && (
-              <button
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-accent-600 dark:text-accent-400 hover:bg-accent-100 dark:hover:bg-accent-900/30 transition-colors"
-                onClick={() => setIsVerifyModalOpen(true)}
-              >
-                <Search className="w-3 h-3" strokeWidth={2} />
-                <span>Verify</span>
-              </button>
-            )}
-
-            {url && (
+            <div className="flex items-center gap-1.5">
               <a
-                className="flex items-center gap-1.5 text-xs font-medium text-accent-600 dark:text-accent-400 hover:underline"
-                href={url}
+                className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                href={buildGoogleSearchUrl(getTextContent(), type)}
                 rel="noopener noreferrer"
                 target="_blank"
               >
-                <span>View source</span>
-                <ExternalLink className="w-3 h-3" strokeWidth={2} />
+                <Globe className="w-3 h-3" strokeWidth={2} />
+                Find
               </a>
-            )}
+
+              {canVerify && (
+                <button
+                  className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium text-accent-600 dark:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-900/20 transition-colors"
+                  onClick={() => setIsVerifyModalOpen(true)}
+                >
+                  <Search className="w-3 h-3" strokeWidth={2} />
+                  Verify
+                </button>
+              )}
+
+              {url && (
+                <a
+                  className="flex items-center gap-1 text-[10px] font-medium text-accent-600 dark:text-accent-400 hover:underline"
+                  href={url}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  Source
+                </a>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </motion.blockquote>
     </>
   );

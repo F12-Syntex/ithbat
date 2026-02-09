@@ -6,48 +6,11 @@ import rehypeRaw from "rehype-raw";
 import { motion } from "framer-motion";
 
 import { QuoteBlock } from "./response/QuoteBlock";
-import { InlineCitation } from "./response/CitationBadge";
+import { SourceInfoBadge } from "./response/SourceInfoBadge";
 import { SourceCitationCard } from "./response/SourceCitationCard";
 import { EvidenceParagraph } from "./response/VerifyEvidence";
 
 import { extractReferences } from "@/lib/references";
-
-// Sites that support text fragment highlighting
-const TEXT_FRAGMENT_SITES = ["sunnah.com", "islamqa.info", "quran.com"];
-
-// Build URL with text fragment for supported sites
-function getTextFragmentUrl(href: string, linkText: string): string {
-  try {
-    const url = new URL(href);
-    const isSupported = TEXT_FRAGMENT_SITES.some((site) =>
-      url.hostname.includes(site),
-    );
-
-    if (!isSupported) return href;
-
-    // For sunnah.com, use hadith book name for search
-    if (url.hostname.includes("sunnah.com")) {
-      const bookMatch = linkText.match(
-        /(Bukhari|Muslim|Tirmidhi|Abu Dawud|Nasa'i|Ibn Majah|Muwatta)/i,
-      );
-
-      if (bookMatch) {
-        return `${href}#:~:text=${encodeURIComponent(bookMatch[0])}`;
-      }
-    }
-
-    // For other sites, use part of link text for search
-    if (linkText.length > 5) {
-      const words = linkText.split(" ").slice(0, 4).join(" ");
-
-      return `${href}#:~:text=${encodeURIComponent(words)}`;
-    }
-
-    return href;
-  } catch {
-    return href;
-  }
-}
 
 interface ResearchResponseProps {
   content: string;
@@ -80,7 +43,6 @@ function detectQuoteType(
 ): "hadith" | "quran" | "scholar" | "general" {
   const lowerText = text.toLowerCase();
 
-  // Check for Quran indicators
   if (
     /quran|surah|ayah|verse\s*\d+:\d+|^\d+:\d+/.test(lowerText) ||
     /al-baqarah|an-nisa|al-imran|al-maidah/.test(lowerText)
@@ -88,7 +50,6 @@ function detectQuoteType(
     return "quran";
   }
 
-  // Check for Hadith indicators
   if (
     /hadith|bukhari|muslim|tirmidhi|abu dawud|nasai|ibn majah|sunnah|narrated|prophet.*said|messenger.*said/.test(
       lowerText,
@@ -97,7 +58,6 @@ function detectQuoteType(
     return "hadith";
   }
 
-  // Check for Scholar indicators
   if (
     /sheikh|imam|scholar|ibn taymiyyah|ibn qayyim|al-nawawi|fatwa|ruling|opinion/.test(
       lowerText,
@@ -118,7 +78,6 @@ function extractSourceInfo(url: string): {
     const urlObj = new URL(url);
     const domain = urlObj.hostname.replace("www.", "");
 
-    // Extract reference from path for known sites
     if (domain.includes("quran.com")) {
       const pathMatch = urlObj.pathname.match(/\/(\d+)\/(\d+)/);
 
@@ -164,7 +123,6 @@ function parseSourcesFromContent(
 
   const sourcesSection = sourcesMatch[0];
 
-  // Pattern for [N] Title - URL or [N] [Title](URL)
   const patterns = [
     /\[(\d+)\]\s*\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
     /\[(\d+)\]\s*([^-\[\]\n]+?)\s*-\s*(https?:\/\/[^\s\n)]+)/g,
@@ -190,7 +148,6 @@ function parseSourcesFromContent(
     }
   }
 
-  // Sort by number
   return sources.sort((a, b) => a.number - b.number);
 }
 
@@ -257,11 +214,23 @@ export function ResearchResponse({
       >
         <ReactMarkdown
           components={{
+            // Render links as SourceInfoBadge for source URLs
             a: ({ href, children }) => {
               const linkText =
-                typeof children === "string" ? children : String(children);
-              const finalHref = href ? getTextFragmentUrl(href, linkText) : "#";
+                typeof children === "string" ? children : extractTextContent(children);
+              const finalHref = href || "#";
 
+              // Use SourceInfoBadge for http links
+              if (finalHref.startsWith("http")) {
+                return (
+                  <SourceInfoBadge
+                    href={finalHref}
+                    title={linkText || "Source"}
+                  />
+                );
+              }
+
+              // Fallback for non-http links
               return (
                 <a
                   className="text-accent-600 dark:text-accent-400 hover:underline font-medium"
@@ -344,7 +313,6 @@ export function ResearchResponse({
             },
             // Paragraph with verify button for evidence
             p: ({ children }) => {
-              // Extract text content for evidence detection
               const textContent = extractTextContent(children);
 
               return (
@@ -374,6 +342,3 @@ export function ResearchResponse({
     </motion.div>
   );
 }
-
-// Export InlineCitation for potential use elsewhere
-export { InlineCitation };

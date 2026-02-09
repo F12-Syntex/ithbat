@@ -56,6 +56,7 @@ export interface ResearchStepEvent {
     | "source"
     | "response_start"
     | "response_content"
+    | "response_replace"
     | "error"
     | "done";
   sessionId?: string;
