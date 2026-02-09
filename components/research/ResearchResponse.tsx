@@ -170,8 +170,14 @@ export function ResearchResponse({
 }: ResearchResponseProps) {
   const { processedContent, sources } = useMemo(() => {
     if (!content) return { processedContent: "", sources: [] };
-    const result = extractReferences(content);
-    const parsedSources = parseSourcesFromContent(content);
+
+    // Strip wrapping "" from blockquote lines
+    let cleaned = content.replace(/^>\s*"(.+)"$/gm, "> $1");
+    // Also strip leading/trailing smart quotes
+    cleaned = cleaned.replace(/^>\s*\u201c(.+)\u201d$/gm, "> $1");
+
+    const result = extractReferences(cleaned);
+    const parsedSources = parseSourcesFromContent(cleaned);
 
     // Merge API sources if markdown parsing didn't find a Sources section
     if (parsedSources.length === 0 && apiSources && apiSources.length > 0) {
@@ -305,16 +311,50 @@ export function ResearchResponse({
                 {children}
               </h2>
             ),
-            blockquote: ({ children }) => (
-              <blockquote className="relative my-4 ml-0 pl-4 pr-4 py-3.5 border-l-[3px] border-accent-500 dark:border-accent-400 bg-accent-50/50 dark:bg-accent-950/20 rounded-r-xl not-italic [&_.quran-arabic]:block [&_.quran-arabic]:text-right [&_.quran-arabic]:text-lg [&_.quran-arabic]:leading-loose [&_.quran-arabic]:text-neutral-800 [&_.quran-arabic]:dark:text-neutral-100 [&_.quran-arabic]:mb-2 [&_.quran-arabic]:font-normal">
-                <div className="text-sm sm:text-[15px] text-neutral-700 dark:text-neutral-200 leading-relaxed italic">
-                  {children}
-                </div>
-              </blockquote>
-            ),
-            // Paragraph with verify button for evidence
+            blockquote: ({ children }) => {
+              // Separate attribution line (starts with "—") from quote content
+              const childArray = Array.isArray(children) ? children : [children];
+              const quoteChildren: ReactNode[] = [];
+              const attrChildren: ReactNode[] = [];
+
+              for (const child of childArray) {
+                const text = extractTextContent(child);
+                if (text.trim().startsWith("—") || text.trim().startsWith("—")) {
+                  attrChildren.push(child);
+                } else {
+                  quoteChildren.push(child);
+                }
+              }
+
+              return (
+                <blockquote className="relative my-4 ml-0 pl-4 pr-4 py-3.5 border-l-[3px] border-accent-500 dark:border-accent-400 bg-accent-50/50 dark:bg-accent-950/20 rounded-r-xl not-italic [&_.quran-arabic]:block [&_.quran-arabic]:text-right [&_.quran-arabic]:text-lg [&_.quran-arabic]:leading-loose [&_.quran-arabic]:text-neutral-800 [&_.quran-arabic]:dark:text-neutral-100 [&_.quran-arabic]:mb-2 [&_.quran-arabic]:font-normal">
+                  <div className="text-sm sm:text-[15px] text-neutral-700 dark:text-neutral-200 leading-relaxed italic">
+                    {quoteChildren}
+                  </div>
+                  {attrChildren.length > 0 && (
+                    <div className="flex justify-end mt-2 pt-1.5 border-t border-accent-200/50 dark:border-accent-800/30 not-italic">
+                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400 [&_a]:!text-[11px] [&_a]:inline-flex [&_a]:items-center [&_a]:gap-0.5 [&_img]:w-3 [&_img]:h-3">
+                        {attrChildren}
+                      </span>
+                    </div>
+                  )}
+                </blockquote>
+              );
+            },
+            // Paragraph renderer — detects attribution lines and renders them compact
             p: ({ children }) => {
               const textContent = extractTextContent(children);
+
+              // Attribution lines (— Source | link) — render as compact right-aligned source
+              if (textContent.trim().startsWith("—") || textContent.trim().startsWith("—")) {
+                return (
+                  <div className="flex justify-end -mt-2 mb-3">
+                    <span className="text-[11px] text-neutral-500 dark:text-neutral-400 [&_a]:!text-[11px] [&_a]:inline-flex [&_a]:items-center [&_a]:gap-0.5 [&_img]:w-3 [&_img]:h-3">
+                      {children}
+                    </span>
+                  </div>
+                );
+              }
 
               return (
                 <EvidenceParagraph evidenceText={textContent}>

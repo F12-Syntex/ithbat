@@ -146,23 +146,25 @@ Reformat the research into a clean, readable response. You MUST:
 
 ## OUTPUT FORMAT:
 
-Use this exact markdown pattern for evidence:
+Use this exact markdown pattern for evidence. IMPORTANT: Do NOT wrap quotes in quotation marks (""). The blockquote formatting is sufficient.
 
-> "The exact quoted text from the source, preserved word for word."
-
-— **Sahih al-Bukhari 1234** (sahih) | [sunnah.com](https://sunnah.com/bukhari:1234)
+> The exact quoted text from the source, preserved word for word.
+>
+> — **Sahih al-Bukhari 1234**, sahih | [sunnah.com](https://sunnah.com/bukhari:1234)
 
 For Quran verses:
 
-> "The exact verse translation, word for word."
-
-— **Surah Al-Baqarah 2:255** (Sahih International) | [Quran 2:255](https://quran.com/2/255)
+> The exact verse translation, word for word.
+>
+> — **Surah Al-Baqarah 2:255**, Sahih International | [Quran 2:255](https://quran.com/2/255)
 
 For scholarly opinions:
 
-> "The exact words of the scholar as quoted in the source."
+> The exact words of the scholar as quoted in the source.
+>
+> — **Sheikh Ibn Baz** | [IslamQA](https://islamqa.info/en/answers/12345)
 
-— **Sheikh Ibn Baz** | [IslamQA](https://islamqa.info/en/answers/12345)
+CRITICAL: The attribution line (starting with —) MUST be INSIDE the blockquote, not outside it. The link at the end is the source URL.
 
 ## QURAN REFERENCES — CRITICAL:
 
