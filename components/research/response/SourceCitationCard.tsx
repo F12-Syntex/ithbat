@@ -2,16 +2,13 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link2, ChevronDown, ExternalLink } from "lucide-react";
-
-import { SourceType, SourceTypeBadge } from "../sources/SourceTypeBadge";
+import { ChevronDown, ExternalLink } from "lucide-react";
 
 interface SourceCitation {
   number: number;
   title: string;
   url: string;
   domain: string;
-  type?: SourceType;
 }
 
 interface SourceCitationCardProps {
@@ -19,83 +16,77 @@ interface SourceCitationCardProps {
   title?: string;
 }
 
-// Helper to detect source type from domain
-function getSourceTypeFromDomain(domain: string): SourceType {
-  const lowerDomain = domain.toLowerCase();
-
-  if (lowerDomain.includes("quran")) return "quran";
-  if (lowerDomain.includes("sunnah") || lowerDomain.includes("hadith"))
-    return "hadith";
-  if (
-    lowerDomain.includes("islamqa") ||
-    lowerDomain.includes("fatwa") ||
-    lowerDomain.includes("askimam")
-  )
-    return "fatwa";
-  if (lowerDomain.includes("tafsir")) return "tafsir";
-  if (
-    lowerDomain.includes("scholar") ||
-    lowerDomain.includes("imam") ||
-    lowerDomain.includes("sheikh")
-  )
-    return "scholarly_opinion";
-
-  return "unknown";
+function getFaviconUrl(domain: string): string {
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 }
 
 export function SourceCitationCard({
   sources,
-  title = "Sources",
 }: SourceCitationCardProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
-  if (sources.length === 0) {
-    return null;
-  }
+  if (sources.length === 0) return null;
 
-  // Enrich sources with type detection
-  const enrichedSources = sources.map((source) => ({
-    ...source,
-    type: source.type || getSourceTypeFromDomain(source.domain),
-  }));
+  // Deduplicate by domain for the circle row
+  const uniqueDomains = Array.from(
+    new Map(sources.map((s) => [s.domain, s])).values(),
+  );
 
   return (
-    <motion.div
-      animate={{ opacity: 1, y: 0 }}
-      className="mt-6 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden bg-white dark:bg-neutral-900"
-      initial={{ opacity: 0, y: 20 }}
-      transition={{ delay: 0.2 }}
-    >
-      {/* Header */}
+    <div className="mt-6">
+      {/* Collapsed: Favicon circles row + expand button */}
       <button
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
+        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-full bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm dark:shadow-none hover:border-neutral-300 dark:hover:border-neutral-700 transition-all group"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <div className="flex items-center gap-2">
-          <Link2
-            className="w-4 h-4 text-neutral-500 dark:text-neutral-400"
-            strokeWidth={1.5}
-          />
-          <span className="text-sm font-medium text-neutral-700 dark:text-neutral-200">
-            {title}
-          </span>
-          <span className="text-xs text-neutral-400 dark:text-neutral-500">
-            ({sources.length})
-          </span>
+        {/* Stacked favicon circles */}
+        <div className="flex items-center -space-x-1.5 flex-shrink-0">
+          {uniqueDomains.slice(0, 5).map((source) => (
+            <div
+              key={source.domain}
+              className="w-6 h-6 rounded-full bg-neutral-100 dark:bg-neutral-800 border-2 border-white dark:border-neutral-900 flex items-center justify-center overflow-hidden"
+              title={source.domain}
+            >
+              <img
+                alt=""
+                className="w-4 h-4 rounded-full"
+                src={getFaviconUrl(source.domain)}
+                onError={(e) => {
+                  const el = e.target as HTMLImageElement;
+                  el.style.display = "none";
+                  el.parentElement!.innerHTML = `<span class="text-[8px] font-bold text-neutral-400">${source.domain.charAt(0).toUpperCase()}</span>`;
+                }}
+              />
+            </div>
+          ))}
+          {uniqueDomains.length > 5 && (
+            <div className="w-6 h-6 rounded-full bg-neutral-100 dark:bg-neutral-800 border-2 border-white dark:border-neutral-900 flex items-center justify-center">
+              <span className="text-[9px] font-medium text-neutral-400">
+                +{uniqueDomains.length - 5}
+              </span>
+            </div>
+          )}
         </div>
 
+        {/* Label */}
+        <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+          {sources.length} source{sources.length !== 1 ? "s" : ""}
+        </span>
+
+        {/* Expand icon */}
         <motion.div
           animate={{ rotate: isExpanded ? 180 : 0 }}
+          className="ml-auto"
           transition={{ duration: 0.2 }}
         >
           <ChevronDown
-            className="w-4 h-4 text-neutral-400 dark:text-neutral-500"
+            className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-500 dark:group-hover:text-neutral-400 transition-colors"
             strokeWidth={2}
           />
         </motion.div>
       </button>
 
-      {/* Source list */}
+      {/* Expanded: Full source list */}
       <AnimatePresence initial={false}>
         {isExpanded && (
           <motion.div
@@ -105,45 +96,45 @@ export function SourceCitationCard({
             initial={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="border-t border-neutral-100 dark:border-neutral-800">
-              {enrichedSources.map((source, index) => (
+            <div className="mt-2 flex flex-col gap-1">
+              {sources.map((source, index) => (
                 <motion.a
                   key={source.number}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors border-b border-neutral-100 dark:border-neutral-800 last:border-b-0 group"
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-full bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 transition-all group"
                   href={source.url}
-                  initial={{ opacity: 0, x: -10 }}
+                  initial={{ opacity: 0, y: 4 }}
                   rel="noopener noreferrer"
                   target="_blank"
-                  transition={{ delay: index * 0.05 }}
+                  transition={{ delay: index * 0.03 }}
                 >
-                  {/* Number badge */}
-                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-[10px] font-medium text-neutral-500 dark:text-neutral-400">
-                    {source.number}
-                  </span>
-
-                  {/* Source info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-neutral-700 dark:text-neutral-200 truncate group-hover:text-accent-600 dark:group-hover:text-accent-400 transition-colors">
-                      {source.title}
-                    </p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
-                        {source.domain}
-                      </span>
-                    </div>
+                  {/* Favicon */}
+                  <div className="w-5 h-5 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center overflow-hidden flex-shrink-0">
+                    <img
+                      alt=""
+                      className="w-3.5 h-3.5 rounded-full"
+                      src={getFaviconUrl(source.domain)}
+                      onError={(e) => {
+                        const el = e.target as HTMLImageElement;
+                        el.style.display = "none";
+                        el.parentElement!.innerHTML = `<span class="text-[7px] font-bold text-neutral-400">${source.domain.charAt(0).toUpperCase()}</span>`;
+                      }}
+                    />
                   </div>
 
-                  {/* Type badge */}
-                  <SourceTypeBadge
-                    showLabel={false}
-                    size="sm"
-                    type={source.type}
-                  />
+                  {/* Title + domain */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-neutral-700 dark:text-neutral-200 truncate group-hover:text-accent-600 dark:group-hover:text-accent-400 transition-colors">
+                      {source.title}
+                    </p>
+                    <p className="text-[10px] text-neutral-400 dark:text-neutral-500 truncate">
+                      {source.domain}
+                    </p>
+                  </div>
 
-                  {/* External link icon */}
+                  {/* External link */}
                   <ExternalLink
-                    className="w-3.5 h-3.5 text-neutral-300 dark:text-neutral-600 group-hover:text-accent-500 transition-colors flex-shrink-0"
+                    className="w-3 h-3 text-neutral-300 dark:text-neutral-600 group-hover:text-accent-500 transition-colors flex-shrink-0"
                     strokeWidth={2}
                   />
                 </motion.a>
@@ -152,6 +143,6 @@ export function SourceCitationCard({
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }
