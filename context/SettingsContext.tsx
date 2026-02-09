@@ -8,41 +8,12 @@ import {
   type ReactNode,
 } from "react";
 
-export type SearchDuration = "fast" | "standard" | "thorough" | "unlimited";
-
-export interface EvidenceTypeFilters {
-  hadith: boolean;
-  quran: boolean;
-  scholar: boolean;
-  fatwa: boolean;
-}
-
 interface Settings {
-  maxWebsiteNodes: number;
   showTimestamps: boolean;
-  searchDuration: SearchDuration;
-  evidenceFilters: EvidenceTypeFilters;
 }
-
-// Map duration to timeout in ms
-// Islamic research can take longer due to source verification
-export const SEARCH_DURATION_MS: Record<SearchDuration, number> = {
-  fast: 60000, // 1 minute - quick results, may skip verification
-  standard: 180000, // 3 minutes - normal research
-  thorough: 480000, // 8 minutes - thorough research with full verification
-  unlimited: 0, // 0 means no timeout
-};
 
 const DEFAULT_SETTINGS: Settings = {
-  maxWebsiteNodes: 8,
   showTimestamps: true,
-  searchDuration: "standard",
-  evidenceFilters: {
-    hadith: true,
-    quran: true,
-    scholar: true,
-    fatwa: true,
-  },
 };
 
 interface SettingsContextValue {
@@ -64,15 +35,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       try {
         const parsed = JSON.parse(saved);
 
-        // Deep merge to ensure nested objects like evidenceFilters are properly merged
         setSettings({
           ...DEFAULT_SETTINGS,
           ...parsed,
-          // Ensure evidenceFilters is properly merged with defaults
-          evidenceFilters: {
-            ...DEFAULT_SETTINGS.evidenceFilters,
-            ...(parsed.evidenceFilters || {}),
-          },
         });
       } catch {
         // Invalid JSON, use defaults

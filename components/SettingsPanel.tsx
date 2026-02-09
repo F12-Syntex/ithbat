@@ -1,24 +1,10 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sun, Moon, Zap, Timer, Clock, Infinity, Check } from "lucide-react";
+import { X, Sun, Moon } from "lucide-react";
 
 import { useTheme, type ThemeAccent } from "@/context/ThemeContext";
-import { useSettings, type SearchDuration, type EvidenceTypeFilters } from "@/context/SettingsContext";
-
-const DURATION_OPTIONS: { value: SearchDuration; label: string; icon: typeof Zap; desc: string }[] = [
-  { value: "fast", label: "Fast", icon: Zap, desc: "~1min" },
-  { value: "standard", label: "Standard", icon: Timer, desc: "~3min" },
-  { value: "thorough", label: "Thorough", icon: Clock, desc: "~8min" },
-  { value: "unlimited", label: "Unlimited", icon: Infinity, desc: "No limit" },
-];
-
-const EVIDENCE_TYPES: { key: keyof EvidenceTypeFilters; label: string }[] = [
-  { key: "quran", label: "Quran" },
-  { key: "hadith", label: "Hadith" },
-  { key: "scholar", label: "Scholars" },
-  { key: "fatwa", label: "Fatwas" },
-];
+import { useSettings } from "@/context/SettingsContext";
 
 const ACCENT_COLORS: Record<ThemeAccent, { bg: string; ring: string }> = {
   emerald: { bg: "bg-emerald-500", ring: "ring-emerald-500/30" },
@@ -211,132 +197,38 @@ function SettingsPanelContent({
           </div>
         </div>
 
-        {/* Research Settings */}
+        {/* Display Settings */}
         <div>
           <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-4">
-            Research
+            Display
           </p>
 
-          {/* Search Depth - Compact horizontal layout */}
-          <div className="flex gap-2">
-            {DURATION_OPTIONS.map((option) => {
-              const isSelected = settings.searchDuration === option.value;
-              const Icon = option.icon;
-              return (
-                <button
-                  key={option.value}
-                  className={`flex-1 flex flex-col items-center gap-1 p-2.5 rounded-xl transition-all ${
-                    isSelected
-                      ? "bg-accent-50 dark:bg-accent-900/20 ring-1 ring-accent-200 dark:ring-accent-800"
-                      : "bg-neutral-50 dark:bg-neutral-800/50 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                  }`}
-                  onClick={() => updateSetting("searchDuration", option.value)}
-                >
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                    isSelected
-                      ? "bg-accent-500 text-white"
-                      : "bg-neutral-200 dark:bg-neutral-700 text-neutral-500"
-                  }`}>
-                    <Icon className="w-4 h-4" strokeWidth={2} />
-                  </div>
-                  <div className={`text-xs font-medium ${
-                    isSelected
-                      ? "text-accent-700 dark:text-accent-300"
-                      : "text-neutral-700 dark:text-neutral-300"
-                  }`}>
-                    {option.label}
-                  </div>
-                  <div className="text-[10px] text-neutral-400">
-                    {option.desc}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Sources Slider - Compact */}
-          <div className="bg-neutral-50 dark:bg-neutral-800/50 rounded-xl p-3 mt-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-neutral-600 dark:text-neutral-400">
-                Max sources
-              </span>
-              <span className="text-xs font-semibold text-neutral-900 dark:text-white bg-neutral-200 dark:bg-neutral-700 px-1.5 py-0.5 rounded">
-                {settings.maxWebsiteNodes}
-              </span>
+          <label className="flex items-center justify-between p-2.5 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+            <span className="text-xs text-neutral-700 dark:text-neutral-300">
+              Show timestamps
+            </span>
+            <div
+              className={`w-10 h-6 rounded-full p-0.5 transition-colors ${
+                settings.showTimestamps
+                  ? "bg-accent-500"
+                  : "bg-neutral-300 dark:bg-neutral-600"
+              }`}
+            >
+              <div
+                className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                  settings.showTimestamps ? "translate-x-4" : "translate-x-0"
+                }`}
+              />
             </div>
             <input
-              className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-700 rounded-full appearance-none cursor-pointer"
-              max="100"
-              min="3"
-              style={{ accentColor: "var(--accent-500)" }}
-              type="range"
-              value={settings.maxWebsiteNodes}
+              checked={settings.showTimestamps}
+              className="sr-only"
+              type="checkbox"
               onChange={(e) =>
-                updateSetting("maxWebsiteNodes", parseInt(e.target.value))
+                updateSetting("showTimestamps", e.target.checked)
               }
             />
-          </div>
-
-          {/* Evidence Type Filters */}
-          <div className="mt-3">
-            <span className="text-xs text-neutral-500 dark:text-neutral-400 block mb-2">
-              Include in results
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {EVIDENCE_TYPES.map(({ key, label }) => {
-                const isActive = settings.evidenceFilters[key];
-                return (
-                  <button
-                    key={key}
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
-                      isActive
-                        ? "bg-accent-500 text-white shadow-sm"
-                        : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
-                    }`}
-                    onClick={() =>
-                      updateSetting("evidenceFilters", {
-                        ...settings.evidenceFilters,
-                        [key]: !isActive,
-                      })
-                    }
-                  >
-                    {isActive && <Check className="w-3 h-3" strokeWidth={3} />}
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Toggle Options */}
-          <div className="mt-3">
-            <label className="flex items-center justify-between p-2.5 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
-              <span className="text-xs text-neutral-700 dark:text-neutral-300">
-                Show timestamps
-              </span>
-              <div
-                className={`w-10 h-6 rounded-full p-0.5 transition-colors ${
-                  settings.showTimestamps
-                    ? "bg-accent-500"
-                    : "bg-neutral-300 dark:bg-neutral-600"
-                }`}
-              >
-                <div
-                  className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                    settings.showTimestamps ? "translate-x-4" : "translate-x-0"
-                  }`}
-                />
-              </div>
-              <input
-                checked={settings.showTimestamps}
-                className="sr-only"
-                type="checkbox"
-                onChange={(e) =>
-                  updateSetting("showTimestamps", e.target.checked)
-                }
-              />
-            </label>
-          </div>
+          </label>
         </div>
 
         {/* About */}

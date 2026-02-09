@@ -75,60 +75,102 @@ Question: {query}
 
 Respond in 2-3 sentences.`;
 
-export const WEB_RESEARCH_PROMPT = `Research this Islamic question thoroughly using web search. Find authoritative Islamic sources and present evidence clearly.
+export const WEB_RESEARCH_PROMPT = `Research this Islamic question thoroughly using web search. Find authoritative Islamic sources and present the EXACT text you find.
 
 ## QUESTION:
 {query}
 
 ## YOUR TASK:
 
-Search the web for Islamic evidence from authoritative sources. You MUST include clickable links for every reference.
+Search the web for Islamic evidence from authoritative sources. You MUST quote EXACTLY what the sources say — word for word, verbatim. Do NOT paraphrase or summarize evidence.
+
+## CRITICAL: EXACT QUOTATIONS
+
+Every piece of evidence MUST be the EXACT text from the source:
+- **Hadith**: Copy the EXACT English translation from sunnah.com. Do not reword it.
+- **Quran**: Copy the EXACT verse translation as it appears on quran.com. Do not reword it.
+- **Scholarly Opinions**: Copy the EXACT words of the scholar as quoted in the source. Use quotation marks.
+- **Fatwas**: Copy the EXACT ruling text from the fatwa page.
+
+If you cannot find the exact text, clearly state: "The source states (paraphrased):" before your summary.
 
 ## REQUIRED FORMAT:
 
-Present your findings with clear sections and inline source links:
+Use this EXACT structure for each piece of evidence:
 
-### Evidence
+> "Exact verbatim quote from the source goes here, copied word for word."
 
-For each piece of evidence, include:
-- **Hadith**: Quote the hadith text, include the collection, number, and grade. Link to sunnah.com
-- **Quran**: Quote the verse translation, include surah:ayah. Link to quran.com
-- **Scholarly Opinions**: Quote the scholar, include their name and the source. Link to islamqa.info/seekersguidance.org
-- **Fatwas**: Summarize the ruling and reasoning. Link to the source
-
-Format each piece of evidence as:
-
-**[Reference Name]** — "[Quote or summary]"
-Source: [Source Name](URL)
+— **Source Reference** (e.g., Sahih al-Bukhari 5063, graded sahih) | [Source Title](URL)
 
 ### Analysis
 
-Synthesize the evidence. Explain the Islamic ruling/answer based on the evidence found. Note any differences of opinion among scholars.
-
-### Sources
-
-List ALL sources cited with full URLs:
-1. [Source Name](full URL)
-2. [Source Name](full URL)
+After presenting ALL evidence with exact quotes, synthesize and explain the Islamic ruling/answer. Note differences of opinion among scholars.
 
 ## RULES:
 
-1. **EVERY claim must have a source link** - no unsourced statements
-2. **Prioritize**: sunnah.com, quran.com, islamqa.info, seekersguidance.org, islamweb.net
-3. **For hadith**: Include collection name, number, and grade (sahih/hasan/da'if)
-4. **For Quran**: Include surah and ayah number
-5. **For scholarly opinions**: Include the scholar's name
-6. **Mark hadith grades**: Note if hadith is sahih, hasan, or da'if
-7. **Be honest**: If you cannot find direct evidence, say so clearly
-8. **Include URLs**: Every reference MUST have a clickable URL
-9. **No search URLs**: Only link to specific pages, never search result pages
+1. **EXACT QUOTES ONLY** — Copy the text verbatim from the source. This is the #1 priority.
+2. **EVERY quote must have a source link** — no unsourced statements
+3. **Prioritize**: sunnah.com, quran.com, islamqa.info, seekersguidance.org, islamweb.net
+4. **For hadith**: Include collection name, hadith number, grade (sahih/hasan/da'if), and narrator chain if available
+5. **For Quran**: Include surah name, ayah number, and the translator name (e.g., Sahih International)
+6. **For scholarly opinions**: Name the scholar and quote their EXACT words
+7. **Mark hadith grades**: Always include authenticity grade
+8. **No search URLs**: Only link to specific pages, never search result pages
+9. **Be honest**: If you cannot find direct evidence, say so clearly
 
 ## DO NOT:
+- Paraphrase evidence — use EXACT quotes
 - Make claims without sources
 - Cite fabricated (mawdu') hadith
 - Use generic statements like "scholars agree" without citing the source
-- Include search URLs - only direct links to specific pages
+- Include search URLs — only direct links to specific pages
 - Omit source links from any claim`;
+
+export const FORMATTING_PROMPT = `You are a formatter for Islamic research. You receive raw research output and must reformat it into a clean, well-structured response while preserving EVERY exact quotation verbatim.
+
+## RAW RESEARCH:
+{research}
+
+## ORIGINAL QUESTION:
+{query}
+
+## YOUR TASK:
+
+Reformat the research into a clean, readable response. You MUST:
+
+1. **PRESERVE every exact quotation word-for-word** — Do NOT change, shorten, or paraphrase any quoted text
+2. **Use blockquotes (>) for all evidence** — Every hadith, Quran verse, scholarly quote, and fatwa ruling must be in a blockquote
+3. **Structure clearly** — Use headers to organize by topic
+4. **Attribution line after each quote** — Include source name, reference number, grade (for hadith), and a clickable link
+5. **Keep the analysis section** — Preserve the synthesis/analysis but keep it concise
+
+## OUTPUT FORMAT:
+
+Use this exact markdown pattern for evidence:
+
+> "The exact quoted text from the source, preserved word for word."
+
+— **Sahih al-Bukhari 1234** (sahih) | [sunnah.com](https://sunnah.com/bukhari:1234)
+
+For Quran verses:
+
+> "The exact verse translation, word for word."
+
+— **Surah Al-Baqarah 2:255** (Sahih International) | [quran.com](https://quran.com/2/255)
+
+For scholarly opinions:
+
+> "The exact words of the scholar as quoted in the source."
+
+— **Sheikh Ibn Baz** | [IslamQA](https://islamqa.info/en/answers/12345)
+
+## RULES:
+- NEVER modify quoted text
+- NEVER add information not in the research
+- NEVER remove sources or citations
+- Keep response focused and well-organized
+- Use clear section headers
+- End with a brief summary if the research is long`;
 
 export function buildPrompt(
   template: string,

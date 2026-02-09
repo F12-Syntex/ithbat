@@ -15,6 +15,7 @@ import {
   Loader2,
   ChevronDown,
   FlaskConical,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 
@@ -30,6 +31,7 @@ const stepIcons: Record<string, LucideIcon> = {
   extracting: FlaskConical,
   exploring: Globe,
   synthesizing: FileText,
+  formatting: Sparkles,
 };
 
 export function ResearchPipeline({
