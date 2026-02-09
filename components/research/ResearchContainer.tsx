@@ -20,7 +20,7 @@ import { ResearchStep } from "./ResearchStep";
 import { ResearchResponse } from "./ResearchResponse";
 import { FollowUpInput } from "./FollowUpInput";
 import { ResearchPipeline } from "./pipeline";
-import { SourceFlow } from "./sources";
+import { SourceCitationCard } from "./response/SourceCitationCard";
 
 import { ContextMenu } from "@/components/ContextMenu";
 import { SettingsPanel } from "@/components/SettingsPanel";
@@ -476,28 +476,18 @@ export function ResearchContainer() {
                         />
                       </div>
 
-                      {/* Source Flow - Connected Nodes */}
-                      {state.sources.length > 0 && (
-                        <motion.div
-                          animate={{ opacity: 1, y: 0 }}
-                          className="mb-4"
-                          initial={{ opacity: 0, y: 20 }}
-                          transition={{ delay: 0.15 }}
-                        >
-                          <SourceFlow
-                            isLoading={
-                              isResearching && state.sources.length === 0
-                            }
+                      {/* Sources - Compact favicon circles */}
+                      {state.sources.length > 0 && !state.response && (
+                        <div className="mb-3">
+                          <SourceCitationCard
                             sources={state.sources.map((source, index) => ({
-                              id: `source-${source.id || index}`,
-                              type: "unknown" as const,
+                              number: index + 1,
                               title: source.title,
                               url: source.url,
                               domain: source.domain,
-                              trusted: source.trusted,
                             }))}
                           />
-                        </motion.div>
+                        </div>
                       )}
 
                       {/* Current Response */}
