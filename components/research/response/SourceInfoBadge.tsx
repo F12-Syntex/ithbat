@@ -79,17 +79,16 @@ export function SourceInfoBadge({ href, title }: SourceInfoBadgeProps) {
 
     setLoading(true);
     fetch(
-      `https://api.alquran.cloud/v1/ayah/${quranRef.surah}:${quranRef.ayah}/en.sahih`,
+      `https://api.quran.com/api/v4/verses/by_key/${quranRef.surah}:${quranRef.ayah}?language=en&translations=20`,
       { signal: AbortSignal.timeout(5000) },
     )
       .then((res) => res.json())
       .then((json) => {
-        const data = Array.isArray(json.data) ? json.data[0] : json.data;
-        if (data?.text) {
-          const text =
-            data.text.length > 180
-              ? data.text.substring(0, 180) + "..."
-              : data.text;
+        const translation = json.verse?.translations?.[0]?.text;
+        if (translation) {
+          // Strip HTML tags (footnote sups etc)
+          const clean = translation.replace(/<[^>]*>/g, "");
+          const text = clean.length > 180 ? clean.substring(0, 180) + "..." : clean;
           verseCache.set(key, text);
           setVerseText(text);
         }

@@ -14,26 +14,17 @@ import {
   type ResearchStep,
 } from "@/types/research";
 
-interface AlQuranAyah {
-  text: string;
-  surah: { englishName: string; number: number };
-  numberInSurah: number;
-}
-
-interface AlQuranResponse {
-  code: number;
-  data: AlQuranAyah | AlQuranAyah[];
-}
-
 async function fetchQuranVerse(surah: number, ayah: number): Promise<{ arabic: string; surahName: string } | null> {
   try {
-    const res = await fetch(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/quran-simple`, {
-      signal: AbortSignal.timeout(5000),
-    });
+    const res = await fetch(
+      `https://api.quran.com/api/v4/verses/by_key/${surah}:${ayah}?language=en&fields=text_uthmani`,
+      { signal: AbortSignal.timeout(5000) },
+    );
     if (!res.ok) return null;
-    const json = await res.json() as AlQuranResponse;
-    const data = Array.isArray(json.data) ? json.data[0] : json.data;
-    return { arabic: data.text, surahName: data.surah.englishName };
+    const json = await res.json();
+    const verse = json.verse;
+    if (!verse?.text_uthmani) return null;
+    return { arabic: verse.text_uthmani, surahName: `Chapter ${surah}` };
   } catch {
     return null;
   }
