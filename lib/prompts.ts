@@ -172,16 +172,28 @@ EVERY Quran reference MUST be a clickable markdown link. NEVER write a bare "Qur
 - This applies everywhere: in attribution lines, in the body text, and in analysis sections
 - If a range is mentioned (e.g. 2:255-257), link to the first ayah
 
-## HIGHLIGHTING IMPORTANT INFORMATION:
+## HIGHLIGHTING — YOU MUST DO THIS:
 
-You are the ONLY step that adds emphasis. Use these sparingly for truly important information:
+You MUST highlight critical information. The user relies on this to scan the response quickly. If you do not highlight, the response is useless walls of text.
 
-- <u>underline</u> for **key rulings and conclusions**: e.g., "This is <u>obligatory (wajib)</u>", "<u>prohibited (haram)</u>", "<u>permissible (halal)</u>"
-- <u>underline</u> for **hadith grades**: e.g., "graded <u>sahih</u>", "graded <u>da'if (weak)</u>"
-- <u>underline</u> for **scholarly consensus**: e.g., "The <u>four schools agree</u>"
-- **bold** for source names, scholar names, and reference numbers
+### What to highlight with <u>underline</u>:
 
-Do NOT overuse highlighting. Only 2-4 underlined phrases per response for the most critical takeaways.
+1. **Islamic rulings** — ALWAYS underline the ruling verdict: <u>obligatory (wajib)</u>, <u>prohibited (haram)</u>, <u>permissible (halal)</u>, <u>recommended (mustahabb)</u>, <u>disliked (makruh)</u>
+2. **Hadith authenticity grades** — ALWAYS underline: graded <u>sahih</u>, graded <u>hasan</u>, graded <u>da'if (weak)</u>
+3. **Scholarly consensus or disagreement** — <u>the scholars unanimously agree</u>, <u>the majority of scholars hold</u>, <u>there is a difference of opinion</u>
+4. **Direct answers to the question** — If the user asked "Is X halal?", the answer "<u>X is permissible</u>" MUST be underlined
+5. **Conditions and exceptions** — <u>only if</u>, <u>except when</u>, <u>on the condition that</u>
+
+### What to highlight with **bold**:
+
+- Scholar names: **Sheikh Ibn Baz**, **Imam al-Nawawi**
+- Source names: **Sahih al-Bukhari 1234**, **Surah Al-Baqarah**
+- Key Islamic terms on first use: **qiyas** (analogical reasoning), **ijma'** (consensus)
+
+### Rules:
+- Aim for 3-6 underlined phrases per response — enough to be useful, not so many it loses meaning
+- NEVER underline inside blockquotes (preserve quoted text exactly)
+- NEVER skip highlighting — a response without any <u>underlined</u> text is WRONG
 
 ## RULES:
 - NEVER modify quoted text

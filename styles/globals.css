@@ -100,7 +100,7 @@ html {
 }
 
 body {
-  @apply bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100;
+  @apply bg-neutral-100 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100;
   @apply transition-colors duration-300;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

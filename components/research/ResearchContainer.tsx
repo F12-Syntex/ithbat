@@ -252,7 +252,7 @@ export function ResearchContainer() {
       {/* Intro Modal for first-time visitors */}
       <IntroModal />
 
-      <div className="relative h-screen h-[100dvh] overflow-hidden bg-neutral-50 dark:bg-neutral-950 flex flex-col">
+      <div className="relative h-screen h-[100dvh] overflow-hidden bg-neutral-100 dark:bg-neutral-950 flex flex-col">
         {/* Settings Button - Fixed top right (desktop only) */}
         <button
           aria-label="Settings"
@@ -345,7 +345,7 @@ export function ResearchContainer() {
                     <motion.button
                       key={example}
                       animate={{ opacity: 1, y: 0 }}
-                      className="px-2.5 sm:px-3 py-1.5 text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg hover:border-accent-400 hover:text-accent-600 dark:hover:text-accent-400 transition-all active:scale-95 sm:hover:scale-105"
+                      className="px-2.5 sm:px-3 py-1.5 text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700 rounded-lg shadow-sm dark:shadow-none hover:border-accent-400 hover:text-accent-600 dark:hover:text-accent-400 hover:shadow-md dark:hover:shadow-none transition-all active:scale-95 sm:hover:scale-105"
                       initial={{ opacity: 0, y: 10 }}
                       transition={{ delay: i * 0.05 }}
                       onClick={() => setSuggestedQuery(example)}
@@ -409,7 +409,7 @@ export function ResearchContainer() {
                       </div>
 
                       {/* Previous Progress (collapsed by default) */}
-                      <div className="bg-white dark:bg-neutral-900 rounded-lg sm:rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden mb-3 opacity-75">
+                      <div className="bg-white dark:bg-neutral-900 rounded-lg sm:rounded-xl border border-neutral-200/80 dark:border-neutral-800 shadow-sm dark:shadow-none overflow-hidden mb-3 opacity-75">
                         <details className="group">
                           <summary className="px-3 sm:px-4 py-2 sm:py-2.5 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors flex items-center justify-between">
                             <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">

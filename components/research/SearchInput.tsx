@@ -83,7 +83,7 @@ export function SearchInput({
   return (
     <>
       <form onSubmit={handleSubmit}>
-        <div className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 focus-within:border-neutral-300 dark:focus-within:border-neutral-700 transition-colors">
+        <div className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200/80 dark:border-neutral-800 shadow-sm dark:shadow-none focus-within:border-neutral-300 dark:focus-within:border-neutral-700 focus-within:shadow-md dark:focus-within:shadow-none transition-all">
           <input
             className="flex-1 bg-transparent text-base sm:text-sm text-neutral-800 dark:text-neutral-100 placeholder:text-neutral-400 outline-none border-none focus:ring-0"
             placeholder={
