@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, useRef, useEffect, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 
@@ -117,6 +117,52 @@ function parseSourcesFromContent(
   return sources.sort((a, b) => a.number - b.number);
 }
 
+// Inline tooltip for Islamic terminology
+function TermTooltip({ meaning, children }: { meaning: string; children: ReactNode }) {
+  const [show, setShow] = useState(false);
+  const [position, setPosition] = useState<"top" | "bottom">("top");
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (show && ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      // If too close to top of viewport, show tooltip below
+      setPosition(rect.top < 60 ? "bottom" : "top");
+    }
+  }, [show]);
+
+  return (
+    <span
+      ref={ref}
+      className="relative inline-flex items-baseline gap-0.5 cursor-help group"
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+      onTouchStart={() => setShow((s) => !s)}
+    >
+      <span className="border-b border-dotted border-neutral-400 dark:border-neutral-500">
+        {children}
+      </span>
+      <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-neutral-200 dark:bg-neutral-700 text-[9px] font-semibold text-neutral-500 dark:text-neutral-400 leading-none flex-shrink-0 translate-y-[-1px]">
+        i
+      </span>
+      {show && (
+        <span
+          className={`absolute left-1/2 -translate-x-1/2 z-50 px-2.5 py-1.5 rounded-lg bg-neutral-800 dark:bg-neutral-200 text-[11px] sm:text-xs font-medium text-white dark:text-neutral-900 whitespace-nowrap shadow-lg pointer-events-none ${
+            position === "top" ? "bottom-full mb-2" : "top-full mt-2"
+          }`}
+        >
+          {meaning}
+          <span
+            className={`absolute left-1/2 -translate-x-1/2 w-2 h-2 bg-neutral-800 dark:bg-neutral-200 rotate-45 ${
+              position === "top" ? "top-full -mt-1" : "bottom-full -mb-1"
+            }`}
+          />
+        </span>
+      )}
+    </span>
+  );
+}
+
 export function ResearchResponse({
   content,
   isStreaming,
@@ -196,6 +242,13 @@ export function ResearchResponse({
                 {children}
               </span>
             ),
+            // Render <term> tags as hoverable Islamic terminology tooltips
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...({ term: ({ node, children }: { node?: { properties?: Record<string, unknown> }; children?: ReactNode }) => {
+              const meaning = (node?.properties?.dataMeaning as string) || "";
+              if (!meaning) return <>{children}</>;
+              return <TermTooltip meaning={meaning}>{children}</TermTooltip>;
+            }} as any),
             h2: ({ children }) => (
               <h2 className="flex items-center gap-2 text-base sm:text-lg font-semibold text-neutral-800 dark:text-neutral-100 mt-6 mb-3 pb-2 border-b border-neutral-200 dark:border-neutral-800">
                 {String(children).toLowerCase().includes("answer") && (
