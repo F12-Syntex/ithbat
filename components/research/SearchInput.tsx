@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, type FormEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Square } from "lucide-react";
+import { ArrowRight, Square, Settings } from "lucide-react";
 
 interface SearchInputProps {
   onSearch: (query: string) => void;
@@ -10,6 +10,7 @@ interface SearchInputProps {
   isLoading?: boolean;
   suggestedQuery?: string;
   onSuggestedQueryApplied?: () => void;
+  onSettings?: () => void;
 }
 
 export function SearchInput({
@@ -18,6 +19,7 @@ export function SearchInput({
   isLoading,
   suggestedQuery,
   onSuggestedQueryApplied,
+  onSettings,
 }: SearchInputProps) {
   const [query, setQuery] = useState("");
   const lastSubmittedQuery = useRef<string | null>(null);

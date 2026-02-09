@@ -251,14 +251,14 @@ export function ResearchContainer() {
       <IntroModal />
 
       <div className="relative h-screen h-[100dvh] overflow-hidden bg-neutral-100 dark:bg-neutral-950 flex flex-col">
-        {/* Settings Button - Fixed top right */}
+        {/* Settings Button - Fixed top right (desktop only) */}
         <button
           aria-label="Settings"
-          className="flex fixed top-3 right-3 sm:top-4 sm:right-4 z-40 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 items-center justify-center shadow-sm hover:shadow-md hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
+          className="hidden sm:flex fixed top-4 right-4 z-40 w-10 h-10 rounded-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 items-center justify-center shadow-sm hover:shadow-md hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
           onClick={() => setSettingsOpen(true)}
         >
           <Settings
-            className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-500 dark:text-neutral-400"
+            className="w-5 h-5 text-neutral-500 dark:text-neutral-400"
             strokeWidth={1.5}
           />
         </button>
@@ -305,15 +305,28 @@ export function ResearchContainer() {
               )}
             </AnimatePresence>
 
-            {/* Search Input */}
-            <div className="w-full max-w-md">
-              <SearchInput
-                isLoading={isResearching}
-                suggestedQuery={suggestedQuery}
-                onCancel={cancelResearch}
-                onSearch={startResearch}
-                onSuggestedQueryApplied={handleSuggestedQueryApplied}
-              />
+            {/* Search Input with mobile settings button */}
+            <div className="w-full max-w-md flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <SearchInput
+                  isLoading={isResearching}
+                  suggestedQuery={suggestedQuery}
+                  onCancel={cancelResearch}
+                  onSearch={startResearch}
+                  onSuggestedQueryApplied={handleSuggestedQueryApplied}
+                />
+              </div>
+              {/* Mobile settings button */}
+              <button
+                aria-label="Settings"
+                className="sm:hidden flex-shrink-0 w-[42px] h-[42px] rounded-full bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 flex items-center justify-center hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
+                onClick={() => setSettingsOpen(true)}
+              >
+                <Settings
+                  className="w-4 h-4 text-neutral-500 dark:text-neutral-400"
+                  strokeWidth={1.5}
+                />
+              </button>
             </div>
 
             {/* Example Buttons */}
@@ -321,7 +334,7 @@ export function ResearchContainer() {
               {!hasResults && !isResearching && (
                 <motion.div
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex flex-wrap justify-center gap-1.5 sm:gap-2 mt-4 sm:mt-6 px-2"
+                  className="flex flex-wrap justify-center gap-1.5 sm:gap-2 mt-4 sm:mt-6 px-2 w-full max-w-md"
                   exit={{ opacity: 0 }}
                   initial={{ opacity: 0, y: 10 }}
                   transition={{ duration: 0.2 }}
