@@ -21,7 +21,7 @@ function getSourceStyle(domain: string): {
   if (domain.includes("quran"))
     return {
       color: "text-sky-600 dark:text-sky-400",
-      bg: "bg-neutral-100 dark:bg-neutral-800 border-neutral-200/60 dark:border-neutral-700/40",
+      bg: "bg-neutral-50 dark:bg-neutral-800/60 border-neutral-200/40 dark:border-neutral-700/30",
       label: "Quran",
       dot: "bg-sky-400",
       tooltipBg: "bg-sky-50 dark:bg-sky-950",
@@ -31,7 +31,7 @@ function getSourceStyle(domain: string): {
   if (domain.includes("sunnah") || domain.includes("hadith"))
     return {
       color: "text-amber-600 dark:text-amber-400",
-      bg: "bg-neutral-100 dark:bg-neutral-800 border-neutral-200/60 dark:border-neutral-700/40",
+      bg: "bg-neutral-50 dark:bg-neutral-800/60 border-neutral-200/40 dark:border-neutral-700/30",
       label: "Hadith",
       dot: "bg-amber-400",
       tooltipBg: "bg-amber-50 dark:bg-amber-950",
@@ -41,7 +41,7 @@ function getSourceStyle(domain: string): {
   if (domain.includes("islamqa"))
     return {
       color: "text-emerald-600 dark:text-emerald-400",
-      bg: "bg-neutral-100 dark:bg-neutral-800 border-neutral-200/60 dark:border-neutral-700/40",
+      bg: "bg-neutral-50 dark:bg-neutral-800/60 border-neutral-200/40 dark:border-neutral-700/30",
       label: "Fatwa",
       dot: "bg-emerald-400",
       tooltipBg: "bg-emerald-50 dark:bg-emerald-950",
@@ -51,7 +51,7 @@ function getSourceStyle(domain: string): {
   if (domain.includes("seekersguidance"))
     return {
       color: "text-purple-600 dark:text-purple-400",
-      bg: "bg-neutral-100 dark:bg-neutral-800 border-neutral-200/60 dark:border-neutral-700/40",
+      bg: "bg-neutral-50 dark:bg-neutral-800/60 border-neutral-200/40 dark:border-neutral-700/30",
       label: "Scholarly",
       dot: "bg-purple-400",
       tooltipBg: "bg-purple-50 dark:bg-purple-950",
@@ -61,7 +61,7 @@ function getSourceStyle(domain: string): {
   if (domain.includes("islamweb"))
     return {
       color: "text-teal-600 dark:text-teal-400",
-      bg: "bg-neutral-100 dark:bg-neutral-800 border-neutral-200/60 dark:border-neutral-700/40",
+      bg: "bg-neutral-50 dark:bg-neutral-800/60 border-neutral-200/40 dark:border-neutral-700/30",
       label: "Islamic",
       dot: "bg-teal-400",
       tooltipBg: "bg-teal-50 dark:bg-teal-950",
@@ -70,7 +70,7 @@ function getSourceStyle(domain: string): {
     };
   return {
     color: "text-neutral-600 dark:text-neutral-400",
-    bg: "bg-neutral-50 dark:bg-neutral-800/60 border-neutral-200/60 dark:border-neutral-700/40",
+    bg: "bg-neutral-50 dark:bg-neutral-800/60 border-neutral-200/40 dark:border-neutral-700/30",
     label: "Source",
     dot: "bg-neutral-400",
     tooltipBg: "bg-neutral-50 dark:bg-neutral-800",
@@ -167,7 +167,12 @@ export function SourceInfoBadge({ href, title }: SourceInfoBadgeProps) {
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
       >
-        <Info className="w-3 h-3 flex-shrink-0 opacity-70" strokeWidth={2} />
+        <img
+          alt=""
+          className="w-3 h-3 rounded-sm flex-shrink-0"
+          src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+        />
         <span className="truncate max-w-[120px]">{title}</span>
         <ExternalLink className="w-2.5 h-2.5 flex-shrink-0 opacity-50" strokeWidth={2} />
       </a>

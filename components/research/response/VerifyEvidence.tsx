@@ -263,22 +263,10 @@ export function EvidenceParagraph({
 }) {
   const referenceType = detectEvidenceType(evidenceText);
 
-  // Only show verify button for actual evidence (not regular paragraphs)
-  if (referenceType === "general") {
-    return (
-      <p className="text-sm sm:text-base text-neutral-700 dark:text-neutral-300 leading-relaxed my-4">
-        {children}
-      </p>
-    );
-  }
-
   return (
-    <div className="my-4 group">
-      <p className="text-sm sm:text-base text-neutral-700 dark:text-neutral-300 leading-relaxed relative">
-        {children}
-        <VerifyButton evidenceText={evidenceText} referenceType={referenceType} />
-      </p>
-    </div>
+    <p className="text-sm sm:text-base text-neutral-700 dark:text-neutral-300 leading-relaxed my-4">
+      {children}
+    </p>
   );
 }
 
