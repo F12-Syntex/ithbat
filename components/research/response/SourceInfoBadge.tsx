@@ -1,82 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { ExternalLink } from "lucide-react";
 
 interface SourceInfoBadgeProps {
   href: string;
   title: string;
-}
-
-// Detect source type from domain for color coding
-function getSourceStyle(domain: string): {
-  color: string;
-  bg: string;
-  label: string;
-  dot: string;
-  tooltipBg: string;
-  tooltipBorder: string;
-  tooltipArrow: string;
-} {
-  if (domain.includes("quran"))
-    return {
-      color: "text-sky-600 dark:text-sky-400",
-      bg: "bg-neutral-50 dark:bg-neutral-800/60 border-neutral-200/40 dark:border-neutral-700/30",
-      label: "Quran",
-      dot: "bg-sky-400",
-      tooltipBg: "bg-sky-50 dark:bg-sky-950",
-      tooltipBorder: "border-sky-200 dark:border-sky-800",
-      tooltipArrow: "border-t-sky-50 dark:border-t-sky-950",
-    };
-  if (domain.includes("sunnah") || domain.includes("hadith"))
-    return {
-      color: "text-amber-600 dark:text-amber-400",
-      bg: "bg-neutral-50 dark:bg-neutral-800/60 border-neutral-200/40 dark:border-neutral-700/30",
-      label: "Hadith",
-      dot: "bg-amber-400",
-      tooltipBg: "bg-amber-50 dark:bg-amber-950",
-      tooltipBorder: "border-amber-200 dark:border-amber-800",
-      tooltipArrow: "border-t-amber-50 dark:border-t-amber-950",
-    };
-  if (domain.includes("islamqa"))
-    return {
-      color: "text-emerald-600 dark:text-emerald-400",
-      bg: "bg-neutral-50 dark:bg-neutral-800/60 border-neutral-200/40 dark:border-neutral-700/30",
-      label: "Fatwa",
-      dot: "bg-emerald-400",
-      tooltipBg: "bg-emerald-50 dark:bg-emerald-950",
-      tooltipBorder: "border-emerald-200 dark:border-emerald-800",
-      tooltipArrow: "border-t-emerald-50 dark:border-t-emerald-950",
-    };
-  if (domain.includes("seekersguidance"))
-    return {
-      color: "text-purple-600 dark:text-purple-400",
-      bg: "bg-neutral-50 dark:bg-neutral-800/60 border-neutral-200/40 dark:border-neutral-700/30",
-      label: "Scholarly",
-      dot: "bg-purple-400",
-      tooltipBg: "bg-purple-50 dark:bg-purple-950",
-      tooltipBorder: "border-purple-200 dark:border-purple-800",
-      tooltipArrow: "border-t-purple-50 dark:border-t-purple-950",
-    };
-  if (domain.includes("islamweb"))
-    return {
-      color: "text-teal-600 dark:text-teal-400",
-      bg: "bg-neutral-50 dark:bg-neutral-800/60 border-neutral-200/40 dark:border-neutral-700/30",
-      label: "Islamic",
-      dot: "bg-teal-400",
-      tooltipBg: "bg-teal-50 dark:bg-teal-950",
-      tooltipBorder: "border-teal-200 dark:border-teal-800",
-      tooltipArrow: "border-t-teal-50 dark:border-t-teal-950",
-    };
-  return {
-    color: "text-neutral-600 dark:text-neutral-400",
-    bg: "bg-neutral-50 dark:bg-neutral-800/60 border-neutral-200/40 dark:border-neutral-700/30",
-    label: "Source",
-    dot: "bg-neutral-400",
-    tooltipBg: "bg-neutral-50 dark:bg-neutral-800",
-    tooltipBorder: "border-neutral-200 dark:border-neutral-700",
-    tooltipArrow: "border-t-neutral-50 dark:border-t-neutral-800",
-  };
 }
 
 function getDomain(url: string): string {
@@ -85,6 +13,28 @@ function getDomain(url: string): string {
   } catch {
     return "source";
   }
+}
+
+function getSourceColor(domain: string): string {
+  if (domain.includes("quran")) return "text-sky-600 dark:text-sky-400";
+  if (domain.includes("sunnah") || domain.includes("hadith"))
+    return "text-amber-600 dark:text-amber-400";
+  if (domain.includes("islamqa"))
+    return "text-emerald-600 dark:text-emerald-400";
+  if (domain.includes("seekersguidance"))
+    return "text-purple-600 dark:text-purple-400";
+  if (domain.includes("islamweb"))
+    return "text-teal-600 dark:text-teal-400";
+  return "text-neutral-500 dark:text-neutral-400";
+}
+
+function getSourceLabel(domain: string): string {
+  if (domain.includes("quran")) return "Quran";
+  if (domain.includes("sunnah") || domain.includes("hadith")) return "Hadith";
+  if (domain.includes("islamqa")) return "Fatwa";
+  if (domain.includes("seekersguidance")) return "Scholarly";
+  if (domain.includes("islamweb")) return "Islamic";
+  return "Source";
 }
 
 // Extract Quran surah:ayah from URL or title
@@ -103,7 +53,7 @@ function getQuranRef(
   return null;
 }
 
-// Verse cache to avoid refetching
+// Verse cache
 const verseCache = new Map<string, string>();
 
 export function SourceInfoBadge({ href, title }: SourceInfoBadgeProps) {
@@ -114,7 +64,7 @@ export function SourceInfoBadge({ href, title }: SourceInfoBadgeProps) {
   const badgeRef = useRef<HTMLSpanElement>(null);
 
   const domain = getDomain(href);
-  const style = getSourceStyle(domain);
+  const color = getSourceColor(domain);
   const quranRef = getQuranRef(href, title);
 
   // Fetch English translation on hover for Quran refs
@@ -137,8 +87,8 @@ export function SourceInfoBadge({ href, title }: SourceInfoBadgeProps) {
         const data = Array.isArray(json.data) ? json.data[0] : json.data;
         if (data?.text) {
           const text =
-            data.text.length > 200
-              ? data.text.substring(0, 200) + "..."
+            data.text.length > 180
+              ? data.text.substring(0, 180) + "..."
               : data.text;
           verseCache.set(key, text);
           setVerseText(text);
@@ -151,16 +101,14 @@ export function SourceInfoBadge({ href, title }: SourceInfoBadgeProps) {
   useEffect(() => {
     if (showTooltip && badgeRef.current) {
       const rect = badgeRef.current.getBoundingClientRect();
-      setPosition(rect.top < 100 ? "bottom" : "top");
+      setPosition(rect.top < 80 ? "bottom" : "top");
     }
   }, [showTooltip]);
-
-  const hasQuranContent = quranRef && (loading || verseText);
 
   return (
     <span ref={badgeRef} className="relative inline-flex align-baseline">
       <a
-        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[11px] font-medium no-underline transition-all hover:shadow-sm ${style.bg} ${style.color}`}
+        className={`inline-flex items-center gap-0.5 text-[11px] font-medium no-underline hover:opacity-70 transition-opacity ${color}`}
         href={href}
         rel="noopener noreferrer"
         target="_blank"
@@ -171,50 +119,50 @@ export function SourceInfoBadge({ href, title }: SourceInfoBadgeProps) {
           alt=""
           className="w-3 h-3 rounded-sm flex-shrink-0"
           src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
-          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = "none";
+          }}
         />
-        <span className="truncate max-w-[120px]">{title}</span>
-        <ExternalLink className="w-2.5 h-2.5 flex-shrink-0 opacity-50" strokeWidth={2} />
+        <span className="truncate max-w-[100px]">{title}</span>
       </a>
 
-      {/* Tooltip — theme colored, with Quran verse translation */}
+      {/* Tooltip — desktop only, fixed width, consistent neutral color */}
       {showTooltip && (
         <span
-          className={`absolute z-50 pointer-events-none ${
+          className={`hidden sm:block absolute z-50 pointer-events-none w-64 ${
             position === "top"
-              ? "bottom-full left-1/2 -translate-x-1/2 mb-2"
-              : "top-full left-1/2 -translate-x-1/2 mt-2"
+              ? "bottom-full left-1/2 -translate-x-1/2 mb-1.5"
+              : "top-full left-1/2 -translate-x-1/2 mt-1.5"
           }`}
         >
-          <span
-            className={`block px-3 py-2 rounded-lg shadow-lg border ${style.tooltipBg} ${style.tooltipBorder} ${
-              hasQuranContent ? "max-w-[280px] sm:max-w-xs" : "whitespace-nowrap"
-            }`}
-          >
-            <span className={`block text-xs font-medium ${style.color}`}>
-              {title}
+          <span className="block px-2.5 py-2 rounded-lg shadow-lg border bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100">
+            <span className="flex items-center gap-1.5">
+              <img
+                alt=""
+                className="w-3.5 h-3.5 rounded-sm flex-shrink-0"
+                src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
+              <span className="text-[11px] font-medium truncate">{title}</span>
             </span>
-            <span className="flex items-center gap-1.5 mt-1">
-              <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
-              <span className="text-[10px] text-neutral-500 dark:text-neutral-400">
-                {domain}
-              </span>
-              <span className="text-[10px] text-neutral-400 dark:text-neutral-500 mx-0.5">
-                ·
-              </span>
-              <span className="text-[10px] text-neutral-500 dark:text-neutral-400">
-                {style.label}
+            <span className="flex items-center gap-1 mt-1">
+              <span className="text-[10px] opacity-50">{domain}</span>
+              <span className="text-[10px] opacity-30 mx-0.5">&middot;</span>
+              <span className="text-[10px] opacity-50">
+                {getSourceLabel(domain)}
               </span>
             </span>
             {/* Quran verse translation */}
             {quranRef && (
-              <span className="block mt-1.5 pt-1.5 border-t border-neutral-200/50 dark:border-neutral-700/50">
+              <span className="block mt-1.5 pt-1.5 border-t border-neutral-200 dark:border-neutral-700">
                 {loading ? (
-                  <span className="block text-[10px] text-neutral-400 dark:text-neutral-500 italic">
+                  <span className="block text-[10px] opacity-40 italic">
                     Loading translation...
                   </span>
                 ) : verseText ? (
-                  <span className="block text-[11px] leading-relaxed text-neutral-600 dark:text-neutral-300 italic">
+                  <span className="block text-[11px] leading-relaxed opacity-80 italic">
                     &ldquo;{verseText}&rdquo;
                   </span>
                 ) : null}
@@ -230,8 +178,8 @@ export function SourceInfoBadge({ href, title }: SourceInfoBadgeProps) {
             <span
               className={`block border-4 border-transparent ${
                 position === "top"
-                  ? style.tooltipArrow
-                  : style.tooltipArrow.replace("border-t-", "border-b-")
+                  ? "border-t-white dark:border-t-neutral-800"
+                  : "border-b-white dark:border-b-neutral-800"
               }`}
             />
           </span>
