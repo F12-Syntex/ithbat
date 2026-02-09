@@ -43,7 +43,7 @@ export function SettingsPanel({
           {/* Mobile: Bottom sheet */}
           <motion.div
             animate={{ y: 0 }}
-            className="sm:hidden fixed inset-x-0 bottom-0 max-h-[85vh] bg-white dark:bg-neutral-900 z-50 rounded-t-2xl shadow-2xl overflow-hidden"
+            className="sm:hidden fixed inset-x-0 bottom-0 max-h-[85vh] bg-white dark:bg-neutral-900 z-50 rounded-t-3xl shadow-2xl overflow-hidden"
             exit={{ y: "100%" }}
             initial={{ y: "100%" }}
             transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
@@ -66,7 +66,7 @@ export function SettingsPanel({
           {/* Desktop: Side panel */}
           <motion.div
             animate={{ opacity: 1, scale: 1 }}
-            className="hidden sm:block fixed right-4 top-4 w-80 max-h-[80vh] bg-white dark:bg-neutral-900 z-50 rounded-2xl shadow-2xl overflow-hidden"
+            className="hidden sm:block fixed right-4 top-4 w-80 max-h-[80vh] bg-white dark:bg-neutral-900 z-50 rounded-3xl shadow-2xl overflow-hidden"
             exit={{ opacity: 0, scale: 0.95 }}
             initial={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
@@ -155,9 +155,9 @@ function SettingsPanelContent({
           </div>
 
           {/* Mode Toggle */}
-          <div className="flex bg-neutral-100 dark:bg-neutral-800 rounded-xl p-1">
+          <div className="flex bg-neutral-100 dark:bg-neutral-800 rounded-3xl p-1">
             <button
-              className={`flex-1 py-2.5 text-xs font-medium rounded-lg transition-all ${
+              className={`flex-1 py-2.5 text-xs font-medium rounded-3xl transition-all ${
                 theme.mode === "light"
                   ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm"
                   : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
@@ -176,7 +176,7 @@ function SettingsPanelContent({
               </span>
             </button>
             <button
-              className={`flex-1 py-2.5 text-xs font-medium rounded-lg transition-all ${
+              className={`flex-1 py-2.5 text-xs font-medium rounded-3xl transition-all ${
                 theme.mode === "dark"
                   ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm"
                   : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
@@ -203,7 +203,7 @@ function SettingsPanelContent({
             Display
           </p>
 
-          <label className="flex items-center justify-between p-2.5 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+          <label className="flex items-center justify-between p-2.5 bg-neutral-50 dark:bg-neutral-800/50 rounded-3xl cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
             <span className="text-xs text-neutral-700 dark:text-neutral-300">
               Show timestamps
             </span>
@@ -235,7 +235,7 @@ function SettingsPanelContent({
         <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800">
           <div className="flex items-center justify-between">
             <span className="text-xs text-neutral-400">ithbat</span>
-            <span className="text-xs text-neutral-400">v0.2</span>
+            <span className="text-xs text-neutral-400">v0.5</span>
           </div>
         </div>
       </div>

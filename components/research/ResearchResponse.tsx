@@ -147,7 +147,7 @@ function TermTooltip({ meaning, children }: { meaning: string; children: ReactNo
       </span>
       {show && (
         <span
-          className={`absolute left-1/2 -translate-x-1/2 z-50 px-2.5 py-1.5 rounded-lg bg-neutral-800 dark:bg-neutral-200 text-[11px] sm:text-xs font-medium text-white dark:text-neutral-900 whitespace-nowrap shadow-lg pointer-events-none ${
+          className={`absolute left-1/2 -translate-x-1/2 z-50 px-2.5 py-1.5 rounded-full bg-neutral-800 dark:bg-neutral-200 text-[11px] sm:text-xs font-medium text-white dark:text-neutral-900 whitespace-nowrap shadow-lg pointer-events-none ${
             position === "top" ? "bottom-full mb-2" : "top-full mt-2"
           }`}
         >

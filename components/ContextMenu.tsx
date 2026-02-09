@@ -105,7 +105,7 @@ export function ContextMenu({ items, children }: ContextMenuProps) {
             style={{ left: position.x, top: position.y }}
             transition={{ duration: 0.1 }}
           >
-            <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-xl overflow-hidden min-w-[180px]">
+            <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-xl overflow-hidden min-w-[180px]">
               {items.map((item, index) =>
                 item.divider ? (
                   <div

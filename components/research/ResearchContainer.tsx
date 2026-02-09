@@ -251,14 +251,14 @@ export function ResearchContainer() {
       <IntroModal />
 
       <div className="relative h-screen h-[100dvh] overflow-hidden bg-neutral-100 dark:bg-neutral-950 flex flex-col">
-        {/* Settings Button - Fixed top right (desktop only) */}
+        {/* Settings Button - Fixed top right */}
         <button
           aria-label="Settings"
-          className="hidden sm:flex fixed top-4 right-4 z-40 w-10 h-10 rounded-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 items-center justify-center shadow-sm hover:shadow-md hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
+          className="flex fixed top-3 right-3 sm:top-4 sm:right-4 z-40 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 items-center justify-center shadow-sm hover:shadow-md hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
           onClick={() => setSettingsOpen(true)}
         >
           <Settings
-            className="w-5 h-5 text-neutral-500 dark:text-neutral-400"
+            className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-500 dark:text-neutral-400"
             strokeWidth={1.5}
           />
         </button>
@@ -293,7 +293,7 @@ export function ResearchContainer() {
                     </h1>
                     {/* Tooltip */}
                     <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-10">
-                      <div className="px-2.5 py-1 bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 text-[11px] rounded-md whitespace-nowrap">
+                      <div className="px-2.5 py-1 bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 text-[11px] rounded-full whitespace-nowrap">
                         affirmation / confirmation
                       </div>
                     </div>
@@ -305,28 +305,15 @@ export function ResearchContainer() {
               )}
             </AnimatePresence>
 
-            {/* Search Input with mobile settings button */}
-            <div className="w-full max-w-md flex items-center gap-2">
-              <div className="flex-1">
-                <SearchInput
-                  isLoading={isResearching}
-                  suggestedQuery={suggestedQuery}
-                  onCancel={cancelResearch}
-                  onSearch={startResearch}
-                  onSuggestedQueryApplied={handleSuggestedQueryApplied}
-                />
-              </div>
-              {/* Mobile settings button */}
-              <button
-                aria-label="Settings"
-                className="sm:hidden flex-shrink-0 p-2.5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
-                onClick={() => setSettingsOpen(true)}
-              >
-                <Settings
-                  className="w-5 h-5 text-neutral-500 dark:text-neutral-400"
-                  strokeWidth={1.5}
-                />
-              </button>
+            {/* Search Input */}
+            <div className="w-full max-w-md">
+              <SearchInput
+                isLoading={isResearching}
+                suggestedQuery={suggestedQuery}
+                onCancel={cancelResearch}
+                onSearch={startResearch}
+                onSuggestedQueryApplied={handleSuggestedQueryApplied}
+              />
             </div>
 
             {/* Example Buttons */}
@@ -343,7 +330,7 @@ export function ResearchContainer() {
                     <motion.button
                       key={example}
                       animate={{ opacity: 1, y: 0 }}
-                      className="px-2.5 sm:px-3 py-1.5 text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700 rounded-lg shadow-sm dark:shadow-none hover:border-accent-400 hover:text-accent-600 dark:hover:text-accent-400 hover:shadow-md dark:hover:shadow-none transition-all active:scale-95 sm:hover:scale-105"
+                      className="px-2.5 sm:px-3 py-1.5 text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700 rounded-full shadow-sm dark:shadow-none hover:border-accent-400 hover:text-accent-600 dark:hover:text-accent-400 hover:shadow-md dark:hover:shadow-none transition-all active:scale-95 sm:hover:scale-105"
                       initial={{ opacity: 0, y: 10 }}
                       transition={{ delay: i * 0.05 }}
                       onClick={() => setSuggestedQuery(example)}
@@ -495,7 +482,7 @@ export function ResearchContainer() {
                             transition={{ delay: 0.3 }}
                           >
                             <button
-                              className="group flex items-center gap-2 px-4 py-2 text-xs bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:border-amber-300 dark:hover:border-amber-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="group flex items-center gap-2 px-4 py-2 text-xs bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-3xl hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:border-amber-300 dark:hover:border-amber-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                               disabled={isResearching}
                               onClick={requestAIAnalysis}
                             >
@@ -547,7 +534,7 @@ export function ResearchContainer() {
                   {state.error && (
                     <motion.div
                       animate={{ opacity: 1 }}
-                      className="p-2.5 sm:p-3 bg-red-50 dark:bg-red-900/20 rounded-lg mt-3 sm:mt-4"
+                      className="p-2.5 sm:p-3 bg-red-50 dark:bg-red-900/20 rounded-3xl mt-3 sm:mt-4"
                       initial={{ opacity: 0 }}
                     >
                       <p className="text-xs sm:text-sm text-red-600 dark:text-red-400">
@@ -577,7 +564,7 @@ export function ResearchContainer() {
         <div className="flex-shrink-0 py-2 sm:py-3 text-center border-t border-neutral-200/50 dark:border-neutral-800/50">
           <div className="flex items-center justify-center gap-2">
             <span className="text-[10px] text-neutral-400 dark:text-neutral-600">
-              ithbat v0.4
+              ithbat v0.5
             </span>
             <span className="text-neutral-300 dark:text-neutral-700">·</span>
             <a

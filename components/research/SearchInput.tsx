@@ -83,7 +83,7 @@ export function SearchInput({
   return (
     <>
       <form onSubmit={handleSubmit}>
-        <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200/80 dark:border-neutral-800 shadow-sm dark:shadow-none focus-within:border-neutral-300 dark:focus-within:border-neutral-700 focus-within:shadow-md dark:focus-within:shadow-none transition-all">
+        <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200/80 dark:border-neutral-800 shadow-sm dark:shadow-none focus-within:border-neutral-300 dark:focus-within:border-neutral-700 focus-within:shadow-md dark:focus-within:shadow-none transition-all">
           <input
             className="flex-1 bg-transparent text-base sm:text-sm text-neutral-800 dark:text-neutral-100 placeholder:text-neutral-400 outline-none border-none focus:ring-0"
             placeholder={
@@ -97,7 +97,7 @@ export function SearchInput({
           {isLoading ? (
             // Stop button when loading
             <button
-              className="flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-md sm:rounded-lg flex items-center justify-center transition-colors bg-red-500 hover:bg-red-600 text-white"
+              className="flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center transition-colors bg-red-500 hover:bg-red-600 text-white"
               title="Stop research"
               type="button"
               onClick={handleStopClick}
@@ -107,9 +107,9 @@ export function SearchInput({
           ) : (
             // Submit button when not loading
             <button
-              className={`flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-md sm:rounded-lg flex items-center justify-center transition-colors ${
+              className={`flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center transition-colors ${
                 query.trim()
-                  ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900"
+                  ? "bg-neutral-100 dark:bg-neutral-800 text-accent-600 dark:text-accent-400"
                   : "bg-neutral-100 dark:bg-neutral-800 text-neutral-400"
               }`}
               disabled={!query.trim()}
@@ -137,7 +137,7 @@ export function SearchInput({
             {/* Mobile: Bottom sheet */}
             <motion.div
               animate={{ y: 0 }}
-              className="sm:hidden fixed inset-x-0 bottom-0 bg-white dark:bg-neutral-900 z-50 rounded-t-2xl shadow-2xl overflow-hidden"
+              className="sm:hidden fixed inset-x-0 bottom-0 bg-white dark:bg-neutral-900 z-50 rounded-t-3xl shadow-2xl overflow-hidden"
               exit={{ y: "100%" }}
               initial={{ y: "100%" }}
               transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
@@ -159,14 +159,14 @@ export function SearchInput({
 
               <div className="px-5 pb-8 flex flex-col gap-2">
                 <button
-                  className="w-full py-3.5 text-base font-medium text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors"
+                  className="w-full py-3.5 text-base font-medium text-white bg-red-500 hover:bg-red-600 rounded-3xl transition-colors"
                   type="button"
                   onClick={handleConfirm}
                 >
                   Stop & Search
                 </button>
                 <button
-                  className="w-full py-3.5 text-base text-neutral-600 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-xl transition-colors"
+                  className="w-full py-3.5 text-base text-neutral-600 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-3xl transition-colors"
                   type="button"
                   onClick={handleCancelDialog}
                 >
@@ -178,7 +178,7 @@ export function SearchInput({
             {/* Desktop: Centered dialog */}
             <motion.div
               animate={{ opacity: 1, scale: 1 }}
-              className="hidden sm:block fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-neutral-900 z-50 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-2xl max-w-sm w-full overflow-hidden"
+              className="hidden sm:block fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-neutral-900 z-50 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-2xl max-w-sm w-full overflow-hidden"
               exit={{ opacity: 0, scale: 0.95 }}
               initial={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2, ease: "easeOut" }}

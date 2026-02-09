@@ -145,7 +145,7 @@ export function SourceInfoBadge({ href, title }: SourceInfoBadgeProps) {
               : "top-full left-1/2 -translate-x-1/2 mt-1.5"
           }`}
         >
-          <span className="block px-2.5 py-2 rounded-lg shadow-lg border bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100">
+          <span className="block px-3 py-2.5 rounded-3xl shadow-lg border bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100">
             {/* Title */}
             <span className="block text-[11px] font-semibold leading-tight">{title}</span>
             {/* Domain + type */}

@@ -112,6 +112,7 @@ function researchReducer(
     case "ADD_STEP": {
       const newStep = createStep(action.stepType, action.stepTitle);
       newStep.startTime = Date.now();
+      newStep.status = "in_progress";
 
       return {
         ...state,

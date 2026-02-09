@@ -34,7 +34,7 @@ export function IntroModal() {
         >
           <motion.div
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl overflow-hidden"
+            className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-3xl shadow-2xl overflow-hidden"
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
@@ -149,7 +149,7 @@ export function IntroModal() {
               </div>
 
               {/* Privacy Notice */}
-              <div className="mt-4 p-3 bg-neutral-50 dark:bg-neutral-800/50 rounded-lg border border-neutral-200 dark:border-neutral-700">
+              <div className="mt-4 p-3 bg-neutral-50 dark:bg-neutral-800/50 rounded-3xl border border-neutral-200 dark:border-neutral-700">
                 <div className="flex gap-2">
                   <svg
                     className="w-4 h-4 text-neutral-400 flex-shrink-0 mt-0.5"
@@ -177,7 +177,7 @@ export function IntroModal() {
             {/* Footer */}
             <div className="px-6 pb-6">
               <button
-                className="w-full py-2.5 bg-accent-500 hover:bg-accent-600 text-white text-sm font-medium rounded-xl transition-colors"
+                className="w-full py-2.5 bg-accent-500 hover:bg-accent-600 text-white text-sm font-medium rounded-3xl transition-colors"
                 onClick={handleClose}
               >
                 Get Started

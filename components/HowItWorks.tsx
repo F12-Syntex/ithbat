@@ -73,7 +73,7 @@ export function HowItWorks() {
             initial={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
           >
-            <div className="mt-4 p-4 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800">
+            <div className="mt-4 p-4 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800">
               {/* Process Steps */}
               <div className="space-y-4 mb-5">
                 <h4 className="text-xs font-semibold text-neutral-800 dark:text-neutral-100 uppercase tracking-wider">
@@ -91,7 +91,7 @@ export function HowItWorks() {
                         initial={{ opacity: 0, x: -10 }}
                         transition={{ delay: index * 0.1 }}
                       >
-                        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center text-accent-600 dark:text-accent-400">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center text-accent-600 dark:text-accent-400">
                           <Icon className="w-5 h-5" strokeWidth={1.5} />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -120,7 +120,7 @@ export function HowItWorks() {
                   {trustedSources.map((source) => (
                     <span
                       key={source.name}
-                      className="inline-flex items-center gap-1.5 px-2 py-1 text-[10px] bg-neutral-100 dark:bg-neutral-800 rounded-md"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] bg-neutral-100 dark:bg-neutral-800 rounded-full"
                     >
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                       <span className="text-neutral-700 dark:text-neutral-300">
