@@ -201,14 +201,14 @@ export function ResearchResponse({
       <article
         className="prose prose-base dark:prose-invert max-w-none
           prose-headings:font-semibold prose-headings:tracking-tight
-          prose-h2:text-base sm:prose-h2:text-lg prose-h2:text-neutral-800 dark:prose-h2:text-neutral-100 prose-h2:mt-6 prose-h2:mb-3 prose-h2:pb-2 prose-h2:border-b prose-h2:border-neutral-200 dark:prose-h2:border-neutral-800
-          prose-h3:text-sm sm:prose-h3:text-base prose-h3:text-neutral-700 dark:prose-h3:text-neutral-200 prose-h3:mt-4 prose-h3:mb-2
-          prose-p:text-sm sm:prose-p:text-base prose-p:text-neutral-700 dark:prose-p:text-neutral-300 prose-p:leading-relaxed prose-p:my-3
+          prose-h2:text-[15px] sm:prose-h2:text-lg prose-h2:text-neutral-800 dark:prose-h2:text-neutral-100 prose-h2:mt-8 prose-h2:mb-3 prose-h2:pb-2.5 prose-h2:border-b prose-h2:border-neutral-200 dark:prose-h2:border-neutral-800
+          prose-h3:text-sm sm:prose-h3:text-base prose-h3:text-neutral-700 dark:prose-h3:text-neutral-200 prose-h3:mt-5 prose-h3:mb-2
+          prose-p:text-[14px] sm:prose-p:text-base prose-p:text-neutral-700 dark:prose-p:text-neutral-300 prose-p:leading-relaxed prose-p:my-3
           prose-strong:text-neutral-800 dark:prose-strong:text-neutral-100 prose-strong:font-semibold
           prose-a:text-accent-600 dark:prose-a:text-accent-400 prose-a:font-medium prose-a:no-underline hover:prose-a:underline
-          prose-ul:text-sm sm:prose-ul:text-base prose-ul:text-neutral-700 dark:prose-ul:text-neutral-300 prose-ul:my-3
-          prose-ol:text-sm sm:prose-ol:text-base prose-ol:text-neutral-700 dark:prose-ol:text-neutral-300 prose-ol:my-3
-          prose-li:my-1 prose-li:leading-relaxed
+          prose-ul:text-[14px] sm:prose-ul:text-base prose-ul:text-neutral-700 dark:prose-ul:text-neutral-300 prose-ul:my-3
+          prose-ol:text-[14px] sm:prose-ol:text-base prose-ol:text-neutral-700 dark:prose-ol:text-neutral-300 prose-ol:my-3
+          prose-li:my-1.5 prose-li:leading-relaxed
           prose-blockquote:border-l-0 prose-blockquote:bg-transparent prose-blockquote:p-0 prose-blockquote:not-italic prose-blockquote:my-0
           prose-code:text-accent-600 dark:prose-code:text-accent-400 prose-code:bg-accent-50 dark:prose-code:bg-accent-900/30 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none"
       >
@@ -256,7 +256,7 @@ export function ResearchResponse({
               return <TermTooltip meaning={meaning}>{children}</TermTooltip>;
             }} as any),
             h2: ({ children }) => (
-              <h2 className="flex items-center gap-2 text-base sm:text-lg font-semibold text-neutral-800 dark:text-neutral-100 mt-6 mb-3 pb-2 border-b border-neutral-200 dark:border-neutral-800">
+              <h2 className="flex items-center gap-2 text-[15px] sm:text-lg font-semibold text-neutral-800 dark:text-neutral-100 mt-8 mb-3 pb-2.5 border-b border-neutral-200 dark:border-neutral-800">
                 {String(children).toLowerCase().includes("answer") && (
                   <span className="w-4 h-4 rounded bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center">
                     <svg
@@ -327,13 +327,13 @@ export function ResearchResponse({
               }
 
               return (
-                <blockquote className="relative my-4 ml-0 pl-4 pr-4 py-3.5 border-l-[3px] border-accent-500 dark:border-accent-400 bg-accent-50/50 dark:bg-accent-950/20 rounded-r-xl not-italic [&_.quran-arabic]:block [&_.quran-arabic]:text-right [&_.quran-arabic]:text-lg [&_.quran-arabic]:leading-loose [&_.quran-arabic]:text-neutral-800 [&_.quran-arabic]:dark:text-neutral-100 [&_.quran-arabic]:mb-2 [&_.quran-arabic]:font-normal">
-                  <div className="text-sm sm:text-[15px] text-neutral-700 dark:text-neutral-200 leading-relaxed italic">
+                <blockquote className="relative my-5 ml-0 pl-4 sm:pl-5 pr-4 py-4 border-l-[3px] border-neutral-300 dark:border-neutral-700 bg-neutral-50/80 dark:bg-neutral-800/30 rounded-r-2xl not-italic [&_.quran-arabic]:block [&_.quran-arabic]:text-right [&_.quran-arabic]:text-lg [&_.quran-arabic]:leading-loose [&_.quran-arabic]:text-neutral-800 [&_.quran-arabic]:dark:text-neutral-100 [&_.quran-arabic]:mb-2 [&_.quran-arabic]:font-normal">
+                  <div className="text-[14px] sm:text-[15px] text-neutral-700 dark:text-neutral-200 leading-relaxed italic">
                     {quoteChildren}
                   </div>
                   {attrChildren.length > 0 && (
-                    <div className="flex justify-end mt-2 pt-1.5 border-t border-accent-200/50 dark:border-accent-800/30 not-italic">
-                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400 [&_a]:!text-[11px] [&_a]:inline-flex [&_a]:items-center [&_a]:gap-0.5 [&_img]:w-3 [&_img]:h-3">
+                    <div className="flex justify-end mt-3 pt-2 border-t border-neutral-200/60 dark:border-neutral-700/40 not-italic">
+                      <span className="text-xs text-neutral-500 dark:text-neutral-400 [&_a]:!text-xs [&_a]:inline-flex [&_a]:items-center [&_a]:gap-1 [&_img]:w-3.5 [&_img]:h-3.5">
                         {attrChildren}
                       </span>
                     </div>
@@ -348,8 +348,8 @@ export function ResearchResponse({
               // Attribution lines (— Source | link) — render as compact right-aligned source
               if (textContent.trim().startsWith("—") || textContent.trim().startsWith("—")) {
                 return (
-                  <div className="flex justify-end -mt-2 mb-3">
-                    <span className="text-[11px] text-neutral-500 dark:text-neutral-400 [&_a]:!text-[11px] [&_a]:inline-flex [&_a]:items-center [&_a]:gap-0.5 [&_img]:w-3 [&_img]:h-3">
+                  <div className="flex justify-end -mt-2 mb-4">
+                    <span className="text-xs text-neutral-500 dark:text-neutral-400 [&_a]:!text-xs [&_a]:inline-flex [&_a]:items-center [&_a]:gap-1 [&_img]:w-3.5 [&_img]:h-3.5">
                       {children}
                     </span>
                   </div>

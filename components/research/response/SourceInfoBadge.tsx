@@ -118,7 +118,7 @@ export function SourceInfoBadge({ href, title }: SourceInfoBadgeProps) {
   return (
     <span ref={badgeRef} className="relative inline-flex align-baseline">
       <a
-        className={`inline-flex items-center gap-0.5 text-[11px] font-medium no-underline hover:opacity-70 transition-opacity ${color}`}
+        className={`inline-flex items-center gap-1 text-xs font-medium no-underline hover:opacity-70 transition-opacity ${color}`}
         href={href}
         rel="noopener noreferrer"
         target="_blank"
@@ -127,13 +127,13 @@ export function SourceInfoBadge({ href, title }: SourceInfoBadgeProps) {
       >
         <img
           alt=""
-          className="w-3 h-3 rounded-sm flex-shrink-0"
+          className="w-3.5 h-3.5 rounded-sm flex-shrink-0"
           src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
           onError={(e) => {
             (e.target as HTMLImageElement).style.display = "none";
           }}
         />
-        <span className="truncate max-w-[100px]">{title}</span>
+        <span className="truncate max-w-[120px]">{title}</span>
       </a>
 
       {/* Tooltip — desktop only, fixed width, consistent neutral color */}
