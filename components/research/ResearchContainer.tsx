@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -12,6 +12,7 @@ import {
   Settings,
   RefreshCw,
   Lightbulb,
+  Download,
 } from "lucide-react";
 
 import { SearchInput } from "./SearchInput";
@@ -98,6 +99,13 @@ export function ResearchContainer() {
   const { theme, setTheme, themes } = useTheme();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [suggestedQuery, setSuggestedQuery] = useState<string | undefined>();
+  const responseRef = useRef<HTMLDivElement>(null);
+
+  const handleExportPdf = useCallback(async () => {
+    if (!responseRef.current || !state.query) return;
+    const { exportResponseAsPdf } = await import("@/lib/export-pdf");
+    await exportResponseAsPdf(responseRef.current, state.query);
+  }, [state.query]);
 
   const startResearch = useCallback(
     (query: string) => baseStartResearch(query),
@@ -210,6 +218,12 @@ export function ResearchContainer() {
         }
       },
       disabled: !state.response,
+    },
+    {
+      label: "Share as PDF",
+      icon: <Download className="w-4 h-4" strokeWidth={2} />,
+      onClick: handleExportPdf,
+      disabled: !state.response || state.status !== "completed",
     },
     {
       label: "Copy Query",
@@ -476,10 +490,30 @@ export function ResearchContainer() {
                       {(state.response || isStreaming) && (
                         <div>
                           <ResearchResponse
+                            ref={responseRef}
                             apiSources={state.sources}
                             content={state.response}
                             isStreaming={isStreaming}
                           />
+
+                          {/* Share as PDF button — shown after streaming completes */}
+                          {state.status === "completed" && state.response && (
+                            <motion.div
+                              animate={{ opacity: 1, y: 0 }}
+                              className="mt-3 flex justify-end"
+                              initial={{ opacity: 0, y: 6 }}
+                              transition={{ delay: 0.2 }}
+                            >
+                              <button
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-full hover:border-accent-400 dark:hover:border-accent-500 hover:text-accent-600 dark:hover:text-accent-400 transition-all active:scale-95"
+                                type="button"
+                                onClick={handleExportPdf}
+                              >
+                                <Download className="w-3.5 h-3.5" strokeWidth={2} />
+                                Share as PDF
+                              </button>
+                            </motion.div>
+                          )}
                         </div>
                       )}
 

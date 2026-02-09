@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useRef, useEffect, type ReactNode } from "react";
+import { useMemo, useState, useRef, useEffect, forwardRef, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 
@@ -163,11 +163,11 @@ function TermTooltip({ meaning, children }: { meaning: string; children: ReactNo
   );
 }
 
-export function ResearchResponse({
+export const ResearchResponse = forwardRef<HTMLDivElement, ResearchResponseProps>(function ResearchResponse({
   content,
   isStreaming,
   apiSources,
-}: ResearchResponseProps) {
+}, ref) {
   const { processedContent, sources } = useMemo(() => {
     if (!content) return { processedContent: "", sources: [] };
 
@@ -196,7 +196,7 @@ export function ResearchResponse({
   if (!content) return null;
 
   return (
-    <div>
+    <div ref={ref}>
       {/* Content */}
       <article
         className="prose prose-base dark:prose-invert max-w-none
@@ -375,4 +375,4 @@ export function ResearchResponse({
       )}
     </div>
   );
-}
+});

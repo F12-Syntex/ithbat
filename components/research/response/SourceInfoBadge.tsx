@@ -116,7 +116,7 @@ export function SourceInfoBadge({ href, title }: SourceInfoBadgeProps) {
   }, [showTooltip]);
 
   return (
-    <span ref={badgeRef} className="relative inline-flex align-baseline">
+    <span ref={badgeRef} className="relative inline-flex align-baseline leading-none">
       <a
         className={`inline-flex items-center gap-1 text-xs font-medium no-underline hover:opacity-70 transition-opacity ${color}`}
         href={href}
