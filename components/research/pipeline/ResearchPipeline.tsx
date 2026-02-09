@@ -54,9 +54,9 @@ export function ResearchPipeline({
         />
       </div>
 
-      {/* Desktop: Horizontal step pills */}
+      {/* Desktop: Full-width rounded rows */}
       <div className="hidden sm:block">
-        <DesktopHorizontalPills steps={steps} />
+        <DesktopStepRows steps={steps} />
       </div>
     </div>
   );
@@ -120,7 +120,6 @@ function MobileProgressView({
 
       {/* Current status */}
       <div className="flex items-center gap-3">
-        {/* Icon */}
         <div
           className={`relative flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
             isAllComplete
@@ -149,7 +148,6 @@ function MobileProgressView({
           )}
         </div>
 
-        {/* Status text */}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-neutral-800 dark:text-neutral-100">
             {isAllComplete
@@ -172,25 +170,24 @@ function MobileProgressView({
   );
 }
 
-// Desktop: Horizontal step pills
-function DesktopHorizontalPills({ steps }: { steps: ResearchStep[] }) {
+// Desktop: Full-width rounded step rows
+function DesktopStepRows({ steps }: { steps: ResearchStep[] }) {
   return (
-    <div className="flex items-center gap-2 flex-wrap py-1">
+    <div className="flex flex-col gap-2">
       {steps.map((step, index) => (
-        <StepPill key={step.id} index={index} step={step} />
+        <StepRow key={step.id} index={index} step={step} />
       ))}
     </div>
   );
 }
 
-// Individual step pill
-function StepPill({ step, index }: { step: ResearchStep; index: number }) {
+// Individual full-width step row
+function StepRow({ step, index }: { step: ResearchStep; index: number }) {
   const [elapsedTime, setElapsedTime] = useState(0);
 
   const isActive = step.status === "in_progress";
   const isCompleted = step.status === "completed";
   const isError = step.status === "error";
-  const isPending = step.status === "pending";
 
   const Icon = stepIcons[step.type] || Lightbulb;
 
@@ -219,64 +216,76 @@ function StepPill({ step, index }: { step: ResearchStep; index: number }) {
 
   return (
     <motion.div
-      animate={{ opacity: 1, scale: 1 }}
+      animate={{ opacity: 1, y: 0 }}
       className={`
-        relative flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors
+        flex items-center gap-3 px-4 py-2.5 rounded-full w-full transition-colors
         ${
           isCompleted
-            ? "bg-accent-50 dark:bg-accent-900/20 text-accent-700 dark:text-accent-300 border border-accent-200 dark:border-accent-800"
+            ? "bg-accent-50 dark:bg-accent-900/15 border border-accent-200/60 dark:border-accent-800/40"
             : isActive
-              ? "bg-accent-50 dark:bg-accent-900/30 text-accent-600 dark:text-accent-300 border border-accent-300 dark:border-accent-700"
+              ? "bg-accent-50/80 dark:bg-accent-900/20 border border-accent-300 dark:border-accent-700"
               : isError
-                ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800"
-                : "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 border border-neutral-200 dark:border-neutral-700"
+                ? "bg-red-50 dark:bg-red-900/15 border border-red-200 dark:border-red-800"
+                : "bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700/50"
         }
       `}
-      initial={{ opacity: 0, scale: 0.9 }}
-      transition={{ delay: index * 0.05, duration: 0.2 }}
+      initial={{ opacity: 0, y: 8 }}
+      transition={{ delay: index * 0.06, duration: 0.25 }}
     >
-      {/* Active ring animation */}
-      {isActive && (
-        <motion.div
-          animate={{ opacity: [0.3, 0.6, 0.3] }}
-          className="absolute inset-0 rounded-full border-2 border-accent-400 dark:border-accent-500"
-          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-        />
-      )}
-
       {/* Icon */}
-      <span className="relative flex-shrink-0">
+      <div
+        className={`relative flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+          isCompleted
+            ? "bg-accent-100 dark:bg-accent-800/40 text-accent-600 dark:text-accent-400"
+            : isActive
+              ? "bg-accent-100/80 dark:bg-accent-800/30 text-accent-500"
+              : isError
+                ? "bg-red-100 dark:bg-red-800/30 text-red-500"
+                : "bg-neutral-100 dark:bg-neutral-700/50 text-neutral-400 dark:text-neutral-500"
+        }`}
+      >
         {isError ? (
-          <X size={14} strokeWidth={2} />
+          <X size={16} strokeWidth={2} />
         ) : isCompleted ? (
-          <Check size={14} strokeWidth={2.5} />
+          <Check size={16} strokeWidth={2.5} />
         ) : isActive ? (
-          <motion.span
-            animate={{ rotate: 360 }}
-            className="block"
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          >
-            <Loader2 size={14} strokeWidth={2} />
-          </motion.span>
+          <Loader2 size={16} strokeWidth={2} className="animate-spin" />
         ) : (
-          <Icon size={14} strokeWidth={1.5} />
+          <Icon size={16} strokeWidth={1.5} />
         )}
-      </span>
+      </div>
 
       {/* Title */}
-      <span className="whitespace-nowrap">{step.title}</span>
+      <span
+        className={`flex-1 text-sm font-medium ${
+          isCompleted || isActive
+            ? "text-neutral-800 dark:text-neutral-100"
+            : "text-neutral-400 dark:text-neutral-500"
+        }`}
+      >
+        {step.title}
+      </span>
 
       {/* Time badge */}
       {(isActive || isCompleted) && step.startTime && (
         <span
-          className={`font-mono text-[10px] tabular-nums ${
+          className={`text-xs font-mono tabular-nums flex-shrink-0 ${
             isActive
               ? "text-accent-500"
-              : "text-accent-400 dark:text-accent-500"
+              : "text-neutral-400 dark:text-neutral-500"
           }`}
         >
           {formatTime(elapsedTime)}
         </span>
+      )}
+
+      {/* Active pulse indicator */}
+      {isActive && (
+        <motion.span
+          animate={{ opacity: [1, 0.3, 1] }}
+          className="w-2 h-2 rounded-full bg-accent-500 flex-shrink-0"
+          transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+        />
       )}
     </motion.div>
   );

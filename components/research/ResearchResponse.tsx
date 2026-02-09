@@ -4,7 +4,6 @@ import { useMemo, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 
-import { QuoteBlock } from "./response/QuoteBlock";
 import { SourceInfoBadge } from "./response/SourceInfoBadge";
 import { SourceCitationCard } from "./response/SourceCitationCard";
 import { EvidenceParagraph } from "./response/VerifyEvidence";
@@ -34,38 +33,6 @@ function extractTextContent(children: ReactNode): string {
   }
 
   return String(children);
-}
-
-// Helper to detect quote type from content
-function detectQuoteType(
-  text: string,
-): "hadith" | "quran" | "scholar" | "general" {
-  const lowerText = text.toLowerCase();
-
-  if (
-    /quran|surah|ayah|verse\s*\d+:\d+|^\d+:\d+/.test(lowerText) ||
-    /al-baqarah|an-nisa|al-imran|al-maidah/.test(lowerText)
-  ) {
-    return "quran";
-  }
-
-  if (
-    /hadith|bukhari|muslim|tirmidhi|abu dawud|nasai|ibn majah|sunnah|narrated|prophet.*said|messenger.*said/.test(
-      lowerText,
-    )
-  ) {
-    return "hadith";
-  }
-
-  if (
-    /sheikh|imam|scholar|ibn taymiyyah|ibn qayyim|al-nawawi|fatwa|ruling|opinion/.test(
-      lowerText,
-    )
-  ) {
-    return "scholar";
-  }
-
-  return "general";
 }
 
 // Helper to extract source info from URL
@@ -190,7 +157,7 @@ export function ResearchResponse({
           prose-ul:text-sm sm:prose-ul:text-base prose-ul:text-neutral-700 dark:prose-ul:text-neutral-300 prose-ul:my-3
           prose-ol:text-sm sm:prose-ol:text-base prose-ol:text-neutral-700 dark:prose-ol:text-neutral-300 prose-ol:my-3
           prose-li:my-1 prose-li:leading-relaxed
-          prose-blockquote:border-l-3 prose-blockquote:border-accent-500 prose-blockquote:bg-accent-50/50 dark:prose-blockquote:bg-accent-900/20 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r-lg prose-blockquote:not-italic prose-blockquote:text-sm sm:prose-blockquote:text-base prose-blockquote:text-neutral-700 dark:prose-blockquote:text-neutral-300
+          prose-blockquote:border-l-3 prose-blockquote:border-neutral-300 dark:prose-blockquote:border-neutral-600 prose-blockquote:bg-transparent prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:not-italic prose-blockquote:text-sm sm:prose-blockquote:text-base prose-blockquote:text-neutral-700 dark:prose-blockquote:text-neutral-300
           prose-code:text-accent-600 dark:prose-code:text-accent-400 prose-code:bg-accent-50 dark:prose-code:bg-accent-900/30 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none"
       >
         <ReactMarkdown
@@ -285,13 +252,11 @@ export function ResearchResponse({
                 {children}
               </h2>
             ),
-            // Enhanced blockquote with type detection
-            blockquote: ({ children }) => {
-              const textContent = String(children);
-              const quoteType = detectQuoteType(textContent);
-
-              return <QuoteBlock type={quoteType}>{children}</QuoteBlock>;
-            },
+            blockquote: ({ children }) => (
+              <blockquote className="my-4 border-l-3 border-neutral-300 dark:border-neutral-600 pl-4 pr-3 py-2 text-sm sm:text-base text-neutral-700 dark:text-neutral-300 not-italic">
+                {children}
+              </blockquote>
+            ),
             // Paragraph with verify button for evidence
             p: ({ children }) => {
               const textContent = extractTextContent(children);
@@ -307,11 +272,6 @@ export function ResearchResponse({
         >
           {processedContent}
         </ReactMarkdown>
-        {isStreaming && (
-          <span
-            className="inline-block w-px h-4 bg-accent-500 ml-0.5 align-middle animate-pulse"
-          />
-        )}
       </article>
 
       {/* Sources Citation Card - shown at the bottom when not streaming */}

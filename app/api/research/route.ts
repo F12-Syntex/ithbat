@@ -216,16 +216,17 @@ export async function POST(request: NextRequest) {
 
         send({ type: "step_complete", step: "formatting" });
 
-        send({ type: "response_start" });
-
         let formattedResponse = "";
         for await (const chunk of client.streamChat(
           [{ role: "user", content: formattingPrompt }],
           "QUICK",
         )) {
           formattedResponse += chunk;
-          send({ type: "response_content", content: chunk });
         }
+
+        // Send the complete formatted response at once (no streaming)
+        send({ type: "response_start" });
+        send({ type: "response_content", content: formattedResponse });
 
         // Log conversation
         logConversation(
