@@ -88,9 +88,8 @@ export function SourceInfoBadge({ href, title }: SourceInfoBadgeProps) {
         if (translation) {
           // Strip HTML tags (footnote sups etc)
           const clean = translation.replace(/<[^>]*>/g, "");
-          const text = clean.length > 180 ? clean.substring(0, 180) + "..." : clean;
-          verseCache.set(key, text);
-          setVerseText(text);
+          verseCache.set(key, clean);
+          setVerseText(clean);
         }
       })
       .catch(() => {})
@@ -134,22 +133,23 @@ export function SourceInfoBadge({ href, title }: SourceInfoBadgeProps) {
               : "top-full left-1/2 -translate-x-1/2 mt-1.5"
           }`}
         >
-          <span className="block px-2.5 py-2 rounded-lg shadow-lg border bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100">
-            <span className="flex items-center gap-1.5">
+          <span className="block px-2.5 py-1.5 rounded-lg shadow-lg border bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100">
+            <span className="flex items-center gap-1 leading-none">
               <img
                 alt=""
-                className="w-3.5 h-3.5 rounded-sm flex-shrink-0"
+                className="w-3 h-3 rounded-sm flex-shrink-0"
                 src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = "none";
                 }}
               />
               <span className="text-[11px] font-medium truncate">{title}</span>
+              <span className="text-[10px] opacity-30 mx-0.5">&middot;</span>
               <span className="text-[10px] opacity-40 flex-shrink-0">{getSourceLabel(domain)}</span>
             </span>
             {/* Quran verse translation */}
             {quranRef && (
-              <span className="block mt-1 pt-1 border-t border-neutral-200 dark:border-neutral-700">
+              <span className="block mt-1 pt-1 border-t border-neutral-100 dark:border-neutral-700">
                 {loading ? (
                   <span className="block text-[10px] opacity-40 italic">
                     Loading translation...

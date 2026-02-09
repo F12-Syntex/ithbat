@@ -1,12 +1,72 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 
 interface FollowUpInputProps {
   onSubmit: (question: string) => void;
   isLoading?: boolean;
   previousQuery: string;
+}
+
+// Generate contextual follow-up suggestions based on the query
+function generateSuggestions(query: string): string[] {
+  const q = query.toLowerCase();
+  const suggestions: string[] = [];
+
+  // Topic-specific suggestions
+  if (q.includes("halal") || q.includes("haram") || q.includes("permissible") || q.includes("allowed")) {
+    suggestions.push(
+      "What are the conditions for this ruling?",
+      "Are there scholarly differences of opinion?",
+      "What is the evidence from the Quran?",
+    );
+  } else if (q.includes("prayer") || q.includes("salah") || q.includes("salat")) {
+    suggestions.push(
+      "What are the conditions for validity?",
+      "What invalidates this prayer?",
+      "What is the Sunnah way to perform it?",
+    );
+  } else if (q.includes("hadith")) {
+    suggestions.push(
+      "Is this hadith authentic?",
+      "What do scholars say about this hadith?",
+      "Are there related hadith on this topic?",
+    );
+  } else if (q.includes("quran") || q.includes("surah") || q.includes("ayah") || q.includes("verse")) {
+    suggestions.push(
+      "What is the tafsir of this verse?",
+      "What is the context of revelation?",
+      "Are there related verses on this topic?",
+    );
+  } else if (q.includes("zakat") || q.includes("charity")) {
+    suggestions.push(
+      "How is it calculated?",
+      "Who is eligible to receive it?",
+      "When should it be paid?",
+    );
+  } else if (q.includes("fasting") || q.includes("ramadan") || q.includes("sawm")) {
+    suggestions.push(
+      "What breaks the fast?",
+      "What are the exemptions?",
+      "What is the fidyah for missing fasts?",
+    );
+  } else if (q.includes("marriage") || q.includes("nikah") || q.includes("spouse") || q.includes("husband") || q.includes("wife")) {
+    suggestions.push(
+      "What are the rights and obligations?",
+      "What do the scholars say about this?",
+      "What is the evidence from Quran and Sunnah?",
+    );
+  } else {
+    // Generic follow-ups
+    suggestions.push(
+      "What is the evidence from hadith?",
+      "Are there different scholarly opinions?",
+      "Can you explain this in more detail?",
+    );
+  }
+
+  return suggestions.slice(0, 3);
 }
 
 export function FollowUpInput({
@@ -17,8 +77,12 @@ export function FollowUpInput({
   const [value, setValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const suggestions = useMemo(
+    () => generateSuggestions(previousQuery),
+    [previousQuery],
+  );
+
   useEffect(() => {
-    // Focus input when component appears
     inputRef.current?.focus();
   }, []);
 
@@ -27,6 +91,12 @@ export function FollowUpInput({
     if (value.trim() && !isLoading) {
       onSubmit(value.trim());
       setValue("");
+    }
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    if (!isLoading) {
+      onSubmit(suggestion);
     }
   };
 
@@ -56,11 +126,29 @@ export function FollowUpInput({
         </span>
       </div>
 
+      {/* Suggestions */}
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {suggestions.map((suggestion, i) => (
+          <motion.button
+            key={suggestion}
+            animate={{ opacity: 1, y: 0 }}
+            className="px-3 py-1.5 text-xs text-neutral-600 dark:text-neutral-300 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full hover:border-accent-300 dark:hover:border-accent-700 hover:text-accent-600 dark:hover:text-accent-400 transition-colors shadow-sm dark:shadow-none disabled:opacity-50"
+            disabled={isLoading}
+            initial={{ opacity: 0, y: 6 }}
+            transition={{ delay: 0.3 + i * 0.05 }}
+            type="button"
+            onClick={() => handleSuggestionClick(suggestion)}
+          >
+            {suggestion}
+          </motion.button>
+        ))}
+      </div>
+
       <form onSubmit={handleSubmit}>
         <div className="relative">
           <input
             ref={inputRef}
-            className="w-full px-4 py-3 pr-12 text-base sm:text-sm bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:outline-none focus:border-accent-400 dark:focus:border-accent-500 focus:ring-1 focus:ring-accent-400/20 dark:focus:ring-accent-500/20 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 transition-all"
+            className="w-full px-4 py-3 pr-12 text-base sm:text-sm bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:outline-none focus:border-accent-400 dark:focus:border-accent-500 focus:ring-1 focus:ring-accent-400/20 dark:focus:ring-accent-500/20 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 transition-all shadow-sm dark:shadow-none"
             disabled={isLoading}
             placeholder={`Follow up on "${previousQuery.slice(0, 30)}${previousQuery.length > 30 ? "..." : ""}"...`}
             type="text"
@@ -112,10 +200,6 @@ export function FollowUpInput({
           </button>
         </div>
       </form>
-
-      <p className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-2">
-        Your follow-up will be answered with context from the previous response
-      </p>
     </motion.div>
   );
 }
