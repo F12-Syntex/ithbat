@@ -2,9 +2,8 @@
 
 import type { ResearchStep } from "@/types/research";
 
-import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import ReactMarkdown from "react-markdown";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import {
   Lightbulb,
   Search,
@@ -13,7 +12,6 @@ import {
   Check,
   X,
   Loader2,
-  ChevronDown,
   FlaskConical,
   Sparkles,
   type LucideIcon,
@@ -36,11 +34,7 @@ const stepIcons: Record<string, LucideIcon> = {
 
 export function ResearchPipeline({
   steps,
-  isCompact = false,
-  showDetails = true,
 }: ResearchPipelineProps) {
-  const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
-
   if (steps.length === 0) {
     return null;
   }
@@ -48,48 +42,23 @@ export function ResearchPipeline({
   const activeStep = steps.find((s) => s.status === "in_progress");
   const completedSteps = steps.filter((s) => s.status === "completed");
 
-  const toggleStep = (stepId: string) => {
-    setExpandedSteps((prev) => {
-      const next = new Set(prev);
-
-      if (next.has(stepId)) {
-        next.delete(stepId);
-      } else {
-        next.add(stepId);
-      }
-
-      return next;
-    });
-  };
-
   return (
-    <motion.div
-      animate={{ opacity: 1 }}
-      className="w-full"
-      initial={{ opacity: 0 }}
-      transition={{ duration: 0.3 }}
-    >
+    <div className="w-full">
       {/* Mobile: Simple active step display */}
       <div className="sm:hidden">
         <MobileProgressView
           activeStep={activeStep}
           completedCount={completedSteps.length}
-          pendingCount={0}
           steps={steps}
           totalSteps={steps.length}
         />
       </div>
 
-      {/* Desktop: Vertical expandable list */}
+      {/* Desktop: Horizontal step pills */}
       <div className="hidden sm:block">
-        <DesktopVerticalPipeline
-          expandedSteps={expandedSteps}
-          showDetails={showDetails}
-          steps={steps}
-          toggleStep={toggleStep}
-        />
+        <DesktopHorizontalPills steps={steps} />
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -98,13 +67,11 @@ function MobileProgressView({
   steps,
   activeStep,
   completedCount,
-  pendingCount,
   totalSteps,
 }: {
   steps: ResearchStep[];
   activeStep: ResearchStep | undefined;
   completedCount: number;
-  pendingCount: number;
   totalSteps: number;
 }) {
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -137,7 +104,7 @@ function MobileProgressView({
     <div className="py-3 px-4">
       {/* Progress bar */}
       <div className="flex items-center gap-1.5 mb-3">
-        {steps.map((step, index) => (
+        {steps.map((step) => (
           <div
             key={step.id}
             className={`h-1 flex-1 rounded-full transition-all duration-300 ${
@@ -205,64 +172,27 @@ function MobileProgressView({
   );
 }
 
-// Desktop vertical pipeline with expandable rows
-function DesktopVerticalPipeline({
-  steps,
-  expandedSteps,
-  toggleStep,
-  showDetails,
-}: {
-  steps: ResearchStep[];
-  expandedSteps: Set<string>;
-  toggleStep: (stepId: string) => void;
-  showDetails: boolean;
-}) {
+// Desktop: Horizontal step pills
+function DesktopHorizontalPills({ steps }: { steps: ResearchStep[] }) {
   return (
-    <div className="py-3 px-4">
-      <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden divide-y divide-neutral-100 dark:divide-neutral-800">
-        {steps.map((step, index) => (
-          <VerticalStepRow
-            key={step.id}
-            index={index}
-            isExpanded={expandedSteps.has(step.id)}
-            showDetails={showDetails}
-            step={step}
-            onToggle={() => toggleStep(step.id)}
-          />
-        ))}
-      </div>
+    <div className="flex items-center gap-2 flex-wrap py-1">
+      {steps.map((step, index) => (
+        <StepPill key={step.id} index={index} step={step} />
+      ))}
     </div>
   );
 }
 
-// Individual step row with expandable content
-function VerticalStepRow({
-  step,
-  index,
-  isExpanded,
-  onToggle,
-  showDetails,
-}: {
-  step: ResearchStep;
-  index: number;
-  isExpanded: boolean;
-  onToggle: () => void;
-  showDetails: boolean;
-}) {
+// Individual step pill
+function StepPill({ step, index }: { step: ResearchStep; index: number }) {
   const [elapsedTime, setElapsedTime] = useState(0);
-  const contentRef = useRef<HTMLDivElement>(null);
 
   const isActive = step.status === "in_progress";
   const isCompleted = step.status === "completed";
   const isError = step.status === "error";
   const isPending = step.status === "pending";
-  const hasContent = step.content && step.content.length > 0;
-  const isUnderstanding = step.type === "understanding";
 
   const Icon = stepIcons[step.type] || Lightbulb;
-
-  // Only expand when manually toggled
-  const shouldShowContent = showDetails && isExpanded && hasContent;
 
   useEffect(() => {
     if (isActive && step.startTime) {
@@ -278,13 +208,6 @@ function VerticalStepRow({
     }
   }, [isActive, isCompleted, step.startTime, step.endTime]);
 
-  // Auto-scroll when content updates
-  useEffect(() => {
-    if (contentRef.current && isActive) {
-      contentRef.current.scrollTop = contentRef.current.scrollHeight;
-    }
-  }, [step.content, isActive]);
-
   const formatTime = (ms: number) => {
     const seconds = Math.floor(ms / 1000);
 
@@ -296,269 +219,65 @@ function VerticalStepRow({
 
   return (
     <motion.div
-      animate={{ opacity: 1 }}
-      initial={{ opacity: 0 }}
-      transition={{ delay: index * 0.05 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className={`
+        relative flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors
+        ${
+          isCompleted
+            ? "bg-accent-50 dark:bg-accent-900/20 text-accent-700 dark:text-accent-300 border border-accent-200 dark:border-accent-800"
+            : isActive
+              ? "bg-accent-50 dark:bg-accent-900/30 text-accent-600 dark:text-accent-300 border border-accent-300 dark:border-accent-700"
+              : isError
+                ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800"
+                : "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 border border-neutral-200 dark:border-neutral-700"
+        }
+      `}
+      initial={{ opacity: 0, scale: 0.9 }}
+      transition={{ delay: index * 0.05, duration: 0.2 }}
     >
-      {/* Header row */}
-      <button
-        className={`w-full flex items-center gap-4 px-4 py-3 transition-colors text-left ${
-          hasContent
-            ? "cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
-            : "cursor-default"
-        }`}
-        disabled={!hasContent}
-        type="button"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (hasContent) {
-            onToggle();
-          }
-        }}
-      >
-        {/* Status icon - always shows type icon with status indicators */}
-        <div
-          className={`relative flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${
-            isCompleted
-              ? "bg-accent-100 dark:bg-accent-900/40 text-accent-600 dark:text-accent-400"
-              : isActive
-                ? "bg-accent-50 dark:bg-accent-900/20 text-accent-500"
-                : isError
-                  ? "bg-red-100 dark:bg-red-900/30 text-red-500"
-                  : "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500"
+      {/* Active ring animation */}
+      {isActive && (
+        <motion.div
+          animate={{ opacity: [0.3, 0.6, 0.3] }}
+          className="absolute inset-0 rounded-full border-2 border-accent-400 dark:border-accent-500"
+          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+        />
+      )}
+
+      {/* Icon */}
+      <span className="relative flex-shrink-0">
+        {isError ? (
+          <X size={14} strokeWidth={2} />
+        ) : isCompleted ? (
+          <Check size={14} strokeWidth={2.5} />
+        ) : isActive ? (
+          <motion.span
+            animate={{ rotate: 360 }}
+            className="block"
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          >
+            <Loader2 size={14} strokeWidth={2} />
+          </motion.span>
+        ) : (
+          <Icon size={14} strokeWidth={1.5} />
+        )}
+      </span>
+
+      {/* Title */}
+      <span className="whitespace-nowrap">{step.title}</span>
+
+      {/* Time badge */}
+      {(isActive || isCompleted) && step.startTime && (
+        <span
+          className={`font-mono text-[10px] tabular-nums ${
+            isActive
+              ? "text-accent-500"
+              : "text-accent-400 dark:text-accent-500"
           }`}
         >
-          {/* Spinning ring for active */}
-          {isActive && (
-            <motion.div
-              animate={{ rotate: 360 }}
-              className="absolute inset-0 rounded-xl"
-              style={{
-                background: `conic-gradient(from 0deg, transparent 0deg, var(--accent-500) 90deg, transparent 180deg)`,
-                maskImage: "radial-gradient(transparent 55%, black 56%)",
-                WebkitMaskImage: "radial-gradient(transparent 55%, black 56%)",
-              }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-            />
-          )}
-
-          {/* Always show type icon */}
-          {isError ? (
-            <X size={20} strokeWidth={2} />
-          ) : (
-            <Icon size={20} strokeWidth={1.5} />
-          )}
-
-          {/* Checkmark badge for completed */}
-          {isCompleted && (
-            <motion.div
-              animate={{ scale: 1 }}
-              className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-accent-500 flex items-center justify-center shadow-sm"
-              initial={{ scale: 0 }}
-              transition={{
-                type: "spring",
-                stiffness: 300,
-                damping: 20,
-                delay: 0.1,
-              }}
-            >
-              <Check className="text-white" size={12} strokeWidth={3} />
-            </motion.div>
-          )}
-        </div>
-
-        {/* Title */}
-        <div className="flex-1 text-left min-w-0">
-          <span
-            className={`text-base font-medium ${
-              isCompleted || isActive
-                ? "text-neutral-800 dark:text-neutral-100"
-                : "text-neutral-500 dark:text-neutral-400"
-            }`}
-          >
-            {step.title}
-          </span>
-        </div>
-
-        {/* Time / Status badge */}
-        <div className="flex items-center gap-3 flex-shrink-0">
-          {(isActive || isCompleted) && step.startTime && (
-            <span
-              className={`text-sm font-mono tabular-nums ${
-                isActive
-                  ? "text-accent-500"
-                  : "text-neutral-400 dark:text-neutral-500"
-              }`}
-            >
-              {formatTime(elapsedTime)}
-            </span>
-          )}
-          {isPending && (
-            <span className="text-sm text-neutral-400 dark:text-neutral-500">
-              Pending
-            </span>
-          )}
-          {isError && <span className="text-sm text-red-500">Error</span>}
-
-          {/* Expand chevron */}
-          {hasContent && (
-            <motion.div
-              animate={{ rotate: shouldShowContent ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <ChevronDown
-                className="w-5 h-5 text-neutral-400 dark:text-neutral-500"
-                strokeWidth={1.5}
-              />
-            </motion.div>
-          )}
-        </div>
-      </button>
-
-      {/* Expandable content */}
-      <AnimatePresence initial={false}>
-        {shouldShowContent && (
-          <motion.div
-            animate={{ height: "auto", opacity: 1 }}
-            className="overflow-hidden"
-            exit={{ height: 0, opacity: 0 }}
-            initial={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div
-              ref={contentRef}
-              className="px-4 pb-4 pt-0 pl-18 max-h-48 overflow-y-auto scroll-smooth"
-              style={{ paddingLeft: "4.5rem" }}
-            >
-              {isUnderstanding ? (
-                <div className="prose prose-sm dark:prose-invert prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 max-w-none text-sm text-neutral-600 dark:text-neutral-300">
-                  <ReactMarkdown>{step.content}</ReactMarkdown>
-                </div>
-              ) : (
-                <div className="font-mono text-xs space-y-0.5 text-neutral-600 dark:text-neutral-400">
-                  {step.content
-                    .split("\n")
-                    .filter(Boolean)
-                    .map((line, lineIndex) => (
-                      <div key={lineIndex} className="flex items-start gap-2">
-                        <span className="text-neutral-300 dark:text-neutral-600 select-none">
-                          {lineIndex ===
-                            step.content.split("\n").filter(Boolean).length -
-                              1 && !isActive
-                            ? "└─"
-                            : "├─"}
-                        </span>
-                        <span className={getLineColor(line)}>
-                          {renderLineWithLinks(line)}
-                        </span>
-                      </div>
-                    ))}
-                  {isActive && (
-                    <motion.div
-                      animate={{ opacity: [0.4, 1, 0.4] }}
-                      className="flex items-center gap-2"
-                      transition={{ duration: 1.2, repeat: Infinity }}
-                    >
-                      <span className="text-neutral-300 dark:text-neutral-600 select-none">
-                        └─
-                      </span>
-                      <span className="text-accent-500">working...</span>
-                    </motion.div>
-                  )}
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          {formatTime(elapsedTime)}
+        </span>
+      )}
     </motion.div>
-  );
-}
-
-// Helper to determine line color
-function getLineColor(line: string): string {
-  // Success indicators
-  if (line.startsWith("✓") || line.toLowerCase().includes("found")) {
-    return "text-emerald-600 dark:text-emerald-400";
-  }
-  // Error indicators
-  if (
-    line.startsWith("✗") ||
-    line.toLowerCase().includes("error") ||
-    line.toLowerCase().includes("failed")
-  ) {
-    return "text-red-500 dark:text-red-400";
-  }
-  // Warning indicators
-  if (line.startsWith("⚠")) {
-    return "text-amber-600 dark:text-amber-400";
-  }
-  // Action indicators
-  if (
-    line.startsWith("→") ||
-    line.toLowerCase().includes("searching") ||
-    line.toLowerCase().includes("exploring")
-  ) {
-    return "text-blue-600 dark:text-blue-400";
-  }
-  // Evidence count lines (emoji indicators)
-  if (line.includes("📖") || line.includes("Hadith:")) {
-    return "text-amber-600 dark:text-amber-400";
-  }
-  if (line.includes("📜") || line.includes("Quran:")) {
-    return "text-sky-600 dark:text-sky-400";
-  }
-  if (line.includes("🎓") || line.includes("Scholarly:")) {
-    return "text-purple-600 dark:text-purple-400";
-  }
-  if (line.includes("⚖️") || line.includes("Fatwas:")) {
-    return "text-indigo-600 dark:text-indigo-400";
-  }
-  // Header lines
-  if (line.includes("📚") || line.includes("EVIDENCE FOUND")) {
-    return "text-accent-600 dark:text-accent-400 font-semibold";
-  }
-  // Separator lines
-  if (line.includes("━━━")) {
-    return "text-neutral-300 dark:text-neutral-600";
-  }
-  // URLs
-  if (line.match(/^https?:\/\//)) {
-    return "text-accent-600 dark:text-accent-400";
-  }
-
-  return "text-neutral-600 dark:text-neutral-400";
-}
-
-// Helper to render line with clickable URLs
-function renderLineWithLinks(text: string): React.ReactNode {
-  const urlPattern = /(https?:\/\/[^\s]+)/g;
-  const parts = text.split(urlPattern);
-
-  if (parts.length === 1) {
-    return text;
-  }
-
-  return (
-    <>
-      {parts.map((part, i) => {
-        if (part.match(urlPattern)) {
-          return (
-            <a
-              key={i}
-              className="text-accent-600 dark:text-accent-400 hover:underline break-all"
-              href={part}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              {part}
-            </a>
-          );
-        }
-
-        return <span key={i}>{part}</span>;
-      })}
-    </>
   );
 }

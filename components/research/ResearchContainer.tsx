@@ -21,7 +21,6 @@ import { ResearchResponse } from "./ResearchResponse";
 import { FollowUpInput } from "./FollowUpInput";
 import { ResearchPipeline } from "./pipeline";
 import { SourceFlow } from "./sources";
-import { ResearchLog } from "./ResearchLog";
 
 import { ContextMenu } from "@/components/ContextMenu";
 import { SettingsPanel } from "@/components/SettingsPanel";
@@ -468,31 +467,14 @@ export function ResearchContainer() {
                         </span>
                       </div>
 
-                      {/* Research Pipeline - Horizontal Flow */}
-                      <motion.div
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-white dark:bg-neutral-900 rounded-lg sm:rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden mb-3"
-                        initial={{ opacity: 0, y: 20 }}
-                        transition={{ delay: 0.1 }}
-                      >
+                      {/* Research Pipeline */}
+                      <div className="mb-3">
                         <ResearchPipeline
                           isCompact={false}
                           showDetails={true}
                           steps={state.steps}
                         />
-                      </motion.div>
-
-                      {/* Research Log - Separate content display */}
-                      {state.steps.some((s) => s.content) && (
-                        <motion.div
-                          animate={{ opacity: 1, y: 0 }}
-                          className="mb-4"
-                          initial={{ opacity: 0, y: 10 }}
-                          transition={{ delay: 0.15 }}
-                        >
-                          <ResearchLog steps={state.steps} />
-                        </motion.div>
-                      )}
+                      </div>
 
                       {/* Source Flow - Connected Nodes */}
                       {state.sources.length > 0 && (
@@ -520,17 +502,13 @@ export function ResearchContainer() {
 
                       {/* Current Response */}
                       {(state.response || isStreaming) && (
-                        <motion.div
-                          animate={{ opacity: 1, y: 0 }}
-                          initial={{ opacity: 0, y: 20 }}
-                          transition={{ delay: 0.2 }}
-                        >
+                        <div>
                           <ResearchResponse
                             apiSources={state.sources}
                             content={state.response}
                             isStreaming={isStreaming}
                           />
-                        </motion.div>
+                        </div>
                       )}
 
                       {/* Request AI Analysis Button */}

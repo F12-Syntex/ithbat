@@ -3,7 +3,6 @@
 import { useMemo, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
-import { motion } from "framer-motion";
 
 import { QuoteBlock } from "./response/QuoteBlock";
 import { SourceInfoBadge } from "./response/SourceInfoBadge";
@@ -178,25 +177,7 @@ export function ResearchResponse({
   if (!content) return null;
 
   return (
-    <motion.div
-      animate={{ opacity: 1 }}
-      initial={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
-    >
-      {/* Streaming indicator */}
-      {isStreaming && (
-        <div className="flex items-center gap-1.5 mb-3">
-          <motion.span
-            animate={{ opacity: [0.3, 1, 0.3] }}
-            className="w-1.5 h-1.5 bg-accent-500 rounded-full"
-            transition={{ duration: 1, repeat: Infinity }}
-          />
-          <span className="text-[10px] text-accent-500 font-medium">
-            Writing response...
-          </span>
-        </div>
-      )}
-
+    <div>
       {/* Content */}
       <article
         className="prose prose-base dark:prose-invert max-w-none
@@ -327,10 +308,8 @@ export function ResearchResponse({
           {processedContent}
         </ReactMarkdown>
         {isStreaming && (
-          <motion.span
-            animate={{ opacity: [1, 0] }}
-            className="inline-block w-px h-4 bg-accent-500 ml-0.5 align-middle"
-            transition={{ duration: 0.6, repeat: Infinity }}
+          <span
+            className="inline-block w-px h-4 bg-accent-500 ml-0.5 align-middle animate-pulse"
           />
         )}
       </article>
@@ -339,6 +318,6 @@ export function ResearchResponse({
       {!isStreaming && sources.length > 0 && (
         <SourceCitationCard sources={sources} />
       )}
-    </motion.div>
+    </div>
   );
 }
