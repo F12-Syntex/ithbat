@@ -157,7 +157,7 @@ export function ResearchResponse({
           prose-ul:text-sm sm:prose-ul:text-base prose-ul:text-neutral-700 dark:prose-ul:text-neutral-300 prose-ul:my-3
           prose-ol:text-sm sm:prose-ol:text-base prose-ol:text-neutral-700 dark:prose-ol:text-neutral-300 prose-ol:my-3
           prose-li:my-1 prose-li:leading-relaxed
-          prose-blockquote:border-l-3 prose-blockquote:border-neutral-300 dark:prose-blockquote:border-neutral-600 prose-blockquote:bg-transparent prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:not-italic prose-blockquote:text-sm sm:prose-blockquote:text-base prose-blockquote:text-neutral-700 dark:prose-blockquote:text-neutral-300
+          prose-blockquote:border-l-0 prose-blockquote:bg-transparent prose-blockquote:p-0 prose-blockquote:not-italic prose-blockquote:my-0
           prose-code:text-accent-600 dark:prose-code:text-accent-400 prose-code:bg-accent-50 dark:prose-code:bg-accent-900/30 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none"
       >
         <ReactMarkdown
@@ -253,7 +253,7 @@ export function ResearchResponse({
               </h2>
             ),
             blockquote: ({ children }) => (
-              <blockquote className="my-4 border-l-3 border-neutral-300 dark:border-neutral-600 pl-4 pr-3 py-2 text-sm sm:text-base text-neutral-700 dark:text-neutral-300 not-italic">
+              <blockquote className="my-4 border-l-3 border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 rounded-r-lg py-3 px-4 text-sm sm:text-[15px] text-neutral-700 dark:text-neutral-200 not-italic leading-relaxed [&_.quran-arabic]:block [&_.quran-arabic]:text-right [&_.quran-arabic]:text-lg [&_.quran-arabic]:leading-loose [&_.quran-arabic]:text-neutral-800 [&_.quran-arabic]:dark:text-neutral-100 [&_.quran-arabic]:mb-2 [&_.quran-arabic]:font-normal">
                 {children}
               </blockquote>
             ),

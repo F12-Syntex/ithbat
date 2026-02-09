@@ -156,13 +156,21 @@ For Quran verses:
 
 > "The exact verse translation, word for word."
 
-— **Surah Al-Baqarah 2:255** (Sahih International) | [quran.com](https://quran.com/2/255)
+— **Surah Al-Baqarah 2:255** (Sahih International) | [Quran 2:255](https://quran.com/2/255)
 
 For scholarly opinions:
 
 > "The exact words of the scholar as quoted in the source."
 
 — **Sheikh Ibn Baz** | [IslamQA](https://islamqa.info/en/answers/12345)
+
+## QURAN REFERENCES — CRITICAL:
+
+EVERY Quran reference MUST be a clickable markdown link. NEVER write a bare "Quran 3:130".
+- Always format as: \`[Quran SURAH:AYAH](https://quran.com/SURAH/AYAH)\`
+- Example: \`[Quran 2:255](https://quran.com/2/255)\` or \`[Quran 3:130](https://quran.com/3/130)\`
+- This applies everywhere: in attribution lines, in the body text, and in analysis sections
+- If a range is mentioned (e.g. 2:255-257), link to the first ayah
 
 ## HIGHLIGHTING IMPORTANT INFORMATION:
 

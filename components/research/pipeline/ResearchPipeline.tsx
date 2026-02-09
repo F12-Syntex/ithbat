@@ -220,13 +220,9 @@ function StepRow({ step, index }: { step: ResearchStep; index: number }) {
       className={`
         flex items-center gap-3 px-4 py-2.5 rounded-full w-full transition-colors
         ${
-          isCompleted
-            ? "bg-accent-50 dark:bg-accent-900/15 border border-accent-200/60 dark:border-accent-800/40"
-            : isActive
-              ? "bg-accent-50/80 dark:bg-accent-900/20 border border-accent-300 dark:border-accent-700"
-              : isError
-                ? "bg-red-50 dark:bg-red-900/15 border border-red-200 dark:border-red-800"
-                : "bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700/50"
+          isError
+            ? "bg-red-50 dark:bg-red-900/15 border border-red-200 dark:border-red-800"
+            : "bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800"
         }
       `}
       initial={{ opacity: 0, y: 8 }}
@@ -235,13 +231,11 @@ function StepRow({ step, index }: { step: ResearchStep; index: number }) {
       {/* Icon */}
       <div
         className={`relative flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-          isCompleted
-            ? "bg-accent-100 dark:bg-accent-800/40 text-accent-600 dark:text-accent-400"
-            : isActive
-              ? "bg-accent-100/80 dark:bg-accent-800/30 text-accent-500"
-              : isError
-                ? "bg-red-100 dark:bg-red-800/30 text-red-500"
-                : "bg-neutral-100 dark:bg-neutral-700/50 text-neutral-400 dark:text-neutral-500"
+          isError
+            ? "bg-red-100 dark:bg-red-800/30 text-red-500"
+            : isCompleted
+              ? "bg-neutral-100 dark:bg-neutral-800 text-accent-600 dark:text-accent-400"
+              : "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500"
         }`}
       >
         {isError ? (
@@ -249,7 +243,7 @@ function StepRow({ step, index }: { step: ResearchStep; index: number }) {
         ) : isCompleted ? (
           <Check size={16} strokeWidth={2.5} />
         ) : isActive ? (
-          <Loader2 size={16} strokeWidth={2} className="animate-spin" />
+          <Loader2 size={16} strokeWidth={2} className="animate-spin text-neutral-500 dark:text-neutral-400" />
         ) : (
           <Icon size={16} strokeWidth={1.5} />
         )}
@@ -268,13 +262,7 @@ function StepRow({ step, index }: { step: ResearchStep; index: number }) {
 
       {/* Time badge */}
       {(isActive || isCompleted) && step.startTime && (
-        <span
-          className={`text-xs font-mono tabular-nums flex-shrink-0 ${
-            isActive
-              ? "text-accent-500"
-              : "text-neutral-400 dark:text-neutral-500"
-          }`}
-        >
+        <span className="text-xs font-mono tabular-nums flex-shrink-0 text-accent-500 dark:text-accent-400">
           {formatTime(elapsedTime)}
         </span>
       )}
@@ -283,7 +271,7 @@ function StepRow({ step, index }: { step: ResearchStep; index: number }) {
       {isActive && (
         <motion.span
           animate={{ opacity: [1, 0.3, 1] }}
-          className="w-2 h-2 rounded-full bg-accent-500 flex-shrink-0"
+          className="w-2 h-2 rounded-full bg-neutral-400 dark:bg-neutral-500 flex-shrink-0"
           transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
         />
       )}

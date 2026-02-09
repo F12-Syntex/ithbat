@@ -13,6 +13,103 @@ import {
   type Source,
   type ResearchStep,
 } from "@/types/research";
+
+interface AlQuranAyah {
+  text: string;
+  surah: { englishName: string; number: number };
+  numberInSurah: number;
+}
+
+interface AlQuranResponse {
+  code: number;
+  data: AlQuranAyah | AlQuranAyah[];
+}
+
+async function fetchQuranVerse(surah: number, ayah: number): Promise<{ arabic: string; surahName: string } | null> {
+  try {
+    const res = await fetch(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/quran-simple`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const json = await res.json() as AlQuranResponse;
+    const data = Array.isArray(json.data) ? json.data[0] : json.data;
+    return { arabic: data.text, surahName: data.surah.englishName };
+  } catch {
+    return null;
+  }
+}
+
+function extractQuranRefsFromFormatted(text: string): Array<{ surah: number; ayah: number; fullMatch: string }> {
+  const refs: Array<{ surah: number; ayah: number; fullMatch: string }> = [];
+  const seen = new Set<string>();
+
+  // Match [Quran X:Y](url) patterns
+  const linkPattern = /\[Quran\s+(\d{1,3}):(\d{1,3})(?:-\d+)?\]\(https?:\/\/quran\.com\/\d+\/\d+\)/gi;
+  let match;
+  while ((match = linkPattern.exec(text)) !== null) {
+    const key = `${match[1]}:${match[2]}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      refs.push({ surah: parseInt(match[1]), ayah: parseInt(match[2]), fullMatch: match[0] });
+    }
+  }
+
+  // Also match bare "Quran X:Y" not already in a link
+  const barePattern = /(?<!\[)Quran\s+(\d{1,3}):(\d{1,3})(?!\]|\()/gi;
+  while ((match = barePattern.exec(text)) !== null) {
+    const key = `${match[1]}:${match[2]}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      refs.push({ surah: parseInt(match[1]), ayah: parseInt(match[2]), fullMatch: match[0] });
+    }
+  }
+
+  return refs;
+}
+
+async function enrichQuranVerses(text: string): Promise<string> {
+  const refs = extractQuranRefsFromFormatted(text);
+  if (refs.length === 0) return text;
+
+  // Fetch all verses in parallel (max 10)
+  const fetches = refs.slice(0, 10).map(async (ref) => {
+    const verse = await fetchQuranVerse(ref.surah, ref.ayah);
+    return { ...ref, verse };
+  });
+
+  const results = await Promise.all(fetches);
+  let enriched = text;
+
+  for (const { surah, ayah, fullMatch, verse } of results) {
+    if (!verse) continue;
+
+    // Find blockquotes that precede or follow this reference and inject Arabic
+    // Look for a blockquote near this reference that doesn't already have Arabic
+    const linkUrl = `https://quran.com/${surah}/${ayah}`;
+    const arabicLine = `> <span dir="rtl" class="quran-arabic">${verse.arabic}</span>\n>\n`;
+
+    // If there's a blockquote right before the attribution line containing this reference,
+    // inject the Arabic text at the start of that blockquote
+    const attrPattern = new RegExp(
+      `(>\\s*"[^"]*"\\s*\\n)\\n(—\\s*\\*\\*[^*]*\\*\\*[^\\n]*${linkUrl.replace(/\//g, '\\/')}[^\\n]*)`,
+    );
+    const attrMatch = enriched.match(attrPattern);
+    if (attrMatch) {
+      enriched = enriched.replace(attrPattern, `${arabicLine}${attrMatch[1]}\n${attrMatch[2]}`);
+      continue;
+    }
+
+    // Fallback: convert bare "Quran X:Y" to a clickable link
+    if (!fullMatch.startsWith('[')) {
+      enriched = enriched.replace(
+        fullMatch,
+        `[${fullMatch}](${linkUrl})`,
+      );
+    }
+  }
+
+  return enriched;
+}
 import { logConversation } from "@/lib/conversation-logger";
 
 interface ResearchStepEvent {
@@ -214,8 +311,6 @@ export async function POST(request: NextRequest) {
           query,
         });
 
-        send({ type: "step_complete", step: "formatting" });
-
         let formattedResponse = "";
         for await (const chunk of client.streamChat(
           [{ role: "user", content: formattingPrompt }],
@@ -223,6 +318,11 @@ export async function POST(request: NextRequest) {
         )) {
           formattedResponse += chunk;
         }
+
+        // Enrich Quran references with Arabic text from alquran.cloud
+        formattedResponse = await enrichQuranVerses(formattedResponse);
+
+        send({ type: "step_complete", step: "formatting" });
 
         // Send the complete formatted response at once (no streaming)
         send({ type: "response_start" });

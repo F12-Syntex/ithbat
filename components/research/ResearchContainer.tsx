@@ -605,7 +605,7 @@ export function ResearchContainer() {
         <div className="flex-shrink-0 py-2 sm:py-3 text-center border-t border-neutral-200/50 dark:border-neutral-800/50">
           <div className="flex items-center justify-center gap-2">
             <span className="text-[10px] text-neutral-400 dark:text-neutral-600">
-              ithbat v0.3
+              ithbat v0.4
             </span>
             <span className="text-neutral-300 dark:text-neutral-700">·</span>
             <a
