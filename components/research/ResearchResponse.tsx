@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useRef, useEffect, forwardRef, type ReactNode } from "react";
+import { useMemo, useState, useRef, useEffect, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 
@@ -147,13 +147,13 @@ function TermTooltip({ meaning, children }: { meaning: string; children: ReactNo
       </span>
       {show && (
         <span
-          className={`absolute left-1/2 -translate-x-1/2 z-50 px-2.5 py-1.5 rounded-full bg-neutral-800 dark:bg-neutral-200 text-[11px] sm:text-xs font-medium text-white dark:text-neutral-900 whitespace-nowrap shadow-lg pointer-events-none ${
+          className={`absolute z-50 px-3 py-1.5 rounded-xl bg-neutral-800 dark:bg-neutral-200 text-[11px] sm:text-xs font-medium text-white dark:text-neutral-900 shadow-lg pointer-events-none w-max max-w-[min(200px,calc(100vw-3rem))] text-center left-0 sm:left-1/2 sm:-translate-x-1/2 ${
             position === "top" ? "bottom-full mb-2" : "top-full mt-2"
           }`}
         >
           {meaning}
           <span
-            className={`absolute left-1/2 -translate-x-1/2 w-2 h-2 bg-neutral-800 dark:bg-neutral-200 rotate-45 ${
+            className={`absolute left-4 sm:left-1/2 sm:-translate-x-1/2 w-2 h-2 bg-neutral-800 dark:bg-neutral-200 rotate-45 ${
               position === "top" ? "top-full -mt-1" : "bottom-full -mb-1"
             }`}
           />
@@ -163,11 +163,11 @@ function TermTooltip({ meaning, children }: { meaning: string; children: ReactNo
   );
 }
 
-export const ResearchResponse = forwardRef<HTMLDivElement, ResearchResponseProps>(function ResearchResponse({
+export function ResearchResponse({
   content,
   isStreaming,
   apiSources,
-}, ref) {
+}: ResearchResponseProps) {
   const { processedContent, sources } = useMemo(() => {
     if (!content) return { processedContent: "", sources: [] };
 
@@ -196,7 +196,7 @@ export const ResearchResponse = forwardRef<HTMLDivElement, ResearchResponseProps
   if (!content) return null;
 
   return (
-    <div ref={ref}>
+    <div>
       {/* Content */}
       <article
         className="prose prose-base dark:prose-invert max-w-none
@@ -209,7 +209,7 @@ export const ResearchResponse = forwardRef<HTMLDivElement, ResearchResponseProps
           prose-ul:text-[14px] sm:prose-ul:text-base prose-ul:text-neutral-700 dark:prose-ul:text-neutral-300 prose-ul:my-3
           prose-ol:text-[14px] sm:prose-ol:text-base prose-ol:text-neutral-700 dark:prose-ol:text-neutral-300 prose-ol:my-3
           prose-li:my-1.5 prose-li:leading-relaxed
-          prose-blockquote:border-l-0 prose-blockquote:bg-transparent prose-blockquote:p-0 prose-blockquote:not-italic prose-blockquote:my-0
+          prose-blockquote:border-l-0 prose-blockquote:bg-transparent prose-blockquote:p-0 prose-blockquote:not-italic prose-blockquote:my-7
           prose-code:text-accent-600 dark:prose-code:text-accent-400 prose-code:bg-accent-50 dark:prose-code:bg-accent-900/30 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none"
       >
         <ReactMarkdown
@@ -315,43 +315,149 @@ export const ResearchResponse = forwardRef<HTMLDivElement, ResearchResponseProps
               // Separate attribution line (starts with "—") from quote content
               const childArray = Array.isArray(children) ? children : [children];
               const quoteChildren: ReactNode[] = [];
-              const attrChildren: ReactNode[] = [];
+              let attributionText = "";
+              let attributionLink: { href: string; title: string } | null = null;
 
               for (const child of childArray) {
                 const text = extractTextContent(child);
                 if (text.trim().startsWith("—") || text.trim().startsWith("—")) {
-                  attrChildren.push(child);
+                  // Extract the attribution text and link
+                  attributionText = text
+                    .replace(/^[—–-]\s*/, "") // Remove leading dash
+                    .replace(/\s*\|\s*$/, "") // Remove trailing pipe
+                    .trim();
+
+                  // Find link in this child - look for SourceInfoBadge props or href
+                  const findLink = (node: ReactNode): { href: string; title: string } | null => {
+                    if (!node) return null;
+                    if (typeof node === "object" && "props" in node) {
+                      const props = (node as { props?: Record<string, unknown> }).props;
+                      if (props?.href && typeof props.href === "string") {
+                        return {
+                          href: props.href,
+                          title: typeof props.title === "string" ? props.title :
+                                 typeof props.children === "string" ? props.children : "Source"
+                        };
+                      }
+                      if (props?.children) {
+                        if (Array.isArray(props.children)) {
+                          for (const c of props.children) {
+                            const found = findLink(c);
+                            if (found) return found;
+                          }
+                        } else {
+                          return findLink(props.children as ReactNode);
+                        }
+                      }
+                    }
+                    if (Array.isArray(node)) {
+                      for (const c of node) {
+                        const found = findLink(c);
+                        if (found) return found;
+                      }
+                    }
+                    return null;
+                  };
+                  attributionLink = findLink(child);
+
+                  // Clean up attribution text - remove link title if it's duplicated
+                  if (attributionLink) {
+                    attributionText = attributionText
+                      .split("|")[0] // Take only the part before the pipe
+                      .trim();
+                  }
                 } else {
                   quoteChildren.push(child);
                 }
               }
 
+              const hasAttr = attributionText || attributionLink;
+
               return (
-                <blockquote className="relative my-5 ml-0 pl-4 sm:pl-5 pr-4 py-4 border-l-[3px] border-neutral-300 dark:border-neutral-700 bg-neutral-50/80 dark:bg-neutral-800/30 rounded-r-2xl not-italic [&_.quran-arabic]:block [&_.quran-arabic]:text-right [&_.quran-arabic]:text-lg [&_.quran-arabic]:leading-loose [&_.quran-arabic]:text-neutral-800 [&_.quran-arabic]:dark:text-neutral-100 [&_.quran-arabic]:mb-2 [&_.quran-arabic]:font-normal">
-                  <div className="text-[14px] sm:text-[15px] text-neutral-700 dark:text-neutral-200 leading-relaxed italic">
-                    {quoteChildren}
-                  </div>
-                  {attrChildren.length > 0 && (
-                    <div className="flex justify-end mt-3 pt-2 border-t border-neutral-200/60 dark:border-neutral-700/40 not-italic">
-                      <span className="text-xs text-neutral-500 dark:text-neutral-400 [&_a]:!text-xs [&_a]:inline-flex [&_a]:items-center [&_a]:gap-1 [&_img]:w-3.5 [&_img]:h-3.5">
-                        {attrChildren}
-                      </span>
+                <div className="relative my-8 pl-4 sm:pl-6">
+                  {/* Decorative quote mark */}
+                  <span className="absolute -left-1 sm:left-0 -top-2 text-4xl sm:text-5xl font-serif text-accent-400/40 dark:text-accent-500/30 select-none leading-none">"</span>
+
+                  <blockquote className="relative not-italic [&_.quran-arabic]:block [&_.quran-arabic]:text-right [&_.quran-arabic]:text-lg [&_.quran-arabic]:leading-loose [&_.quran-arabic]:text-neutral-800 [&_.quran-arabic]:dark:text-neutral-100 [&_.quran-arabic]:mb-2 [&_.quran-arabic]:font-normal">
+                    <div className="text-[15px] sm:text-base text-neutral-600 dark:text-neutral-300 leading-relaxed">
+                      {quoteChildren}
                     </div>
-                  )}
-                </blockquote>
+                    {/* Source attribution */}
+                    {hasAttr && (
+                      <div className="flex items-center flex-wrap gap-x-2 gap-y-1 mt-3 text-[12px] text-neutral-400 dark:text-neutral-500 not-italic">
+                        <span className="text-neutral-500 dark:text-neutral-400">
+                          — {attributionText}
+                        </span>
+                        {attributionLink && (
+                          <SourceInfoBadge
+                            href={attributionLink.href}
+                            title={attributionLink.title}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </blockquote>
+                </div>
               );
             },
             // Paragraph renderer — detects attribution lines and renders them compact
             p: ({ children }) => {
               const textContent = extractTextContent(children);
 
-              // Attribution lines (— Source | link) — render as compact right-aligned source
+              // Attribution lines (— Source | link) — render as clean source line
               if (textContent.trim().startsWith("—") || textContent.trim().startsWith("—")) {
+                // Find link in children
+                const findLink = (node: ReactNode): { href: string; title: string } | null => {
+                  if (!node) return null;
+                  if (typeof node === "object" && "props" in node) {
+                    const props = (node as { props?: Record<string, unknown> }).props;
+                    if (props?.href && typeof props.href === "string") {
+                      return {
+                        href: props.href,
+                        title: typeof props.title === "string" ? props.title :
+                               typeof props.children === "string" ? props.children : "Source"
+                      };
+                    }
+                    if (props?.children) {
+                      if (Array.isArray(props.children)) {
+                        for (const c of props.children) {
+                          const found = findLink(c);
+                          if (found) return found;
+                        }
+                      } else {
+                        return findLink(props.children as ReactNode);
+                      }
+                    }
+                  }
+                  if (Array.isArray(node)) {
+                    for (const c of node) {
+                      const found = findLink(c);
+                      if (found) return found;
+                    }
+                  }
+                  return null;
+                };
+
+                const attributionLink = findLink(children);
+                const attributionText = textContent
+                  .replace(/^[—–-]\s*/, "")
+                  .split("|")[0]
+                  .trim();
+
                 return (
-                  <div className="flex justify-end -mt-2 mb-4">
-                    <span className="text-xs text-neutral-500 dark:text-neutral-400 [&_a]:!text-xs [&_a]:inline-flex [&_a]:items-center [&_a]:gap-1 [&_img]:w-3.5 [&_img]:h-3.5">
-                      {children}
+                  <div className="flex items-center gap-1.5 -mt-2 mb-6 ml-3 text-[12px] text-neutral-500 dark:text-neutral-400">
+                    <span className="font-medium text-neutral-600 dark:text-neutral-300">
+                      {attributionText}
                     </span>
+                    {attributionLink && (
+                      <>
+                        <span className="text-neutral-300 dark:text-neutral-600">|</span>
+                        <SourceInfoBadge
+                          href={attributionLink.href}
+                          title={attributionLink.title}
+                        />
+                      </>
+                    )}
                   </div>
                 );
               }
@@ -375,4 +481,4 @@ export const ResearchResponse = forwardRef<HTMLDivElement, ResearchResponseProps
       )}
     </div>
   );
-});
+}

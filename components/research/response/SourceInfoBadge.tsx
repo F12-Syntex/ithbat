@@ -73,6 +73,7 @@ export function SourceInfoBadge({ href, title }: SourceInfoBadgeProps) {
   const [verseText, setVerseText] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [position, setPosition] = useState<"top" | "bottom">("top");
+  const [hAlign, setHAlign] = useState<"center" | "left" | "right">("center");
   const badgeRef = useRef<HTMLSpanElement>(null);
 
   const domain = getDomain(href);
@@ -112,6 +113,17 @@ export function SourceInfoBadge({ href, title }: SourceInfoBadgeProps) {
     if (showTooltip && badgeRef.current) {
       const rect = badgeRef.current.getBoundingClientRect();
       setPosition(rect.top < 80 ? "bottom" : "top");
+
+      // Horizontal: if badge is too close to left/right edge, align tooltip accordingly
+      const tooltipW = 256; // w-64 = 16rem = 256px
+      const centerX = rect.left + rect.width / 2;
+      if (centerX - tooltipW / 2 < 12) {
+        setHAlign("left");
+      } else if (centerX + tooltipW / 2 > window.innerWidth - 12) {
+        setHAlign("right");
+      } else {
+        setHAlign("center");
+      }
     }
   }, [showTooltip]);
 
@@ -140,9 +152,13 @@ export function SourceInfoBadge({ href, title }: SourceInfoBadgeProps) {
       {showTooltip && (
         <span
           className={`hidden sm:block absolute z-50 pointer-events-none w-64 ${
-            position === "top"
-              ? "bottom-full left-1/2 -translate-x-1/2 mb-1.5"
-              : "top-full left-1/2 -translate-x-1/2 mt-1.5"
+            position === "top" ? "bottom-full mb-1.5" : "top-full mt-1.5"
+          } ${
+            hAlign === "left"
+              ? "left-0"
+              : hAlign === "right"
+                ? "right-0"
+                : "left-1/2 -translate-x-1/2"
           }`}
         >
           <span className="block px-3 py-2.5 rounded-3xl shadow-lg border bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100">
@@ -182,7 +198,13 @@ export function SourceInfoBadge({ href, title }: SourceInfoBadgeProps) {
           </span>
           {/* Arrow */}
           <span
-            className={`absolute left-1/2 -translate-x-1/2 ${
+            className={`absolute ${
+              hAlign === "left"
+                ? "left-4"
+                : hAlign === "right"
+                  ? "right-4"
+                  : "left-1/2 -translate-x-1/2"
+            } ${
               position === "top" ? "top-full -mt-px" : "bottom-full -mb-px"
             }`}
           >

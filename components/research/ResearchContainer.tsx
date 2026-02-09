@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -99,13 +99,12 @@ export function ResearchContainer() {
   const { theme, setTheme, themes } = useTheme();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [suggestedQuery, setSuggestedQuery] = useState<string | undefined>();
-  const responseRef = useRef<HTMLDivElement>(null);
 
   const handleExportPdf = useCallback(async () => {
-    if (!responseRef.current || !state.query) return;
+    if (!state.response || !state.query) return;
     const { exportResponseAsPdf } = await import("@/lib/export-pdf");
-    await exportResponseAsPdf(responseRef.current, state.query);
-  }, [state.query]);
+    await exportResponseAsPdf(state.response, state.query);
+  }, [state.response, state.query]);
 
   const startResearch = useCallback(
     (query: string) => baseStartResearch(query),
@@ -490,7 +489,6 @@ export function ResearchContainer() {
                       {(state.response || isStreaming) && (
                         <div>
                           <ResearchResponse
-                            ref={responseRef}
                             apiSources={state.sources}
                             content={state.response}
                             isStreaming={isStreaming}
