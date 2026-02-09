@@ -30,38 +30,67 @@ export interface TrustedDomain {
   domain: string;
   name: string;
   types: SourceType[];
-  trusted: boolean;
 }
 
+/**
+ * Single source of truth for all trusted Islamic domains.
+ * Used by: ai-config.ts (model config), HowItWorks.tsx (UI display)
+ */
 export const TRUSTED_DOMAINS: TrustedDomain[] = [
   {
     domain: "quran.com",
     name: "Quran.com",
     types: ["quran", "tafsir"],
-    trusted: true,
   },
   {
     domain: "sunnah.com",
     name: "Sunnah.com",
     types: ["hadith"],
-    trusted: true,
   },
   {
     domain: "islamqa.info",
     name: "IslamQA",
     types: ["fatwa", "scholarly_opinion", "fiqh"],
-    trusted: true,
+  },
+  {
+    domain: "islamqa.org",
+    name: "IslamQA (Hanafi)",
+    types: ["fatwa", "scholarly_opinion"],
   },
   {
     domain: "islamweb.net",
     name: "IslamWeb",
     types: ["fatwa", "scholarly_opinion"],
-    trusted: true,
   },
   {
     domain: "seekersguidance.org",
-    name: "Seeker's Guidance",
+    name: "SeekersGuidance",
     types: ["scholarly_opinion", "fiqh"],
-    trusted: true,
   },
 ];
+
+/** Domain strings for AI config */
+export const TRUSTED_DOMAIN_LIST: string[] = TRUSTED_DOMAINS.map((d) => d.domain);
+
+/** Check if a URL belongs to a trusted domain */
+export function isTrustedUrl(url: string): boolean {
+  return TRUSTED_DOMAINS.some((d) => url.includes(d.domain));
+}
+
+/** UI-friendly label for a source type */
+const TYPE_LABELS: Record<string, string> = {
+  hadith: "Hadith",
+  quran: "Quran",
+  tafsir: "Tafsir",
+  fatwa: "Fatawa",
+  scholarly_opinion: "Scholarly",
+  fiqh: "Fiqh",
+};
+
+/** Get trusted domains formatted for UI display */
+export function getTrustedDomainsForUI(): { name: string; type: string }[] {
+  return TRUSTED_DOMAINS.map((d) => ({
+    name: d.name,
+    type: TYPE_LABELS[d.types[0]] || d.types[0],
+  }));
+}

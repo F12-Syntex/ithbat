@@ -1,3 +1,5 @@
+import { TRUSTED_DOMAIN_LIST } from "@/types/sources";
+
 export type ModelTier = "QUICK" | "SEARCH";
 
 export interface AIModel {
@@ -39,14 +41,7 @@ export const aiConfig: AIConfig = {
     },
   },
   defaultTier: "SEARCH",
-  trustedDomains: [
-    "quran.com",
-    "sunnah.com",
-    "islamqa.info",
-    "islamweb.net",
-    "seekersguidance.org",
-    "islamqa.org",
-  ],
+  trustedDomains: TRUSTED_DOMAIN_LIST,
 };
 
 export function getModel(tier: ModelTier): AIModel {

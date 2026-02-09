@@ -12,7 +12,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { getTrustedSitesForUI } from "@/lib/trusted-sites";
+import { getTrustedDomainsForUI } from "@/types/sources";
 
 const steps: { icon: LucideIcon; title: string; description: string }[] = [
   {
@@ -41,8 +41,7 @@ const steps: { icon: LucideIcon; title: string; description: string }[] = [
   },
 ];
 
-// Load trusted sources dynamically from traverser config
-const trustedSources = getTrustedSitesForUI();
+const trustedSources = getTrustedDomainsForUI();
 
 export function HowItWorks() {
   const [isOpen, setIsOpen] = useState(false);
