@@ -4,6 +4,7 @@ import type { ResearchStep } from "@/types/research";
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import ReactMarkdown from "react-markdown";
 import {
   Lightbulb,
   Search,
@@ -57,7 +58,9 @@ function StepRow({ step, index }: { step: ResearchStep; index: number }) {
   const isActive = step.status === "in_progress";
   const isCompleted = step.status === "completed";
   const isError = step.status === "error";
-  const hasContent = step.content && step.content.trim().length > 0;
+  // Only show expandable content if there's meaningful text (not just "Searching the web...")
+  const trimmedContent = step.content?.trim() || "";
+  const hasContent = trimmedContent.length > 0 && !trimmedContent.startsWith("Searching the web") && !trimmedContent.match(/^Found \d+ source links?\s*$/);
 
   const Icon = stepIcons[step.type] || Lightbulb;
 
@@ -173,10 +176,10 @@ function StepRow({ step, index }: { step: ResearchStep; index: number }) {
             initial={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="mx-3 sm:mx-4 mt-1 mb-1.5 px-3 py-2 rounded-lg bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800">
-              <p className="text-[11px] sm:text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed whitespace-pre-wrap">
-                {step.content}
-              </p>
+            <div className="mt-1.5 sm:mt-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm dark:shadow-none">
+              <div className="text-[11px] sm:text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed prose prose-xs dark:prose-invert max-w-none prose-p:my-1 prose-p:text-[11px] sm:prose-p:text-xs prose-p:text-neutral-600 dark:prose-p:text-neutral-400 prose-p:leading-relaxed prose-headings:text-[11px] sm:prose-headings:text-xs prose-headings:font-semibold prose-headings:text-neutral-700 dark:prose-headings:text-neutral-300 prose-headings:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-strong:text-neutral-700 dark:prose-strong:text-neutral-300">
+                <ReactMarkdown>{trimmedContent}</ReactMarkdown>
+              </div>
             </div>
           </motion.div>
         )}

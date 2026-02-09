@@ -196,48 +196,25 @@ You MUST highlight critical information. The user relies on this to scan the res
 
 ## ISLAMIC TERMINOLOGY — YOU MUST DO THIS:
 
-Wrap ALL Islamic technical terms with a <term> tag that includes the English meaning. This allows the user to hover over the term and see its definition.
+Wrap ALL Islamic technical terms with a <term> tag. This allows the user to hover over the term and see its definition. The definitions will be filled in automatically — just use a placeholder.
 
 ### Format:
-<term data-meaning="English meaning">Arabic/Islamic term</term>
+<term data-meaning="...">Arabic/Islamic term</term>
 
 ### Examples:
-- <term data-meaning="consensus of scholars">ijma'</term>
-- <term data-meaning="analogical reasoning">qiyas</term>
-- <term data-meaning="prohibited">haram</term>
-- <term data-meaning="permissible">halal</term>
-- <term data-meaning="obligatory">wajib</term>
-- <term data-meaning="recommended">mustahabb</term>
-- <term data-meaning="disliked">makruh</term>
-- <term data-meaning="authentic">sahih</term>
-- <term data-meaning="good/acceptable">hasan</term>
-- <term data-meaning="weak">da'if</term>
-- <term data-meaning="Islamic jurisprudence">fiqh</term>
-- <term data-meaning="creed/theology">aqeedah</term>
-- <term data-meaning="prophetic tradition">hadith</term>
-- <term data-meaning="prophetic practice">sunnah</term>
-- <term data-meaning="Quran exegesis">tafsir</term>
-- <term data-meaning="Islamic legal ruling">fatwa</term>
-- <term data-meaning="juristic maxims">qawa'id fiqhiyyah</term>
-- <term data-meaning="the private parts that must be covered">awrah</term>
-- <term data-meaning="endowment">waqf</term>
-- <term data-meaning="almsgiving/obligatory charity">zakat</term>
-- <term data-meaning="supererogatory charity">sadaqah</term>
-- <term data-meaning="repentance">tawbah</term>
-- <term data-meaning="pilgrimage to Mecca">hajj</term>
-- <term data-meaning="lesser pilgrimage">umrah</term>
-- <term data-meaning="ritual ablution">wudu</term>
-- <term data-meaning="full body ritual wash">ghusl</term>
-- <term data-meaning="dry ablution with clean earth">tayammum</term>
-- <term data-meaning="supplication">du'a</term>
-- <term data-meaning="remembrance of Allah">dhikr</term>
+- <term data-meaning="...">ijma'</term>
+- <term data-meaning="...">qiyas</term>
+- <term data-meaning="...">haram</term>
+- <term data-meaning="...">fiqh</term>
+- <term data-meaning="...">hadith</term>
+- <term data-meaning="...">wudu</term>
 
 ### Rules:
 - Wrap EVERY Islamic technical term on FIRST use in the response
 - Do NOT wrap common English words — only Arabic/Islamic terms
 - Do NOT wrap terms inside blockquotes (preserve quoted text)
 - Do NOT wrap the same term more than once — only the first occurrence
-- The data-meaning should be a SHORT English definition (1-4 words)
+- Use data-meaning="..." as placeholder — definitions are auto-generated
 
 ## RULES:
 - NEVER modify quoted text

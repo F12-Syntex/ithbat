@@ -236,11 +236,11 @@ export function ResearchResponse({
                 </a>
               );
             },
-            // Render <u> tags as underlined text
+            // Render <u> tags as highlighted important text
             u: ({ children }) => (
-              <span className="underline decoration-accent-500/50 underline-offset-2">
+              <mark className="bg-amber-100/80 dark:bg-amber-900/30 text-inherit px-0.5 rounded-sm decoration-0 font-medium">
                 {children}
-              </span>
+              </mark>
             ),
             // Render <term> tags as hoverable Islamic terminology tooltips
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -306,9 +306,10 @@ export function ResearchResponse({
               </h2>
             ),
             blockquote: ({ children }) => (
-              <blockquote className="relative my-5 pl-4 sm:pl-5 pr-3 py-3 border-l-2 border-accent-400/60 dark:border-accent-500/40 bg-neutral-50/80 dark:bg-neutral-800/30 rounded-r-lg text-sm sm:text-[15px] text-neutral-700 dark:text-neutral-200 not-italic leading-relaxed [&_.quran-arabic]:block [&_.quran-arabic]:text-right [&_.quran-arabic]:text-lg [&_.quran-arabic]:leading-loose [&_.quran-arabic]:text-neutral-800 [&_.quran-arabic]:dark:text-neutral-100 [&_.quran-arabic]:mb-2 [&_.quran-arabic]:font-normal">
-                <span className="absolute -left-0.5 -top-2 text-2xl leading-none text-accent-300 dark:text-accent-700 select-none">&ldquo;</span>
-                {children}
+              <blockquote className="relative my-4 ml-0 pl-4 pr-4 py-3.5 border-l-[3px] border-accent-500 dark:border-accent-400 bg-accent-50/50 dark:bg-accent-950/20 rounded-r-xl not-italic [&_.quran-arabic]:block [&_.quran-arabic]:text-right [&_.quran-arabic]:text-lg [&_.quran-arabic]:leading-loose [&_.quran-arabic]:text-neutral-800 [&_.quran-arabic]:dark:text-neutral-100 [&_.quran-arabic]:mb-2 [&_.quran-arabic]:font-normal">
+                <div className="text-sm sm:text-[15px] text-neutral-700 dark:text-neutral-200 leading-relaxed italic">
+                  {children}
+                </div>
               </blockquote>
             ),
             // Paragraph with verify button for evidence

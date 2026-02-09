@@ -318,14 +318,14 @@ export function ResearchContainer() {
                   onSuggestedQueryApplied={handleSuggestedQueryApplied}
                 />
               </div>
-              {/* Mobile settings button - matches search input (px-4 py-3 with h-8 content) */}
+              {/* Mobile settings button */}
               <button
                 aria-label="Settings"
-                className="sm:hidden flex-shrink-0 px-4 py-3 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
+                className="sm:hidden flex-shrink-0 p-2.5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
                 onClick={() => setSettingsOpen(true)}
               >
                 <Settings
-                  className="w-8 h-8 text-neutral-500 dark:text-neutral-400"
+                  className="w-5 h-5 text-neutral-500 dark:text-neutral-400"
                   strokeWidth={1.5}
                 />
               </button>

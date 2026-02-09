@@ -83,7 +83,7 @@ export function SearchInput({
   return (
     <>
       <form onSubmit={handleSubmit}>
-        <div className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200/80 dark:border-neutral-800 shadow-sm dark:shadow-none focus-within:border-neutral-300 dark:focus-within:border-neutral-700 focus-within:shadow-md dark:focus-within:shadow-none transition-all">
+        <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200/80 dark:border-neutral-800 shadow-sm dark:shadow-none focus-within:border-neutral-300 dark:focus-within:border-neutral-700 focus-within:shadow-md dark:focus-within:shadow-none transition-all">
           <input
             className="flex-1 bg-transparent text-base sm:text-sm text-neutral-800 dark:text-neutral-100 placeholder:text-neutral-400 outline-none border-none focus:ring-0"
             placeholder={
@@ -97,17 +97,17 @@ export function SearchInput({
           {isLoading ? (
             // Stop button when loading
             <button
-              className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-colors bg-red-500 hover:bg-red-600 text-white"
+              className="flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-md sm:rounded-lg flex items-center justify-center transition-colors bg-red-500 hover:bg-red-600 text-white"
               title="Stop research"
               type="button"
               onClick={handleStopClick}
             >
-              <Square className="w-3 h-3" fill="currentColor" />
+              <Square className="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="currentColor" />
             </button>
           ) : (
             // Submit button when not loading
             <button
-              className={`flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+              className={`flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-md sm:rounded-lg flex items-center justify-center transition-colors ${
                 query.trim()
                   ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900"
                   : "bg-neutral-100 dark:bg-neutral-800 text-neutral-400"
@@ -115,7 +115,7 @@ export function SearchInput({
               disabled={!query.trim()}
               type="submit"
             >
-              <ArrowRight className="w-3.5 h-3.5" strokeWidth={2} />
+              <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" strokeWidth={2} />
             </button>
           )}
         </div>

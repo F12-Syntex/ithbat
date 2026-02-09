@@ -103,6 +103,74 @@ async function enrichQuranVerses(text: string): Promise<string> {
 }
 import { logConversation } from "@/lib/conversation-logger";
 
+function extractTermsFromResponse(text: string): string[] {
+  const termPattern = /<term\s+data-meaning="[^"]*">([^<]+)<\/term>/g;
+  const terms: string[] = [];
+  const seen = new Set<string>();
+  let match;
+  while ((match = termPattern.exec(text)) !== null) {
+    const term = match[1].trim();
+    if (!seen.has(term.toLowerCase())) {
+      seen.add(term.toLowerCase());
+      terms.push(term);
+    }
+  }
+  return terms;
+}
+
+async function enrichTermDefinitions(
+  text: string,
+  client: ReturnType<typeof getOpenRouterClient>,
+): Promise<string> {
+  const terms = extractTermsFromResponse(text);
+  if (terms.length === 0) return text;
+
+  const prompt = `You are an Islamic studies expert. Define each of these Islamic terms in 2-6 words. Be precise and accurate. Return ONLY a JSON object mapping each term to its short English definition.
+
+Terms: ${terms.join(", ")}
+
+Example output format:
+{"ijma'": "scholarly consensus", "qiyas": "analogical reasoning"}
+
+Return ONLY valid JSON, no other text.`;
+
+  let definitionsText = "";
+  for await (const chunk of client.streamChat(
+    [{ role: "user", content: prompt }],
+    "QUICK",
+  )) {
+    definitionsText += chunk;
+  }
+
+  // Parse the JSON response
+  try {
+    // Extract JSON from the response (handle markdown code blocks)
+    const jsonMatch = definitionsText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return text;
+
+    const definitions: Record<string, string> = JSON.parse(jsonMatch[0]);
+    let enriched = text;
+
+    // Replace data-meaning attributes with accurate definitions
+    for (const [term, meaning] of Object.entries(definitions)) {
+      if (typeof meaning !== "string") continue;
+      // Match the <term> tag containing this term (case-insensitive)
+      const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const pattern = new RegExp(
+        `<term\\s+data-meaning="[^"]*">(${escapedTerm})<\\/term>`,
+        "i",
+      );
+      const replacement = `<term data-meaning="${meaning.replace(/"/g, "&quot;")}">${term}</term>`;
+      enriched = enriched.replace(pattern, replacement);
+    }
+
+    return enriched;
+  } catch {
+    // If parsing fails, return original text (terms keep their original meanings)
+    return text;
+  }
+}
+
 interface ResearchStepEvent {
   type:
     | "session_init"
@@ -310,8 +378,11 @@ export async function POST(request: NextRequest) {
           formattedResponse += chunk;
         }
 
-        // Enrich Quran references with Arabic text from alquran.cloud
+        // Enrich Quran references with Arabic text
         formattedResponse = await enrichQuranVerses(formattedResponse);
+
+        // Enrich Islamic term definitions with accurate LLM-generated meanings
+        formattedResponse = await enrichTermDefinitions(formattedResponse, client);
 
         send({ type: "step_complete", step: "formatting" });
 
