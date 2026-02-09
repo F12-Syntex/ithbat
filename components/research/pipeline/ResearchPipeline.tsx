@@ -3,7 +3,7 @@
 import type { ResearchStep } from "@/types/research";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Lightbulb,
   Search,
@@ -14,6 +14,7 @@ import {
   Loader2,
   FlaskConical,
   Sparkles,
+  ChevronDown,
   type LucideIcon,
 } from "lucide-react";
 
@@ -48,13 +49,15 @@ export function ResearchPipeline({
   );
 }
 
-// Unified step row — responsive for mobile and desktop
+// Unified step row — responsive, clickable for details
 function StepRow({ step, index }: { step: ResearchStep; index: number }) {
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [expanded, setExpanded] = useState(false);
 
   const isActive = step.status === "in_progress";
   const isCompleted = step.status === "completed";
   const isError = step.status === "error";
+  const hasContent = step.content && step.content.trim().length > 0;
 
   const Icon = stepIcons[step.type] || Lightbulb;
 
@@ -81,67 +84,103 @@ function StepRow({ step, index }: { step: ResearchStep; index: number }) {
     return `${minutes}:${(seconds % 60).toString().padStart(2, "0")}`;
   };
 
+  const canExpand = hasContent && (isCompleted || isError);
+
   return (
-    <motion.div
-      animate={{ opacity: 1, y: 0 }}
-      className={`
-        flex items-center gap-2.5 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full w-full transition-colors
-        ${
-          isError
-            ? "bg-red-50 dark:bg-red-900/15 border border-red-200 dark:border-red-800"
-            : "bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm dark:shadow-none"
-        }
-      `}
-      initial={{ opacity: 0, y: 8 }}
-      transition={{ delay: index * 0.06, duration: 0.25 }}
-    >
-      {/* Icon */}
-      <div
-        className={`relative flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center ${
-          isError
-            ? "bg-red-100 dark:bg-red-800/30 text-red-500"
-            : isCompleted
-              ? "bg-neutral-100 dark:bg-neutral-800 text-accent-600 dark:text-accent-400"
-              : "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500"
-        }`}
+    <div>
+      <motion.div
+        animate={{ opacity: 1, y: 0 }}
+        className={`
+          flex items-center gap-2.5 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full w-full transition-colors
+          ${canExpand ? "cursor-pointer" : ""}
+          ${
+            isError
+              ? "bg-red-50 dark:bg-red-900/15 border border-red-200 dark:border-red-800"
+              : "bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm dark:shadow-none"
+          }
+          ${canExpand && !expanded ? "hover:border-neutral-300 dark:hover:border-neutral-700" : ""}
+        `}
+        initial={{ opacity: 0, y: 8 }}
+        transition={{ delay: index * 0.06, duration: 0.25 }}
+        onClick={() => canExpand && setExpanded(!expanded)}
       >
-        {isError ? (
-          <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2} />
-        ) : isCompleted ? (
-          <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2.5} />
-        ) : isActive ? (
-          <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-neutral-500 dark:text-neutral-400" strokeWidth={2} />
-        ) : (
-          <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
-        )}
-      </div>
+        {/* Icon */}
+        <div
+          className={`relative flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center ${
+            isError
+              ? "bg-red-100 dark:bg-red-800/30 text-red-500"
+              : isCompleted
+                ? "bg-neutral-100 dark:bg-neutral-800 text-accent-600 dark:text-accent-400"
+                : "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500"
+          }`}
+        >
+          {isError ? (
+            <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2} />
+          ) : isCompleted ? (
+            <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2.5} />
+          ) : isActive ? (
+            <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-neutral-500 dark:text-neutral-400" strokeWidth={2} />
+          ) : (
+            <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
+          )}
+        </div>
 
-      {/* Title */}
-      <span
-        className={`flex-1 text-xs sm:text-sm font-medium truncate ${
-          isCompleted || isActive
-            ? "text-neutral-800 dark:text-neutral-100"
-            : "text-neutral-400 dark:text-neutral-500"
-        }`}
-      >
-        {step.title}
-      </span>
-
-      {/* Time badge */}
-      {(isActive || isCompleted) && step.startTime && (
-        <span className="text-[11px] sm:text-xs font-mono tabular-nums flex-shrink-0 text-accent-500 dark:text-accent-400">
-          {formatTime(elapsedTime)}
+        {/* Title */}
+        <span
+          className={`flex-1 text-xs sm:text-sm font-medium truncate ${
+            isCompleted || isActive
+              ? "text-neutral-800 dark:text-neutral-100"
+              : "text-neutral-400 dark:text-neutral-500"
+          }`}
+        >
+          {step.title}
         </span>
-      )}
 
-      {/* Active pulse indicator */}
-      {isActive && (
-        <motion.span
-          animate={{ opacity: [1, 0.3, 1] }}
-          className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-neutral-400 dark:bg-neutral-500 flex-shrink-0"
-          transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
-        />
-      )}
-    </motion.div>
+        {/* Time badge */}
+        {(isActive || isCompleted) && step.startTime && (
+          <span className="text-[11px] sm:text-xs font-mono tabular-nums flex-shrink-0 text-accent-500 dark:text-accent-400">
+            {formatTime(elapsedTime)}
+          </span>
+        )}
+
+        {/* Expand chevron for completed steps with content */}
+        {canExpand && (
+          <motion.div
+            animate={{ rotate: expanded ? 180 : 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-neutral-400 dark:text-neutral-500 flex-shrink-0" strokeWidth={2} />
+          </motion.div>
+        )}
+
+        {/* Active pulse indicator */}
+        {isActive && (
+          <motion.span
+            animate={{ opacity: [1, 0.3, 1] }}
+            className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-neutral-400 dark:bg-neutral-500 flex-shrink-0"
+            transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+          />
+        )}
+      </motion.div>
+
+      {/* Expandable content */}
+      <AnimatePresence initial={false}>
+        {expanded && hasContent && (
+          <motion.div
+            animate={{ height: "auto", opacity: 1 }}
+            className="overflow-hidden"
+            exit={{ height: 0, opacity: 0 }}
+            initial={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="mx-3 sm:mx-4 mt-1 mb-1.5 px-3 py-2 rounded-lg bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800">
+              <p className="text-[11px] sm:text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed whitespace-pre-wrap">
+                {step.content}
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

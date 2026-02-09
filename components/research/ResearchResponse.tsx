@@ -306,7 +306,8 @@ export function ResearchResponse({
               </h2>
             ),
             blockquote: ({ children }) => (
-              <blockquote className="my-4 border-l-3 border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 rounded-r-lg py-3 px-4 text-sm sm:text-[15px] text-neutral-700 dark:text-neutral-200 not-italic leading-relaxed [&_.quran-arabic]:block [&_.quran-arabic]:text-right [&_.quran-arabic]:text-lg [&_.quran-arabic]:leading-loose [&_.quran-arabic]:text-neutral-800 [&_.quran-arabic]:dark:text-neutral-100 [&_.quran-arabic]:mb-2 [&_.quran-arabic]:font-normal">
+              <blockquote className="relative my-5 pl-4 sm:pl-5 pr-3 py-3 border-l-2 border-accent-400/60 dark:border-accent-500/40 bg-neutral-50/80 dark:bg-neutral-800/30 rounded-r-lg text-sm sm:text-[15px] text-neutral-700 dark:text-neutral-200 not-italic leading-relaxed [&_.quran-arabic]:block [&_.quran-arabic]:text-right [&_.quran-arabic]:text-lg [&_.quran-arabic]:leading-loose [&_.quran-arabic]:text-neutral-800 [&_.quran-arabic]:dark:text-neutral-100 [&_.quran-arabic]:mb-2 [&_.quran-arabic]:font-normal">
+                <span className="absolute -left-0.5 -top-2 text-2xl leading-none text-accent-300 dark:text-accent-700 select-none">&ldquo;</span>
                 {children}
               </blockquote>
             ),

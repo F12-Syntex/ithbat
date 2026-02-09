@@ -97,17 +97,17 @@ export function SearchInput({
           {isLoading ? (
             // Stop button when loading
             <button
-              className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-colors bg-red-500 hover:bg-red-600 text-white"
+              className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-colors bg-red-500 hover:bg-red-600 text-white"
               title="Stop research"
               type="button"
               onClick={handleStopClick}
             >
-              <Square className="w-4 h-4" fill="currentColor" />
+              <Square className="w-3 h-3" fill="currentColor" />
             </button>
           ) : (
             // Submit button when not loading
             <button
-              className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+              className={`flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
                 query.trim()
                   ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900"
                   : "bg-neutral-100 dark:bg-neutral-800 text-neutral-400"
@@ -115,7 +115,7 @@ export function SearchInput({
               disabled={!query.trim()}
               type="submit"
             >
-              <ArrowRight className="w-4 h-4" strokeWidth={2} />
+              <ArrowRight className="w-3.5 h-3.5" strokeWidth={2} />
             </button>
           )}
         </div>

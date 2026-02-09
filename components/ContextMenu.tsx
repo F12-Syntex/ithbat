@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, type ReactNode } from "react";
+import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 type MenuItem =
@@ -27,11 +27,21 @@ interface ContextMenuProps {
 export function ContextMenu({ items, children }: ContextMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  // Track the last focused input before the context menu steals focus
+  const lastFocusedInput = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
 
-    // Calculate position, ensuring menu stays in viewport
+    // Capture the currently focused input before the menu opens
+    const active = document.activeElement;
+    if (
+      active instanceof HTMLInputElement ||
+      active instanceof HTMLTextAreaElement
+    ) {
+      lastFocusedInput.current = active;
+    }
+
     const x = Math.min(e.clientX, window.innerWidth - 200);
     const y = Math.min(e.clientY, window.innerHeight - 300);
 
@@ -59,6 +69,27 @@ export function ContextMenu({ items, children }: ContextMenuProps) {
       document.removeEventListener("keydown", handleEscape);
     };
   }, [isOpen]);
+
+  // Expose the last focused input ref via a data attribute on the container
+  // so paste handlers can find the right input
+  const handleItemClick = useCallback(
+    (item: MenuItem) => {
+      if (item.divider || item.disabled) return;
+
+      // Before running the click handler, restore focus to the last input
+      // so paste operations target the right element
+      if (lastFocusedInput.current) {
+        lastFocusedInput.current.focus();
+      }
+
+      // Small delay to let focus settle before the handler reads activeElement
+      setTimeout(() => {
+        item.onClick?.();
+        handleClose();
+      }, 10);
+    },
+    [handleClose],
+  );
 
   return (
     <>
@@ -90,10 +121,7 @@ export function ContextMenu({ items, children }: ContextMenuProps) {
                         : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                     }`}
                     disabled={item.disabled}
-                    onClick={() => {
-                      item.onClick?.();
-                      handleClose();
-                    }}
+                    onClick={() => handleItemClick(item)}
                   >
                     {item.icon && <span className="w-4 h-4">{item.icon}</span>}
                     {item.label}
