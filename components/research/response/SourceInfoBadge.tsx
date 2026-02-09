@@ -146,17 +146,11 @@ export function SourceInfoBadge({ href, title }: SourceInfoBadgeProps) {
                 }}
               />
               <span className="text-[11px] font-medium truncate">{title}</span>
-            </span>
-            <span className="flex items-center gap-1 mt-1">
-              <span className="text-[10px] opacity-50">{domain}</span>
-              <span className="text-[10px] opacity-30 mx-0.5">&middot;</span>
-              <span className="text-[10px] opacity-50">
-                {getSourceLabel(domain)}
-              </span>
+              <span className="text-[10px] opacity-40 flex-shrink-0">{getSourceLabel(domain)}</span>
             </span>
             {/* Quran verse translation */}
             {quranRef && (
-              <span className="block mt-1.5 pt-1.5 border-t border-neutral-200 dark:border-neutral-700">
+              <span className="block mt-1 pt-1 border-t border-neutral-200 dark:border-neutral-700">
                 {loading ? (
                   <span className="block text-[10px] opacity-40 italic">
                     Loading translation...
