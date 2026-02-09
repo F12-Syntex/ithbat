@@ -96,7 +96,7 @@ export function SourceCitationCard({
             initial={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="mt-2 flex flex-col gap-1">
+            <div className="mt-1 flex flex-col gap-1">
               {sources.map((source, index) => (
                 <motion.a
                   key={source.number}

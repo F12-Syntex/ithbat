@@ -12,11 +12,9 @@ import {
   Settings,
   RefreshCw,
   Lightbulb,
-  ChevronDown,
 } from "lucide-react";
 
 import { SearchInput } from "./SearchInput";
-import { ResearchStep } from "./ResearchStep";
 import { ResearchResponse } from "./ResearchResponse";
 import { FollowUpInput } from "./FollowUpInput";
 import { ResearchPipeline } from "./pipeline";
@@ -408,29 +406,13 @@ export function ResearchContainer() {
                         )}
                       </div>
 
-                      {/* Previous Progress (collapsed by default) */}
-                      <div className="bg-white dark:bg-neutral-900 rounded-lg sm:rounded-xl border border-neutral-200/80 dark:border-neutral-800 shadow-sm dark:shadow-none overflow-hidden mb-3 opacity-75">
-                        <details className="group">
-                          <summary className="px-3 sm:px-4 py-2 sm:py-2.5 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors flex items-center justify-between">
-                            <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                              Progress ({session.steps.length} steps)
-                            </span>
-                            <ChevronDown
-                              className="w-3 h-3 text-neutral-400 transition-transform group-open:rotate-180"
-                              strokeWidth={2}
-                            />
-                          </summary>
-                          <div className="divide-y divide-neutral-100 dark:divide-neutral-800 border-t border-neutral-100 dark:border-neutral-800">
-                            {session.steps.map((step, stepIndex) => (
-                              <ResearchStep
-                                key={step.id}
-                                defaultExpanded={false}
-                                index={stepIndex}
-                                step={step}
-                              />
-                            ))}
-                          </div>
-                        </details>
+                      {/* Previous Pipeline */}
+                      <div className="mb-3">
+                        <ResearchPipeline
+                          isCompact={false}
+                          showDetails={true}
+                          steps={session.steps}
+                        />
                       </div>
 
                       {/* Previous Response */}
