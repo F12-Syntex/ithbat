@@ -102,6 +102,188 @@ async function enrichQuranVerses(text: string): Promise<string> {
   return enriched;
 }
 import { logConversation } from "@/lib/conversation-logger";
+import { fetchHadith } from "@/lib/hadith-api";
+
+interface HadithRef {
+  collection: string;
+  number: number;
+  fullMatch: string;
+}
+
+const HADITH_COLLECTION_MAP: Record<string, string> = {
+  "bukhari": "bukhari",
+  "sahih al-bukhari": "bukhari",
+  "sahih bukhari": "bukhari",
+  "muslim": "muslim",
+  "sahih muslim": "muslim",
+  "abu dawud": "abudawud",
+  "sunan abu dawud": "abudawud",
+  "abu dawood": "abudawud",
+  "tirmidhi": "tirmidhi",
+  "jami at-tirmidhi": "tirmidhi",
+  "jami' at-tirmidhi": "tirmidhi",
+  "nasa'i": "nasai",
+  "nasai": "nasai",
+  "sunan an-nasa'i": "nasai",
+  "sunan an-nasai": "nasai",
+  "ibn majah": "ibnmajah",
+  "sunan ibn majah": "ibnmajah",
+  "malik": "malik",
+  "muwatta malik": "malik",
+  "nawawi": "nawawi",
+  "40 nawawi": "nawawi",
+  "qudsi": "qudsi",
+  "hadith qudsi": "qudsi",
+};
+
+const COLLECTION_DISPLAY_NAMES: Record<string, string> = {
+  bukhari: "Sahih al-Bukhari",
+  muslim: "Sahih Muslim",
+  abudawud: "Sunan Abu Dawud",
+  tirmidhi: "Jami at-Tirmidhi",
+  nasai: "Sunan an-Nasa'i",
+  ibnmajah: "Sunan Ibn Majah",
+  malik: "Muwatta Malik",
+  nawawi: "40 Nawawi",
+  qudsi: "Hadith Qudsi",
+};
+
+// sunnah.com URL slugs (some differ from API edition keys)
+const SUNNAH_SLUGS: Record<string, string> = {
+  bukhari: "bukhari",
+  muslim: "muslim",
+  abudawud: "abudawud",
+  tirmidhi: "tirmidhi",
+  nasai: "nasai",
+  ibnmajah: "ibnmajah",
+  malik: "malik",
+  nawawi: "nawawi40",
+  qudsi: "qudsi40",
+};
+
+function extractHadithRefsFromFormatted(text: string): HadithRef[] {
+  const refs: HadithRef[] = [];
+  const seen = new Set<string>();
+
+  // Build alternation from collection names (longest first to avoid partial matches)
+  const collectionNames = Object.keys(HADITH_COLLECTION_MAP)
+    .sort((a, b) => b.length - a.length)
+    .map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
+
+  // Match "Collection Name 1234" or "Collection Name #1234" or "Collection Name no. 1234"
+  const pattern = new RegExp(
+    `(${collectionNames})\\s+(?:#|no\\.?\\s*)?([\\d]+)`,
+    "gi",
+  );
+
+  let match;
+  while ((match = pattern.exec(text)) !== null) {
+    const collectionKey =
+      HADITH_COLLECTION_MAP[match[1].toLowerCase()];
+    const number = parseInt(match[2]);
+    if (!collectionKey || isNaN(number)) continue;
+
+    const key = `${collectionKey}:${number}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      refs.push({ collection: collectionKey, number, fullMatch: match[0] });
+    }
+  }
+
+  // Match sunnah.com URLs: sunnah.com/bukhari:1234 or sunnah.com/bukhari/1234
+  const sunnahPattern =
+    /sunnah\.com\/(bukhari|muslim|abudawud|tirmidhi|nasai|ibnmajah|malik|nawawi|qudsi)[:/](\d+)/gi;
+  while ((match = sunnahPattern.exec(text)) !== null) {
+    const collectionKey = match[1].toLowerCase();
+    const number = parseInt(match[2]);
+    const key = `${collectionKey}:${number}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      refs.push({ collection: collectionKey, number, fullMatch: match[0] });
+    }
+  }
+
+  return refs;
+}
+
+async function enrichHadithReferences(text: string): Promise<string> {
+  const refs = extractHadithRefsFromFormatted(text);
+  if (refs.length === 0) return text;
+
+  const fetches = refs.slice(0, 10).map(async (ref) => {
+    const hadith = await fetchHadith(ref.collection, ref.number);
+    return { ...ref, hadith };
+  });
+
+  const results = await Promise.all(fetches);
+  let enriched = text;
+
+  for (const { collection, number, fullMatch, hadith } of results) {
+    const sunnahSlug = SUNNAH_SLUGS[collection] || collection;
+    const sunnahUrl = `https://sunnah.com/${sunnahSlug}:${number}`;
+    const displayName = COLLECTION_DISPLAY_NAMES[collection] || collection;
+
+    // Make the reference text clickable (link to sunnah.com)
+    // Only if it's not already inside a markdown link
+    const escapedMatch = fullMatch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const alreadyLinked = new RegExp(`\\[${escapedMatch}\\]\\(`).test(enriched);
+    if (!alreadyLinked) {
+      enriched = enriched.replace(fullMatch, `[${fullMatch}](${sunnahUrl})`);
+    }
+
+    if (!hadith) continue;
+
+    const arabicLine = hadith.arabic
+      ? `> <span dir="rtl" class="hadith-arabic">${hadith.arabic}</span>\n>\n`
+      : "";
+
+    // Check if there's a blockquote near this reference that already quotes the hadith
+    // Look for a blockquote followed by an attribution line containing this reference
+    const linkedRef = `[${fullMatch}](${sunnahUrl})`;
+    const escapedLinkedRef = linkedRef.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const attrPattern = new RegExp(
+      `(>\\s*"[^"]*"\\s*\\n)\\n(—\\s*\\*\\*[^*]*\\*\\*[^\\n]*${escapedLinkedRef}[^\\n]*)`,
+    );
+    const attrMatch = enriched.match(attrPattern);
+    if (attrMatch && arabicLine) {
+      enriched = enriched.replace(
+        attrPattern,
+        `${arabicLine}${attrMatch[1]}\n${attrMatch[2]}`,
+      );
+      continue;
+    }
+
+    // No existing blockquote found — append the hadith text after the reference
+    const englishQuote = hadith.english
+      ? `> "${hadith.english.length > 500 ? hadith.english.slice(0, 500) + "..." : hadith.english}"`
+      : "";
+    const block = [
+      arabicLine ? arabicLine.trimEnd() : "",
+      englishQuote,
+      `>\n> — **${displayName}** [${number}](${sunnahUrl})`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    // Insert the blockquote after the first occurrence of the reference
+    const refIndex = enriched.indexOf(linkedRef);
+    const searchTarget = refIndex !== -1 ? linkedRef : fullMatch;
+    const insertIndex = enriched.indexOf(searchTarget);
+    if (insertIndex !== -1) {
+      const lineEnd = enriched.indexOf("\n", insertIndex);
+      const insertPos = lineEnd === -1 ? enriched.length : lineEnd;
+      enriched =
+        enriched.slice(0, insertPos) +
+        "\n\n" +
+        block +
+        "\n" +
+        enriched.slice(insertPos);
+    }
+  }
+
+  return enriched;
+}
 
 function extractTermsFromResponse(text: string): string[] {
   const termPattern = /<term\s+data-meaning="[^"]*">([^<]+)<\/term>/g;
@@ -380,6 +562,9 @@ export async function POST(request: NextRequest) {
 
         // Enrich Quran references with Arabic text
         formattedResponse = await enrichQuranVerses(formattedResponse);
+
+        // Enrich hadith references with exact Arabic + English text
+        formattedResponse = await enrichHadithReferences(formattedResponse);
 
         // Enrich Islamic term definitions with accurate LLM-generated meanings
         formattedResponse = await enrichTermDefinitions(formattedResponse, client);

@@ -559,15 +559,15 @@ function processNumberedCitations(
   let processedMain = mainText;
 
   // Replace [1], [2], etc. with clickable superscript-style links
-  // Match [N] but not when followed by Title - URL (which is the sources list)
+  // Match [N] but not when preceded by [ (already in markdown link) or followed by ( (already a link)
   processedMain = processedMain.replace(
-    /\[(\d+)\](?!\s*[^\[\]]+\s*-?\s*https?:)/g,
+    /(?<!\[)\[(\d+)\](?!\(|\])/g,
     (match, num) => {
       const n = parseInt(num, 10);
       const source = sources.get(n);
 
       if (source) {
-        return `[[${n}]](${source.url})`;
+        return `[${source.title}](${source.url})`;
       }
 
       return match;
@@ -611,26 +611,14 @@ export function extractReferences(text: string): {
   references: ParsedReference[];
 } {
   const references: ParsedReference[] = [];
-
-  // Check if the text already has properly formatted markdown links
-  // Pattern: [text](url) - if we find these, the AI has already formatted the links
-  const hasInlineLinks = /\[[^\]]+\]\(https?:\/\/[^)]+\)/.test(text);
-
-  // If the AI has already created inline links, just return the text as-is
-  // This prevents double-wrapping like [[Text](url)](url)
-  if (hasInlineLinks) {
-    return { processedText: text, references };
-  }
-
   let processedText = text;
 
-  // First, parse the numbered sources list and convert [1], [2] citations
+  // Always process numbered citations [1], [2], [3] — these should be clickable
   const sources = parseSourcesList(text);
 
   if (sources.size > 0) {
     processedText = processNumberedCitations(processedText, sources);
 
-    // Add sources to references
     for (const [, { title, url }] of sources) {
       references.push({
         type: "url",
@@ -639,6 +627,14 @@ export function extractReferences(text: string): {
         details: { source: title },
       });
     }
+  }
+
+  // Check if the text already has properly formatted markdown links
+  // If so, skip Quran/hadith/URL pattern matching to avoid double-wrapping
+  const hasInlineLinks = /\[[^\]]+\]\(https?:\/\/[^)]+\)/.test(processedText);
+
+  if (hasInlineLinks) {
+    return { processedText, references };
   }
 
   // Quran reference patterns to find and replace

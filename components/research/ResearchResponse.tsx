@@ -3,6 +3,7 @@
 import { useMemo, useState, useRef, useEffect, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
+import remarkGfm from "remark-gfm";
 
 import { SourceInfoBadge } from "./response/SourceInfoBadge";
 import { SourceCitationCard } from "./response/SourceCitationCard";
@@ -311,6 +312,38 @@ export function ResearchResponse({
                 {children}
               </h2>
             ),
+            table: ({ children }) => (
+              <div className="my-5 overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-700/80">
+                <table className="w-full text-[13px] sm:text-sm text-left">
+                  {children}
+                </table>
+              </div>
+            ),
+            thead: ({ children }) => (
+              <thead className="bg-neutral-100 dark:bg-neutral-800/60 text-neutral-700 dark:text-neutral-200 text-xs uppercase tracking-wide">
+                {children}
+              </thead>
+            ),
+            tbody: ({ children }) => (
+              <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700/60">
+                {children}
+              </tbody>
+            ),
+            tr: ({ children }) => (
+              <tr className="hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors">
+                {children}
+              </tr>
+            ),
+            th: ({ children }) => (
+              <th className="px-3 sm:px-4 py-2.5 font-semibold text-neutral-800 dark:text-neutral-100 whitespace-nowrap">
+                {children}
+              </th>
+            ),
+            td: ({ children }) => (
+              <td className="px-3 sm:px-4 py-2.5 text-neutral-700 dark:text-neutral-300">
+                {children}
+              </td>
+            ),
             blockquote: ({ children }) => {
               // Separate attribution line (starts with "—") from quote content
               const childArray = Array.isArray(children) ? children : [children];
@@ -378,7 +411,7 @@ export function ResearchResponse({
                   {/* Decorative quote mark */}
                   <span className="absolute -left-1 sm:left-0 -top-2 text-4xl sm:text-5xl font-serif text-accent-400/40 dark:text-accent-500/30 select-none leading-none">"</span>
 
-                  <blockquote className="relative not-italic [&_.quran-arabic]:block [&_.quran-arabic]:text-right [&_.quran-arabic]:text-lg [&_.quran-arabic]:leading-loose [&_.quran-arabic]:text-neutral-800 [&_.quran-arabic]:dark:text-neutral-100 [&_.quran-arabic]:mb-2 [&_.quran-arabic]:font-normal">
+                  <blockquote className="relative not-italic [&_.quran-arabic]:block [&_.quran-arabic]:text-right [&_.quran-arabic]:text-lg [&_.quran-arabic]:leading-loose [&_.quran-arabic]:text-neutral-800 [&_.quran-arabic]:dark:text-neutral-100 [&_.quran-arabic]:mb-2 [&_.quran-arabic]:font-normal [&_.hadith-arabic]:block [&_.hadith-arabic]:text-right [&_.hadith-arabic]:text-lg [&_.hadith-arabic]:leading-loose [&_.hadith-arabic]:text-neutral-800 [&_.hadith-arabic]:dark:text-neutral-100 [&_.hadith-arabic]:mb-2 [&_.hadith-arabic]:font-normal">
                     <div className="text-[15px] sm:text-base text-neutral-600 dark:text-neutral-300 leading-relaxed">
                       {quoteChildren}
                     </div>
@@ -469,6 +502,7 @@ export function ResearchResponse({
               );
             },
           }}
+          remarkPlugins={[remarkGfm]}
           rehypePlugins={[rehypeRaw]}
         >
           {processedContent}

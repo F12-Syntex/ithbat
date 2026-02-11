@@ -218,10 +218,17 @@ Wrap ALL Islamic technical terms with a <term> tag. This allows the user to hove
 - Do NOT wrap the same term more than once — only the first occurrence
 - Use data-meaning="..." as placeholder — definitions are auto-generated
 
+## NUMBERED CITATIONS — CRITICAL:
+
+REMOVE all numbered citation markers like [1], [2], [3] from the text. Do NOT include them anywhere in the response.
+Each piece of evidence is already in a blockquote with its source link in the attribution line, so numbered citations are redundant and clutter the text.
+If the raw research uses [1], [2] to reference sources, replace them with the actual inline source link or simply remove them.
+
 ## RULES:
 - NEVER modify quoted text
 - NEVER add information not in the research
 - NEVER remove sources or citations
+- NEVER include numbered citation markers like [1], [2], [3]
 - Keep response focused and well-organized
 - Use clear section headers
 - End with a brief summary if the research is long`;
