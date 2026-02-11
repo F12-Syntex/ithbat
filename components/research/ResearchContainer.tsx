@@ -11,8 +11,8 @@ import {
   Moon,
   Settings,
   RefreshCw,
-  Lightbulb,
   Download,
+  Layers,
 } from "lucide-react";
 
 import { SearchInput } from "./SearchInput";
@@ -92,7 +92,7 @@ export function ResearchContainer() {
     state,
     startResearch: baseStartResearch,
     askFollowUp: baseAskFollowUp,
-    requestAIAnalysis,
+    diveDeeper,
     cancelResearch,
     reset,
   } = useResearch();
@@ -515,11 +515,8 @@ export function ResearchContainer() {
                         </div>
                       )}
 
-                      {/* Request AI Analysis Button */}
-                      {(state.status === "completed" ||
-                        (state.status === "researching" && state.response)) &&
-                        state.response &&
-                        !state.response.includes("## ⚠️ AI Analysis") && (
+                      {/* Dive Deeper Button */}
+                      {state.status === "completed" && state.response && (
                           <motion.div
                             animate={{ opacity: 1, y: 0 }}
                             className="mt-4 flex justify-center"
@@ -527,36 +524,33 @@ export function ResearchContainer() {
                             transition={{ delay: 0.3 }}
                           >
                             <button
-                              className="group flex items-center gap-2 px-4 py-2 text-xs bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-3xl hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:border-amber-300 dark:hover:border-amber-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="group flex items-center gap-2 px-4 py-2 text-xs bg-accent-50 dark:bg-accent-900/20 border border-accent-200 dark:border-accent-800 rounded-3xl hover:bg-accent-100 dark:hover:bg-accent-900/30 hover:border-accent-300 dark:hover:border-accent-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                               disabled={isResearching}
-                              onClick={requestAIAnalysis}
+                              onClick={diveDeeper}
                             >
                               {isResearching ? (
                                 <>
                                   <motion.div
                                     animate={{ rotate: 360 }}
-                                    className="w-3.5 h-3.5 border-2 border-amber-400 border-t-transparent rounded-full"
+                                    className="w-3.5 h-3.5 border-2 border-accent-400 border-t-transparent rounded-full"
                                     transition={{
                                       duration: 0.8,
                                       repeat: Infinity,
                                       ease: "linear",
                                     }}
                                   />
-                                  <span className="text-amber-700 dark:text-amber-400">
-                                    Analyzing...
+                                  <span className="text-accent-700 dark:text-accent-400">
+                                    Researching more...
                                   </span>
                                 </>
                               ) : (
                                 <>
-                                  <Lightbulb
-                                    className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400"
+                                  <Layers
+                                    className="w-3.5 h-3.5 text-accent-600 dark:text-accent-400"
                                     strokeWidth={2}
                                   />
-                                  <span className="text-amber-700 dark:text-amber-400">
-                                    Request AI Analysis
-                                  </span>
-                                  <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 dark:bg-amber-800/50 text-amber-600 dark:text-amber-300 rounded group-hover:bg-amber-200 dark:group-hover:bg-amber-800 transition-colors">
-                                    Can make mistakes
+                                  <span className="text-accent-700 dark:text-accent-400">
+                                    Dive deeper
                                   </span>
                                 </>
                               )}

@@ -31,7 +31,7 @@ const steps: { icon: LucideIcon; title: string; description: string }[] = [
     icon: Globe,
     title: "Analyzing",
     description:
-      "Visits each source to extract relevant content, verify authenticity of hadith, and gather scholarly opinions.",
+      "Visits each source to extract relevant content, and gather scholarly opinions.",
   },
   {
     icon: FileText,

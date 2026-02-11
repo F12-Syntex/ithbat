@@ -513,6 +513,7 @@ export function ResearchResponse({
       {!isStreaming && sources.length > 0 && (
         <SourceCitationCard sources={sources} />
       )}
+
     </div>
   );
 }

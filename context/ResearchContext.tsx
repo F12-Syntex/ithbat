@@ -49,7 +49,7 @@ interface ResearchContextValue {
   state: ResearchState;
   startResearch: (query: string) => Promise<void>;
   askFollowUp: (question: string) => Promise<void>;
-  requestAIAnalysis: () => Promise<void>;
+  diveDeeper: () => Promise<void>;
   cancelResearch: () => void;
   reset: () => void;
 }
@@ -318,41 +318,57 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "RESET" });
   }, []);
 
-  const requestAIAnalysis = useCallback(async () => {
+  const diveDeeper = useCallback(async () => {
     if (!state.query || !state.response || state.status !== "completed") {
       return;
     }
 
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
+
     dispatch({ type: "START_ANALYZING" });
 
-    try {
-      const response = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: state.query,
-          evidence: state.response,
-        }),
-      });
+    const conversationHistory = [
+      ...(state.conversationHistory || []),
+      { query: state.query, response: state.response },
+    ];
 
-      if (!response.ok) {
-        throw new Error("Failed to get AI analysis");
+    const currentSessionId = (state as ExtendedResearchState).sessionId;
+
+    try {
+      let newContent = "";
+
+      for await (const event of streamResearch(
+        `Provide additional depth, details, scholarly opinions, and evidence on this topic that was NOT already covered: ${state.query}`,
+        abortControllerRef.current.signal,
+        conversationHistory,
+        currentSessionId || undefined,
+      )) {
+        if (event.type === "source" && event.source) {
+          dispatch({ type: "ADD_SOURCE", source: event.source });
+        }
+        if (event.type === "response_content" && event.content) {
+          newContent += event.content;
+        }
       }
 
-      const { analysis } = await response.json();
-
-      if (analysis) {
-        dispatch({ type: "APPEND_ANALYSIS", content: "\n\n" + analysis });
+      if (newContent) {
+        dispatch({
+          type: "APPEND_ANALYSIS",
+          content: "\n\n---\n\n" + newContent,
+        });
       }
 
       dispatch({ type: "FINISH_ANALYZING" });
     } catch (error) {
-      dispatch({
-        type: "SET_ERROR",
-        error: error instanceof Error ? error.message : "Analysis failed",
-      });
+      if (error instanceof Error && error.name !== "AbortError") {
+        dispatch({
+          type: "SET_ERROR",
+          error: error instanceof Error ? error.message : "Dive deeper failed",
+        });
+      }
     }
-  }, [state.query, state.response, state.status]);
+  }, [state.query, state.response, state.status, state.conversationHistory, state.sessionId]);
 
   const askFollowUp = useCallback(async (question: string) => {
     abortControllerRef.current?.abort();
@@ -397,7 +413,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
         state,
         startResearch,
         askFollowUp,
-        requestAIAnalysis,
+        diveDeeper,
         cancelResearch,
         reset,
       }}
