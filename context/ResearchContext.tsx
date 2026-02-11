@@ -47,6 +47,7 @@ type ResearchAction =
 
 interface ResearchContextValue {
   state: ResearchState;
+  isAnalyzing: boolean;
   startResearch: (query: string) => Promise<void>;
   askFollowUp: (question: string) => Promise<void>;
   diveDeeper: () => Promise<void>;
@@ -56,6 +57,7 @@ interface ResearchContextValue {
 
 interface ExtendedResearchState extends ResearchState {
   sessionId: string | null;
+  isAnalyzing: boolean;
 }
 
 const initialState: ExtendedResearchState = {
@@ -68,6 +70,7 @@ const initialState: ExtendedResearchState = {
   conversationHistory: [],
   completedSessions: [],
   sessionId: null,
+  isAnalyzing: false,
 };
 
 function researchReducer(
@@ -172,6 +175,7 @@ function researchReducer(
         ...state,
         status: "error",
         error: action.error,
+        isAnalyzing: false,
       };
 
     case "COMPLETE":
@@ -187,6 +191,7 @@ function researchReducer(
       return {
         ...state,
         status: "researching",
+        isAnalyzing: true,
       };
 
     case "APPEND_ANALYSIS":
@@ -199,6 +204,7 @@ function researchReducer(
       return {
         ...state,
         status: "completed",
+        isAnalyzing: false,
       };
 
     default:
@@ -411,6 +417,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
     <ResearchContext.Provider
       value={{
         state,
+        isAnalyzing: state.isAnalyzing,
         startResearch,
         askFollowUp,
         diveDeeper,

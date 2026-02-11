@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Download,
   Layers,
+  Sparkles,
 } from "lucide-react";
 
 import { SearchInput } from "./SearchInput";
@@ -90,6 +91,7 @@ function getRandomQuestions(count: number): string[] {
 export function ResearchContainer() {
   const {
     state,
+    isAnalyzing,
     startResearch: baseStartResearch,
     askFollowUp: baseAskFollowUp,
     diveDeeper,
@@ -516,52 +518,107 @@ export function ResearchContainer() {
                       )}
 
                       {/* Dive Deeper Button */}
-                      {state.status === "completed" && state.response && (
-                          <motion.div
-                            animate={{ opacity: 1, y: 0 }}
-                            className="mt-4 flex justify-center"
-                            initial={{ opacity: 0, y: 10 }}
-                            transition={{ delay: 0.3 }}
+                      {(state.status === "completed" || isAnalyzing) && state.response && (
+                        <motion.div
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-5 flex flex-col items-center gap-3"
+                          initial={{ opacity: 0, y: 10 }}
+                          transition={{ delay: 0.3 }}
+                        >
+                          <button
+                            className="group relative flex items-center gap-2.5 px-5 py-2.5 text-xs rounded-full overflow-hidden transition-all duration-300 disabled:cursor-not-allowed bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 hover:border-accent-400 dark:hover:border-accent-600 hover:shadow-[0_0_20px_color-mix(in_srgb,var(--accent-500)_15%,transparent)] active:scale-[0.97]"
+                            disabled={isAnalyzing}
+                            onClick={diveDeeper}
                           >
-                            <button
-                              className="group flex items-center gap-2 px-4 py-2 text-xs bg-accent-50 dark:bg-accent-900/20 border border-accent-200 dark:border-accent-800 rounded-3xl hover:bg-accent-100 dark:hover:bg-accent-900/30 hover:border-accent-300 dark:hover:border-accent-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                              disabled={isResearching}
-                              onClick={diveDeeper}
-                            >
-                              {isResearching ? (
-                                <>
+                            {/* Shimmer overlay when loading */}
+                            {isAnalyzing && (
+                              <motion.div
+                                animate={{ x: ["calc(-100%)", "calc(200%)"] }}
+                                className="absolute inset-0 w-1/2 bg-gradient-to-r from-transparent via-accent-400/10 dark:via-accent-400/5 to-transparent"
+                                transition={{
+                                  duration: 1.5,
+                                  repeat: Infinity,
+                                  ease: "easeInOut",
+                                }}
+                              />
+                            )}
+
+                            {isAnalyzing ? (
+                              <>
+                                <motion.div className="relative w-4 h-4">
                                   <motion.div
                                     animate={{ rotate: 360 }}
-                                    className="w-3.5 h-3.5 border-2 border-accent-400 border-t-transparent rounded-full"
+                                    className="absolute inset-0 rounded-full border-2 border-accent-200 dark:border-accent-800 border-t-accent-500 dark:border-t-accent-400"
                                     transition={{
                                       duration: 0.8,
                                       repeat: Infinity,
                                       ease: "linear",
                                     }}
                                   />
-                                  <span className="text-accent-700 dark:text-accent-400">
-                                    Researching more...
-                                  </span>
-                                </>
-                              ) : (
-                                <>
+                                </motion.div>
+                                <span className="text-accent-600 dark:text-accent-400 font-medium">
+                                  Diving deeper...
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <motion.div
+                                  className="relative"
+                                  whileHover={{ scale: 1.1, rotate: 12 }}
+                                  transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                                >
                                   <Layers
-                                    className="w-3.5 h-3.5 text-accent-600 dark:text-accent-400"
+                                    className="w-4 h-4 text-accent-500 dark:text-accent-400"
                                     strokeWidth={2}
                                   />
-                                  <span className="text-accent-700 dark:text-accent-400">
-                                    Dive deeper
-                                  </span>
-                                </>
-                              )}
-                            </button>
-                          </motion.div>
-                        )}
+                                </motion.div>
+                                <span className="text-neutral-600 dark:text-neutral-300 group-hover:text-accent-600 dark:group-hover:text-accent-400 font-medium transition-colors">
+                                  Dive deeper
+                                </span>
+                                <Sparkles
+                                  className="w-3 h-3 text-neutral-300 dark:text-neutral-600 group-hover:text-accent-400 dark:group-hover:text-accent-500 transition-colors"
+                                  strokeWidth={2}
+                                />
+                              </>
+                            )}
+                          </button>
+
+                          {/* Loading indicator below button */}
+                          <AnimatePresence>
+                            {isAnalyzing && (
+                              <motion.div
+                                animate={{ opacity: 1, y: 0 }}
+                                className="flex items-center gap-1.5"
+                                exit={{ opacity: 0, y: -4 }}
+                                initial={{ opacity: 0, y: 6 }}
+                                transition={{ duration: 0.3 }}
+                              >
+                                {[0, 1, 2].map((i) => (
+                                  <motion.div
+                                    key={i}
+                                    animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1, 0.8] }}
+                                    className="w-1 h-1 rounded-full bg-accent-400 dark:bg-accent-500"
+                                    transition={{
+                                      duration: 1.2,
+                                      repeat: Infinity,
+                                      delay: i * 0.2,
+                                      ease: "easeInOut",
+                                    }}
+                                  />
+                                ))}
+                                <span className="text-[10px] text-neutral-400 dark:text-neutral-500 ml-1">
+                                  Finding more evidence
+                                </span>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </motion.div>
+                      )}
                     </>
                   )}
 
                   {/* Follow-up Input */}
-                  {state.status === "completed" && state.response && (
+                  {state.status === "completed" && state.response && !isAnalyzing && (
                     <FollowUpInput
                       isLoading={isResearching}
                       previousQuery={state.query}
