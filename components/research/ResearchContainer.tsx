@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -14,10 +14,6 @@ import {
   Layers,
   Sparkles,
   Share2,
-  Check,
-  Menu,
-  History,
-  Settings,
 } from "lucide-react";
 
 import { SearchInput } from "./SearchInput";
@@ -27,7 +23,7 @@ import { ResearchPipeline } from "./pipeline";
 import { SourceCitationCard } from "./response/SourceCitationCard";
 
 import { ContextMenu } from "@/components/ContextMenu";
-import { Dock, type DockTab } from "@/components/Dock";
+import { Dock } from "@/components/Dock";
 import { IntroModal } from "@/components/IntroModal";
 import { HowItWorks } from "@/components/HowItWorks";
 import { useResearch } from "@/hooks/useResearch";
@@ -106,10 +102,12 @@ export function ResearchContainer() {
   } = useResearch();
   const { theme, setTheme, themes } = useTheme();
   const { addEntry } = useChatHistory();
-  const [dockOpen, setDockOpen] = useState(false);
-  const [dockTab, setDockTab] = useState<DockTab>("history");
   const [suggestedQuery, setSuggestedQuery] = useState<string | undefined>();
   const [linkCopied, setLinkCopied] = useState(false);
+  const [dockMerged, setDockMerged] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const followUpRef = useRef<HTMLDivElement>(null);
+  const inlineDockSlotRef = useRef<HTMLDivElement>(null);
 
   const handleExportPdf = useCallback(async () => {
     if (!state.response || !state.query) return;
@@ -166,6 +164,26 @@ export function ResearchContainer() {
       addEntry(slug, state.query, messageCount);
     }
   }, [state.status, slug, state.query, state.completedSessions?.length, addEntry]);
+
+  // Merge detection: check if mergeable elements are near the dock
+  const checkMerge = useCallback(() => {
+    const el = followUpRef.current;
+    if (!el) { setDockMerged(false); return; }
+    const rect = el.getBoundingClientRect();
+    const dockY = window.innerHeight - 60;
+    // Element overlaps with dock zone
+    setDockMerged(rect.bottom > dockY && rect.top < window.innerHeight);
+  }, []);
+
+  useEffect(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+    const handler = () => requestAnimationFrame(checkMerge);
+    scrollEl.addEventListener("scroll", handler, { passive: true });
+    // Check once on mount/update
+    handler();
+    return () => scrollEl.removeEventListener("scroll", handler);
+  }, [checkMerge, state.status]);
 
   const isResearching = state.status === "researching";
   const hasResults =
@@ -280,11 +298,6 @@ export function ResearchContainer() {
     },
     { divider: true as const },
     {
-      label: "History",
-      icon: <History className="w-4 h-4" strokeWidth={2} />,
-      onClick: () => { setDockTab("history"); setDockOpen(true); },
-    },
-    {
       label: theme.mode === "dark" ? "Light Mode" : "Dark Mode",
       icon:
         theme.mode === "dark" ? (
@@ -293,11 +306,6 @@ export function ResearchContainer() {
           <Moon className="w-4 h-4" strokeWidth={2} />
         ),
       onClick: toggleDarkMode,
-    },
-    {
-      label: "Settings",
-      icon: <Settings className="w-4 h-4" strokeWidth={2} />,
-      onClick: () => { setDockTab("settings"); setDockOpen(true); },
     },
     { divider: true as const },
     {
@@ -313,28 +321,18 @@ export function ResearchContainer() {
       <IntroModal />
 
       <div className="relative h-screen h-[100dvh] overflow-hidden bg-neutral-100 dark:bg-neutral-950 flex flex-col">
-        {/* Dock Button - Fixed top left (desktop only) */}
-        <button
-          aria-label="Menu"
-          className="hidden sm:flex fixed top-4 left-4 z-40 w-10 h-10 rounded-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 items-center justify-center shadow-sm hover:shadow-md hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
-          onClick={() => setDockOpen(true)}
-        >
-          <Menu
-            className="w-5 h-5 text-neutral-500 dark:text-neutral-400"
-            strokeWidth={1.5}
-          />
-        </button>
-
-        {/* Dock (History + Settings) */}
+        {/* Floating Bottom Dock */}
         <Dock
-          activeTab={dockTab}
-          isOpen={dockOpen}
-          onClose={() => setDockOpen(false)}
-          onTabChange={setDockTab}
+          inlineSlotRef={inlineDockSlotRef}
+          linkCopied={linkCopied}
+          merged={dockMerged}
+          onNewSearch={reset}
+          onShare={handleShareLink}
+          shareDisabled={!slug || state.status !== "completed"}
         />
 
         {/* Main Content Area */}
-        <div className="flex-1 min-h-0 flex flex-col overflow-y-auto">
+        <div ref={scrollRef} className="flex-1 min-h-0 flex flex-col overflow-y-auto pb-20">
           {/* Search Section - Centers when no results, scrolls with content when results exist */}
           <div
             className={`flex flex-col items-center justify-center px-3 sm:px-4 transition-all duration-500 ease-out ${
@@ -369,28 +367,15 @@ export function ResearchContainer() {
               )}
             </AnimatePresence>
 
-            {/* Search Input with mobile settings button */}
-            <div className="w-full max-w-md flex items-center gap-2">
-              <div className="flex-1 min-w-0">
-                <SearchInput
-                  isLoading={isResearching}
-                  suggestedQuery={suggestedQuery}
-                  onCancel={cancelResearch}
-                  onSearch={startResearch}
-                  onSuggestedQueryApplied={handleSuggestedQueryApplied}
-                />
-              </div>
-              {/* Mobile dock button */}
-              <button
-                aria-label="Menu"
-                className="sm:hidden flex-shrink-0 w-[42px] h-[42px] rounded-full bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 flex items-center justify-center hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
-                onClick={() => setDockOpen(true)}
-              >
-                <Menu
-                  className="w-4 h-4 text-neutral-500 dark:text-neutral-400"
-                  strokeWidth={1.5}
-                />
-              </button>
+            {/* Search Input */}
+            <div className="w-full max-w-md">
+              <SearchInput
+                isLoading={isResearching}
+                suggestedQuery={suggestedQuery}
+                onCancel={cancelResearch}
+                onSearch={startResearch}
+                onSuggestedQueryApplied={handleSuggestedQueryApplied}
+              />
             </div>
 
             {/* Example Buttons */}
@@ -544,44 +529,6 @@ export function ResearchContainer() {
                             content={state.response}
                             isStreaming={isStreaming}
                           />
-
-                          {/* Share buttons — shown after streaming completes */}
-                          {state.status === "completed" && state.response && (
-                            <motion.div
-                              animate={{ opacity: 1, y: 0 }}
-                              className="mt-3 flex justify-end gap-2"
-                              initial={{ opacity: 0, y: 6 }}
-                              transition={{ delay: 0.2 }}
-                            >
-                              {slug && (
-                                <button
-                                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-full hover:border-accent-400 dark:hover:border-accent-500 hover:text-accent-600 dark:hover:text-accent-400 transition-all active:scale-95"
-                                  type="button"
-                                  onClick={handleShareLink}
-                                >
-                                  {linkCopied ? (
-                                    <>
-                                      <Check className="w-3.5 h-3.5 text-green-500" strokeWidth={2} />
-                                      <span className="text-green-600 dark:text-green-400">Copied!</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Share2 className="w-3.5 h-3.5" strokeWidth={2} />
-                                      Share Link
-                                    </>
-                                  )}
-                                </button>
-                              )}
-                              <button
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-full hover:border-accent-400 dark:hover:border-accent-500 hover:text-accent-600 dark:hover:text-accent-400 transition-all active:scale-95"
-                                type="button"
-                                onClick={handleExportPdf}
-                              >
-                                <Download className="w-3.5 h-3.5" strokeWidth={2} />
-                                Share as PDF
-                              </button>
-                            </motion.div>
-                          )}
                         </div>
                       )}
 
@@ -687,11 +634,16 @@ export function ResearchContainer() {
 
                   {/* Follow-up Input */}
                   {state.status === "completed" && state.response && !isAnalyzing && (
-                    <FollowUpInput
-                      isLoading={isResearching}
-                      previousQuery={state.query}
-                      onSubmit={askFollowUp}
-                    />
+                    <div ref={followUpRef} className="flex items-end gap-3">
+                      <div className="flex-1 min-w-0">
+                        <FollowUpInput
+                          isLoading={isResearching}
+                          previousQuery={state.query}
+                          onSubmit={askFollowUp}
+                        />
+                      </div>
+                      <div ref={inlineDockSlotRef} />
+                    </div>
                   )}
 
                   {/* Error */}
@@ -724,21 +676,6 @@ export function ResearchContainer() {
           </AnimatePresence>
         </div>
 
-        {/* Fixed Footer */}
-        <div className="flex-shrink-0 py-2 sm:py-3 text-center border-t border-neutral-200/50 dark:border-neutral-800/50">
-          <div className="flex items-center justify-center gap-2">
-            <span className="text-[10px] text-neutral-400 dark:text-neutral-600">
-              ithbat v0.5
-            </span>
-            <span className="text-neutral-300 dark:text-neutral-700">·</span>
-            <a
-              className="text-[10px] text-neutral-400 dark:text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors"
-              href="/logs"
-            >
-              Chats logged for analysis
-            </a>
-          </div>
-        </div>
       </div>
     </ContextMenu>
   );

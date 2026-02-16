@@ -1,7 +1,9 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
   Sun,
@@ -11,6 +13,9 @@ import {
   Trash2,
   History,
   Settings,
+  Plus,
+  Share2,
+  Check,
 } from "lucide-react";
 
 import { useTheme, type ThemeAccent } from "@/context/ThemeContext";
@@ -45,125 +50,225 @@ function formatRelativeTime(dateStr: string): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-export type DockTab = "history" | "settings";
+type SheetType = "history" | "settings" | null;
+
+interface DockProps {
+  merged: boolean;
+  inlineSlotRef: React.RefObject<HTMLDivElement | null>;
+  shareDisabled: boolean;
+  onNewSearch: () => void;
+  onShare: () => void;
+  linkCopied: boolean;
+}
+
+function PillButtons({
+  openSheet,
+  toggleSheet,
+  shareDisabled,
+  onNewSearch,
+  onShare,
+  linkCopied,
+}: {
+  openSheet: SheetType;
+  toggleSheet: (sheet: SheetType) => void;
+  shareDisabled: boolean;
+  onNewSearch: () => void;
+  onShare: () => void;
+  linkCopied: boolean;
+}) {
+  return (
+    <>
+      <DockButton
+        active={openSheet === "history"}
+        icon={<History className="w-[18px] h-[18px]" strokeWidth={1.5} />}
+        label="History"
+        onClick={() => toggleSheet("history")}
+      />
+      <DockButton
+        icon={<Plus className="w-[18px] h-[18px]" strokeWidth={1.5} />}
+        label="New"
+        onClick={onNewSearch}
+      />
+      <DockButton
+        disabled={shareDisabled}
+        icon={
+          linkCopied ? (
+            <Check className="w-[18px] h-[18px] text-green-500" strokeWidth={2} />
+          ) : (
+            <Share2 className="w-[18px] h-[18px]" strokeWidth={1.5} />
+          )
+        }
+        label={linkCopied ? "Copied" : "Share"}
+        onClick={onShare}
+      />
+      <DockButton
+        active={openSheet === "settings"}
+        icon={<Settings className="w-[18px] h-[18px]" strokeWidth={1.5} />}
+        label="Settings"
+        onClick={() => toggleSheet("settings")}
+      />
+    </>
+  );
+}
 
 export function Dock({
-  isOpen,
-  activeTab,
-  onClose,
-  onTabChange,
-}: {
-  isOpen: boolean;
-  activeTab: DockTab;
-  onClose: () => void;
-  onTabChange: (tab: DockTab) => void;
-}) {
+  merged,
+  inlineSlotRef,
+  shareDisabled,
+  onNewSearch,
+  onShare,
+  linkCopied,
+}: DockProps) {
+  const [openSheet, setOpenSheet] = useState<SheetType>(null);
+
+  const toggleSheet = (sheet: SheetType) => {
+    setOpenSheet((prev) => (prev === sheet ? null : sheet));
+  };
+
+  const pillButtonProps = {
+    openSheet,
+    toggleSheet,
+    shareDisabled,
+    onNewSearch,
+    onShare,
+    linkCopied,
+  };
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            animate={{ opacity: 1 }}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
-            exit={{ opacity: 0 }}
-            initial={{ opacity: 0 }}
-            onClick={onClose}
-          />
-
-          {/* Desktop: Left slide panel */}
-          <motion.div
-            animate={{ x: 0 }}
-            className="hidden sm:flex fixed left-0 top-0 bottom-0 w-80 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl z-50 flex-col shadow-2xl"
-            exit={{ x: "-100%" }}
-            initial={{ x: "-100%" }}
-            transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
-          >
-            <DockContent
-              activeTab={activeTab}
-              onClose={onClose}
-              onTabChange={onTabChange}
+    <>
+      {/* Bottom Sheets */}
+      <AnimatePresence>
+        {openSheet && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
+              exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }}
+              onClick={() => setOpenSheet(null)}
             />
-          </motion.div>
 
-          {/* Mobile: Bottom sheet */}
-          <motion.div
-            animate={{ y: 0 }}
-            className="sm:hidden fixed inset-x-0 bottom-0 max-h-[85vh] bg-white dark:bg-neutral-900 z-50 rounded-t-3xl shadow-2xl overflow-hidden flex flex-col"
-            exit={{ y: "100%" }}
-            initial={{ y: "100%" }}
-            transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
-          >
-            {/* Drag handle */}
-            <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
-              <div className="w-10 h-1 bg-neutral-300 dark:bg-neutral-700 rounded-full" />
-            </div>
-            <DockContent
-              activeTab={activeTab}
-              onClose={onClose}
-              onTabChange={onTabChange}
-            />
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
-}
+            {/* Sheet */}
+            <motion.div
+              animate={{ y: 0 }}
+              className="fixed inset-x-0 bottom-0 z-50 max-h-[75vh] bg-white dark:bg-neutral-900 rounded-t-3xl shadow-2xl flex flex-col overflow-hidden"
+              exit={{ y: "100%" }}
+              initial={{ y: "100%" }}
+              transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+            >
+              {/* Drag handle */}
+              <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+                <div className="w-10 h-1 bg-neutral-300 dark:bg-neutral-700 rounded-full" />
+              </div>
 
-function DockContent({
-  activeTab,
-  onClose,
-  onTabChange,
-}: {
-  activeTab: DockTab;
-  onClose: () => void;
-  onTabChange: (tab: DockTab) => void;
-}) {
-  return (
-    <div className="flex flex-col h-full min-h-0">
-      {/* Header with tabs */}
-      <div className="px-4 pt-3 pb-2 flex-shrink-0">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex bg-neutral-100 dark:bg-neutral-800 rounded-xl p-0.5">
-            <button
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
-                activeTab === "history"
-                  ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm"
-                  : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
-              }`}
-              onClick={() => onTabChange("history")}
-            >
-              <History className="w-3.5 h-3.5" strokeWidth={2} />
-              History
-            </button>
-            <button
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
-                activeTab === "settings"
-                  ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm"
-                  : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
-              }`}
-              onClick={() => onTabChange("settings")}
-            >
-              <Settings className="w-3.5 h-3.5" strokeWidth={2} />
-              Settings
-            </button>
-          </div>
-          <button
-            className="w-7 h-7 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 flex items-center justify-center transition-colors"
-            onClick={onClose}
-          >
-            <X className="w-3.5 h-3.5 text-neutral-500" strokeWidth={2} />
-          </button>
+              {/* Sheet header */}
+              <div className="px-5 py-3 flex items-center justify-between flex-shrink-0">
+                <h2 className="text-sm font-semibold text-neutral-900 dark:text-white">
+                  {openSheet === "history" ? "History" : "Settings"}
+                </h2>
+                <button
+                  className="w-7 h-7 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 flex items-center justify-center transition-colors"
+                  onClick={() => setOpenSheet(null)}
+                >
+                  <X className="w-3.5 h-3.5 text-neutral-500" strokeWidth={2} />
+                </button>
+              </div>
+
+              {/* Sheet content */}
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                {openSheet === "history" ? (
+                  <HistoryTab onClose={() => setOpenSheet(null)} />
+                ) : (
+                  <SettingsTab />
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Dock Pill — fades out when merged */}
+      <motion.div
+        animate={{
+          opacity: merged || openSheet ? 0 : 1,
+          y: merged || openSheet ? 20 : 0,
+        }}
+        className="fixed left-1/2 z-40 -translate-x-1/2 bottom-5"
+        style={{ pointerEvents: merged || openSheet ? "none" : "auto" }}
+        transition={{
+          type: "spring",
+          stiffness: 400,
+          damping: 35,
+          opacity: { duration: 0.15 },
+        }}
+      >
+        <div className="flex items-center justify-center gap-1 px-2 py-1.5 backdrop-blur-xl shadow-lg bg-white/80 dark:bg-neutral-900/80 border border-neutral-200/50 dark:border-neutral-800/50 rounded-full">
+          <PillButtons {...pillButtonProps} />
         </div>
-      </div>
+      </motion.div>
 
-      {/* Content */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        {activeTab === "history" ? <HistoryTab onClose={onClose} /> : <SettingsTab />}
-      </div>
-    </div>
+      {/* Inline Dock Pill — portaled next to FollowUpInput when merged */}
+      {merged &&
+        inlineSlotRef.current &&
+        createPortal(
+          <AnimatePresence>
+            <motion.div
+              key="inline-dock"
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 30, scale: 0.95 }}
+              initial={{ opacity: 0, x: 30, scale: 0.95 }}
+              transition={{
+                type: "spring",
+                stiffness: 400,
+                damping: 30,
+              }}
+            >
+              <div className="flex items-center justify-center gap-1 px-2 py-1.5 backdrop-blur-xl shadow-lg bg-white/80 dark:bg-neutral-900/80 border border-neutral-200/50 dark:border-neutral-800/50 rounded-full">
+                <PillButtons {...pillButtonProps} />
+              </div>
+            </motion.div>
+          </AnimatePresence>,
+          inlineSlotRef.current,
+        )}
+    </>
   );
 }
+
+function DockButton({
+  icon,
+  label,
+  onClick,
+  active,
+  disabled,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  active?: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      aria-label={label}
+      className={`relative flex flex-col items-center justify-center w-14 h-11 rounded-xl transition-all ${
+        disabled
+          ? "opacity-30 cursor-not-allowed"
+          : active
+            ? "text-accent-600 dark:text-accent-400 bg-accent-50 dark:bg-accent-900/30"
+            : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-neutral-100/80 dark:hover:bg-neutral-800/50 active:scale-90"
+      }`}
+      disabled={disabled}
+      type="button"
+      onClick={onClick}
+    >
+      {icon}
+      <span className="text-[9px] mt-0.5 leading-none font-medium">{label}</span>
+    </button>
+  );
+}
+
+// ─── History Sheet Content ───────────────────────────────────────────
 
 function HistoryTab({ onClose }: { onClose: () => void }) {
   const router = useRouter();
@@ -269,6 +374,8 @@ function HistoryItem({
   );
 }
 
+// ─── Settings Sheet Content ──────────────────────────────────────────
+
 function SettingsTab() {
   const { theme, setTheme, themes } = useTheme();
   const { settings, updateSetting } = useSettings();
@@ -277,14 +384,13 @@ function SettingsTab() {
   const lightThemes = themes.filter((t) => t.mode === "light");
 
   return (
-    <div className="px-4 pb-5 space-y-5">
+    <div className="px-5 pb-6 space-y-5">
       {/* Theme Colors */}
       <div>
         <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-4">
           Theme
         </p>
 
-        {/* Color Selection */}
         <div className="flex items-center justify-center gap-3 mb-4">
           {(["emerald", "blue", "purple", "rose", "amber", "cyan"] as const).map(
             (accent) => (
@@ -309,7 +415,6 @@ function SettingsTab() {
           )}
         </div>
 
-        {/* Mode Toggle */}
         <div className="flex bg-neutral-100 dark:bg-neutral-800 rounded-3xl p-1">
           <button
             className={`flex-1 py-2.5 text-xs font-medium rounded-3xl transition-all ${
@@ -396,3 +501,6 @@ function SettingsTab() {
     </div>
   );
 }
+
+// Re-export for context menu usage
+export type { SheetType as DockSheet };
