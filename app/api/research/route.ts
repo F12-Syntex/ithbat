@@ -214,7 +214,19 @@ interface ConversationTurn {
   response: string;
 }
 
+async function hashIP(ip: string): Promise<string> {
+  const data = new TextEncoder().encode(ip);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 8);
+}
+
 export async function POST(request: NextRequest) {
+  // Extract and hash client IP for user identification in logs
+  const forwarded = request.headers.get("x-forwarded-for");
+  const ip = forwarded?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
+  const userHash = ip !== "unknown" ? await hashIP(ip) : undefined;
+
   const {
     query,
     conversationHistory = [],
@@ -471,7 +483,7 @@ export async function POST(request: NextRequest) {
           if (isFollowUp) {
             await appendToChat(slug!, query, formattedResponse, allSteps, allSources);
           } else {
-            await createChat(slug!, sessionId, query, formattedResponse, allSteps, allSources);
+            await createChat(slug!, sessionId, query, formattedResponse, allSteps, allSources, userHash);
           }
         } catch (err) {
           console.error("Failed to log conversation:", err);

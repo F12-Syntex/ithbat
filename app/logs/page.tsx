@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,6 +12,8 @@ import {
   Clock,
   Search,
   X,
+  ChevronDown,
+  User,
 } from "lucide-react";
 
 const LOGS_PASSWORD = "ithbat2024";
@@ -20,6 +22,7 @@ const AUTH_KEY = "ithbat_logs_auth";
 interface ChatSession {
   sessionId: string;
   slug: string;
+  userHash?: string;
   conversations: Array<{
     query: string;
     response: string;
@@ -28,6 +31,13 @@ interface ChatSession {
   }>;
   createdAt: string;
   updatedAt: string;
+}
+
+interface UserGroup {
+  userHash: string;
+  sessions: ChatSession[];
+  latestUpdate: string;
+  totalMessages: number;
 }
 
 function formatRelativeTime(dateStr: string): string {
@@ -47,7 +57,6 @@ function formatRelativeTime(dateStr: string): string {
 }
 
 function truncateResponse(response: string, maxLen = 120): string {
-  // Strip markdown formatting for preview
   const plain = response
     .replace(/[#*_~`>]/g, "")
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
@@ -58,6 +67,82 @@ function truncateResponse(response: string, maxLen = 120): string {
   if (plain.length <= maxLen) return plain;
 
   return plain.slice(0, maxLen).replace(/\s+\S*$/, "") + "...";
+}
+
+function ChatCard({
+  session,
+  index,
+  deleting,
+  onDelete,
+  onClick,
+}: {
+  session: ChatSession;
+  index: number;
+  deleting: string | null;
+  onDelete: (slug: string, label: string) => void;
+  onClick: (slug: string) => void;
+}) {
+  const firstQuery = session.conversations[0]?.query || "Untitled";
+  const lastResponse =
+    session.conversations[session.conversations.length - 1]?.response || "";
+  const msgCount = session.conversations.length;
+  const isDeleting = deleting === session.slug;
+
+  return (
+    <motion.div
+      key={session.slug}
+      animate={{ opacity: 1, y: 0 }}
+      className={`group relative rounded-2xl border transition-all cursor-pointer ${
+        isDeleting
+          ? "opacity-50 pointer-events-none"
+          : "bg-white/60 dark:bg-neutral-900/60 border-neutral-200/50 dark:border-neutral-800/50 hover:border-accent-400/50 dark:hover:border-accent-500/50"
+      }`}
+      exit={{ opacity: 0, x: -20 }}
+      initial={{ opacity: 0, y: 12 }}
+      layout
+      transition={{
+        delay: index * 0.02,
+        duration: 0.25,
+        layout: { duration: 0.2 },
+      }}
+      onClick={() => onClick(session.slug)}
+    >
+      <div className="px-4 py-3.5">
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="text-sm font-medium text-neutral-800 dark:text-neutral-200 line-clamp-1 group-hover:text-accent-600 dark:group-hover:text-accent-400 transition-colors">
+            {firstQuery}
+          </h3>
+          <button
+            className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all opacity-0 group-hover:opacity-100"
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(session.slug, firstQuery.slice(0, 40));
+            }}
+          >
+            <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+          </button>
+        </div>
+
+        <p className="text-xs text-neutral-400 dark:text-neutral-500 line-clamp-2 mt-1 leading-relaxed">
+          {truncateResponse(lastResponse)}
+        </p>
+
+        <div className="flex items-center gap-3 mt-2.5">
+          {msgCount > 1 && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-accent-600 dark:text-accent-400 bg-accent-50 dark:bg-accent-900/20 px-1.5 py-0.5 rounded-md font-medium">
+              <MessageCircle className="w-2.5 h-2.5" strokeWidth={2} />
+              {msgCount}
+            </span>
+          )}
+          <span className="flex items-center gap-1 text-[11px] text-neutral-400 dark:text-neutral-500">
+            <Clock className="w-2.5 h-2.5" strokeWidth={2} />
+            {formatRelativeTime(session.updatedAt)}
+          </span>
+        </div>
+      </div>
+    </motion.div>
+  );
 }
 
 export default function LogsPage() {
@@ -77,6 +162,7 @@ export default function LogsPage() {
     label: string;
   } | null>(null);
   const [filter, setFilter] = useState("");
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const auth = sessionStorage.getItem(AUTH_KEY);
@@ -147,6 +233,49 @@ export default function LogsPage() {
         ),
       )
     : sessions;
+
+  // Group sessions by userHash
+  const userGroups = useMemo((): UserGroup[] => {
+    const groupMap = new Map<string, ChatSession[]>();
+
+    for (const session of filtered) {
+      const hash = session.userHash || "unknown";
+      const existing = groupMap.get(hash);
+      if (existing) {
+        existing.push(session);
+      } else {
+        groupMap.set(hash, [session]);
+      }
+    }
+
+    return Array.from(groupMap.entries())
+      .map(([userHash, sessions]) => ({
+        userHash,
+        sessions,
+        latestUpdate: sessions[0]?.updatedAt || "",
+        totalMessages: sessions.reduce(
+          (sum, s) => sum + s.conversations.length,
+          0,
+        ),
+      }))
+      .sort(
+        (a, b) =>
+          new Date(b.latestUpdate).getTime() -
+          new Date(a.latestUpdate).getTime(),
+      );
+  }, [filtered]);
+
+  const toggleGroup = (hash: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(hash)) {
+        next.delete(hash);
+      } else {
+        next.add(hash);
+      }
+      return next;
+    });
+  };
 
   // Loading auth check
   if (checkingAuth) {
@@ -336,80 +465,73 @@ export default function LogsPage() {
             </button>
           </div>
         ) : (
-          <div className="space-y-2">
-            <AnimatePresence mode="popLayout">
-              {filtered.map((session, index) => {
-                const firstQuery =
-                  session.conversations[0]?.query || "Untitled";
-                const lastResponse =
-                  session.conversations[session.conversations.length - 1]
-                    ?.response || "";
-                const msgCount = session.conversations.length;
-                const isDeleting = deleting === session.slug;
+          <div className="space-y-4">
+            {userGroups.map((group) => {
+              const isCollapsed = collapsedGroups.has(group.userHash);
+              const label =
+                group.userHash === "unknown"
+                  ? "Unknown"
+                  : group.userHash;
 
-                return (
-                  <motion.div
-                    key={session.slug}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`group relative rounded-2xl border transition-all cursor-pointer ${
-                      isDeleting
-                        ? "opacity-50 pointer-events-none"
-                        : "bg-white/60 dark:bg-neutral-900/60 border-neutral-200/50 dark:border-neutral-800/50 hover:border-accent-400/50 dark:hover:border-accent-500/50"
-                    }`}
-                    exit={{ opacity: 0, x: -20 }}
-                    initial={{ opacity: 0, y: 12 }}
-                    layout
-                    transition={{
-                      delay: index * 0.02,
-                      duration: 0.25,
-                      layout: { duration: 0.2 },
-                    }}
-                    onClick={() => router.push(`/chat/${session.slug}`)}
+              return (
+                <div key={group.userHash}>
+                  {/* Group header */}
+                  <button
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/40 dark:bg-neutral-900/40 border border-neutral-200/30 dark:border-neutral-800/30 hover:border-neutral-300 dark:hover:border-neutral-700 transition-all mb-2"
+                    type="button"
+                    onClick={() => toggleGroup(group.userHash)}
                   >
-                    <div className="px-4 py-3.5">
-                      {/* Title row */}
-                      <div className="flex items-start justify-between gap-3">
-                        <h3 className="text-sm font-medium text-neutral-800 dark:text-neutral-200 line-clamp-1 group-hover:text-accent-600 dark:group-hover:text-accent-400 transition-colors">
-                          {firstQuery}
-                        </h3>
-                        <button
-                          className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all opacity-0 group-hover:opacity-100"
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteTarget({
-                              slug: session.slug,
-                              label: firstQuery.slice(0, 40),
-                            });
-                          }}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
-                        </button>
-                      </div>
-
-                      {/* Response preview */}
-                      <p className="text-xs text-neutral-400 dark:text-neutral-500 line-clamp-2 mt-1 leading-relaxed">
-                        {truncateResponse(lastResponse)}
-                      </p>
-
-                      {/* Meta row */}
-                      <div className="flex items-center gap-3 mt-2.5">
-                        {msgCount > 1 && (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-accent-600 dark:text-accent-400 bg-accent-50 dark:bg-accent-900/20 px-1.5 py-0.5 rounded-md font-medium">
-                            <MessageCircle className="w-2.5 h-2.5" strokeWidth={2} />
-                            {msgCount}
-                          </span>
-                        )}
-                        <span className="flex items-center gap-1 text-[11px] text-neutral-400 dark:text-neutral-500">
-                          <Clock className="w-2.5 h-2.5" strokeWidth={2} />
-                          {formatRelativeTime(session.updatedAt)}
-                        </span>
-                      </div>
+                    <div className="w-6 h-6 rounded-lg bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center flex-shrink-0">
+                      <User className="w-3 h-3 text-accent-600 dark:text-accent-400" strokeWidth={2} />
                     </div>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
+                    <span className="text-xs font-mono font-medium text-neutral-600 dark:text-neutral-300">
+                      {label}
+                    </span>
+                    <span className="text-[11px] text-neutral-400 dark:text-neutral-500">
+                      {group.sessions.length} chat{group.sessions.length !== 1 ? "s" : ""}
+                      {" \u00b7 "}
+                      {group.totalMessages} msg{group.totalMessages !== 1 ? "s" : ""}
+                    </span>
+                    <span className="flex items-center gap-1 text-[11px] text-neutral-400 dark:text-neutral-500 ml-auto">
+                      <Clock className="w-2.5 h-2.5" strokeWidth={2} />
+                      {formatRelativeTime(group.latestUpdate)}
+                    </span>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 text-neutral-400 transition-transform ${
+                        isCollapsed ? "-rotate-90" : ""
+                      }`}
+                      strokeWidth={2}
+                    />
+                  </button>
+
+                  {/* Group chats */}
+                  <AnimatePresence mode="popLayout">
+                    {!isCollapsed && (
+                      <motion.div
+                        animate={{ opacity: 1, height: "auto" }}
+                        className="space-y-2 pl-3"
+                        exit={{ opacity: 0, height: 0 }}
+                        initial={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        {group.sessions.map((session, index) => (
+                          <ChatCard
+                            key={session.slug}
+                            deleting={deleting}
+                            index={index}
+                            session={session}
+                            onClick={(slug) => router.push(`/chat/${slug}`)}
+                            onDelete={(slug, label) =>
+                              setDeleteTarget({ slug, label })
+                            }
+                          />
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
           </div>
         )}
       </main>

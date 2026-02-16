@@ -22,6 +22,7 @@ export interface ConversationEntry {
 export interface ChatData {
   sessionId: string;
   slug: string;
+  userHash?: string;
   conversations: ConversationEntry[];
   createdAt: string;
   updatedAt: string;
@@ -52,6 +53,7 @@ export async function createChat(
   response: string,
   steps: ResearchStep[],
   sources: Source[],
+  userHash?: string,
 ): Promise<void> {
   if (!isBlobConfigured) {
     console.warn("Blob not configured, skipping chat creation");
@@ -64,6 +66,7 @@ export async function createChat(
     const chatData: ChatData = {
       sessionId,
       slug,
+      userHash,
       conversations: [
         {
           query,
