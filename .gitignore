@@ -30,3 +30,5 @@ bun.lockb
 
 #broken files
 nul
+.vercel
+.env*.local

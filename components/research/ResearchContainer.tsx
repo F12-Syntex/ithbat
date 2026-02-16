@@ -14,6 +14,8 @@ import {
   Download,
   Layers,
   Sparkles,
+  Share2,
+  Check,
 } from "lucide-react";
 
 import { SearchInput } from "./SearchInput";
@@ -92,6 +94,7 @@ export function ResearchContainer() {
   const {
     state,
     isAnalyzing,
+    slug,
     startResearch: baseStartResearch,
     askFollowUp: baseAskFollowUp,
     diveDeeper,
@@ -101,12 +104,32 @@ export function ResearchContainer() {
   const { theme, setTheme, themes } = useTheme();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [suggestedQuery, setSuggestedQuery] = useState<string | undefined>();
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const handleExportPdf = useCallback(async () => {
     if (!state.response || !state.query) return;
     const { exportResponseAsPdf } = await import("@/lib/export-pdf");
     await exportResponseAsPdf(state.response, state.query);
   }, [state.response, state.query]);
+
+  const handleShareLink = useCallback(async () => {
+    if (!slug) return;
+    const url = `${window.location.origin}/chat/${slug}`;
+
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      const ta = document.createElement("textarea");
+
+      ta.value = url;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  }, [slug]);
 
   const startResearch = useCallback(
     (query: string) => baseStartResearch(query),
@@ -219,6 +242,12 @@ export function ResearchContainer() {
         }
       },
       disabled: !state.response,
+    },
+    {
+      label: "Share Link",
+      icon: <Share2 className="w-4 h-4" strokeWidth={2} />,
+      onClick: handleShareLink,
+      disabled: !slug || state.status !== "completed",
     },
     {
       label: "Share as PDF",
@@ -496,14 +525,33 @@ export function ResearchContainer() {
                             isStreaming={isStreaming}
                           />
 
-                          {/* Share as PDF button — shown after streaming completes */}
+                          {/* Share buttons — shown after streaming completes */}
                           {state.status === "completed" && state.response && (
                             <motion.div
                               animate={{ opacity: 1, y: 0 }}
-                              className="mt-3 flex justify-end"
+                              className="mt-3 flex justify-end gap-2"
                               initial={{ opacity: 0, y: 6 }}
                               transition={{ delay: 0.2 }}
                             >
+                              {slug && (
+                                <button
+                                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-full hover:border-accent-400 dark:hover:border-accent-500 hover:text-accent-600 dark:hover:text-accent-400 transition-all active:scale-95"
+                                  type="button"
+                                  onClick={handleShareLink}
+                                >
+                                  {linkCopied ? (
+                                    <>
+                                      <Check className="w-3.5 h-3.5 text-green-500" strokeWidth={2} />
+                                      <span className="text-green-600 dark:text-green-400">Copied!</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Share2 className="w-3.5 h-3.5" strokeWidth={2} />
+                                      Share Link
+                                    </>
+                                  )}
+                                </button>
+                              )}
                               <button
                                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-full hover:border-accent-400 dark:hover:border-accent-500 hover:text-accent-600 dark:hover:text-accent-400 transition-all active:scale-95"
                                 type="button"

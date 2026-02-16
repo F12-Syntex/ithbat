@@ -101,7 +101,12 @@ async function enrichQuranVerses(text: string): Promise<string> {
 
   return enriched;
 }
-import { logConversation } from "@/lib/conversation-logger";
+import {
+  createChat,
+  appendToChat,
+  resolveUniqueSlug,
+  getSlugBySessionId,
+} from "@/lib/conversation-logger";
 
 function extractTermsFromResponse(text: string): string[] {
   const termPattern = /<term\s+data-meaning="[^"]*">([^<]+)<\/term>/g;
@@ -183,6 +188,7 @@ interface ResearchStepEvent {
     | "error"
     | "done";
   sessionId?: string;
+  slug?: string;
   step?: string;
   stepTitle?: string;
   content?: string;
@@ -222,6 +228,15 @@ export async function POST(request: NextRequest) {
   const history = conversationHistory as ConversationTurn[];
   const sessionId = providedSessionId || crypto.randomUUID();
   const isFollowUp = history.length > 0;
+
+  // Resolve slug: generate new for first request, look up for follow-ups
+  let slug: string | null = null;
+  if (isFollowUp && providedSessionId) {
+    slug = await getSlugBySessionId(providedSessionId);
+  }
+  if (!slug) {
+    slug = await resolveUniqueSlug(query);
+  }
 
   if (!query || typeof query !== "string") {
     return new Response(JSON.stringify({ error: "Query is required" }), {
@@ -265,7 +280,7 @@ export async function POST(request: NextRequest) {
       const client = getOpenRouterClient();
 
       try {
-        send({ type: "session_init", sessionId });
+        send({ type: "session_init", sessionId, slug: slug! });
 
         // Build conversation context for follow-ups
         let conversationContext = "";
@@ -390,16 +405,11 @@ export async function POST(request: NextRequest) {
         send({ type: "response_start" });
         send({ type: "response_content", content: formattedResponse });
 
-        // Log conversation
-        logConversation(
-          sessionId,
-          query,
-          formattedResponse,
-          allSteps,
-          allSources,
-          isFollowUp,
-          { ip, userAgent },
-        ).catch((err) => console.error("Failed to log conversation:", err));
+        // Log conversation to KV
+        const logPromise = isFollowUp
+          ? appendToChat(slug!, query, formattedResponse, allSteps, allSources)
+          : createChat(slug!, sessionId, query, formattedResponse, allSteps, allSources, { ip, userAgent });
+        logPromise.catch((err) => console.error("Failed to log conversation:", err));
 
         send({ type: "done" });
       } catch (error) {

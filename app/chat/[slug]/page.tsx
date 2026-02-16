@@ -18,9 +18,7 @@ import {
 
 import { ResearchResponse } from "@/components/research/ResearchResponse";
 
-interface ConversationLog {
-  id: string;
-  session_id: string;
+interface ConversationEntry {
   query: string;
   response: string;
   steps: Array<{
@@ -35,17 +33,17 @@ interface ConversationLog {
     url: string;
     domain: string;
   }>;
-  is_follow_up: boolean;
-  created_at: string;
+  isFollowUp: boolean;
+  createdAt: string;
 }
 
 export default function ChatPage({
   params,
 }: {
-  params: Promise<{ sessionId: string }>;
+  params: Promise<{ slug: string }>;
 }) {
-  const { sessionId } = use(params);
-  const [conversations, setConversations] = useState<ConversationLog[]>([]);
+  const { slug } = use(params);
+  const [conversations, setConversations] = useState<ConversationEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -53,9 +51,8 @@ export default function ChatPage({
 
   useEffect(() => {
     fetchChat();
-  }, [sessionId]);
+  }, [slug]);
 
-  // Close export menu on outside click
   useEffect(() => {
     if (!showExportMenu) return;
     const handleClick = () => setShowExportMenu(false);
@@ -68,7 +65,7 @@ export default function ChatPage({
   const fetchChat = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/chat/${sessionId}`);
+      const res = await fetch(`/api/chat/${slug}`);
 
       if (!res.ok) {
         if (res.status === 404) {
@@ -119,15 +116,28 @@ export default function ChatPage({
     }
   };
 
+  const downloadFile = (content: string, filename: string, type: string) => {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const exportAsJSON = () => {
     const data = {
-      sessionId,
+      slug,
       exportedAt: new Date().toISOString(),
       conversations: conversations.map((c) => ({
         query: c.query,
         response: c.response,
-        isFollowUp: c.is_follow_up,
-        createdAt: c.created_at,
+        isFollowUp: c.isFollowUp,
+        createdAt: c.createdAt,
         sources: c.sources,
         steps: c.steps,
       })),
@@ -135,7 +145,7 @@ export default function ChatPage({
 
     downloadFile(
       JSON.stringify(data, null, 2),
-      `ithbat-chat-${sessionId.slice(0, 8)}.json`,
+      `ithbat-${slug}.json`,
       "application/json",
     );
     setShowExportMenu(false);
@@ -144,14 +154,14 @@ export default function ChatPage({
   const exportAsMarkdown = () => {
     let md = `# Ithbat Research Chat\n\n`;
 
-    md += `**Session:** ${sessionId}\n`;
+    md += `**Chat:** ${slug}\n`;
     md += `**Exported:** ${new Date().toLocaleString()}\n\n`;
     md += `---\n\n`;
 
     conversations.forEach((c, i) => {
-      md += `## ${c.is_follow_up ? "Follow-up " : ""}Question ${i + 1}\n\n`;
+      md += `## ${c.isFollowUp ? "Follow-up " : ""}Question ${i + 1}\n\n`;
       md += `**${c.query}**\n\n`;
-      md += `*${formatDate(c.created_at)}*\n\n`;
+      md += `*${formatDate(c.createdAt)}*\n\n`;
       md += `### Answer\n\n`;
       md += `${c.response}\n\n`;
 
@@ -166,11 +176,7 @@ export default function ChatPage({
       md += `---\n\n`;
     });
 
-    downloadFile(
-      md,
-      `ithbat-chat-${sessionId.slice(0, 8)}.md`,
-      "text/markdown",
-    );
+    downloadFile(md, `ithbat-${slug}.md`, "text/markdown");
     setShowExportMenu(false);
   };
 
@@ -178,15 +184,15 @@ export default function ChatPage({
     let text = `ITHBAT RESEARCH CHAT\n`;
 
     text += `${"=".repeat(50)}\n\n`;
-    text += `Session: ${sessionId}\n`;
+    text += `Chat: ${slug}\n`;
     text += `Exported: ${new Date().toLocaleString()}\n\n`;
     text += `${"=".repeat(50)}\n\n`;
 
     conversations.forEach((c, i) => {
-      text += `${c.is_follow_up ? "FOLLOW-UP " : ""}QUESTION ${i + 1}\n`;
+      text += `${c.isFollowUp ? "FOLLOW-UP " : ""}QUESTION ${i + 1}\n`;
       text += `${"-".repeat(30)}\n`;
       text += `${c.query}\n\n`;
-      text += `Date: ${formatDate(c.created_at)}\n\n`;
+      text += `Date: ${formatDate(c.createdAt)}\n\n`;
       text += `ANSWER:\n`;
       text += `${c.response}\n\n`;
 
@@ -201,26 +207,11 @@ export default function ChatPage({
       text += `${"=".repeat(50)}\n\n`;
     });
 
-    downloadFile(
-      text,
-      `ithbat-chat-${sessionId.slice(0, 8)}.txt`,
-      "text/plain",
-    );
+    downloadFile(text, `ithbat-${slug}.txt`, "text/plain");
     setShowExportMenu(false);
   };
 
-  const downloadFile = (content: string, filename: string, type: string) => {
-    const blob = new Blob([content], { type });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+  const firstQuery = conversations[0]?.query || "Shared Chat";
 
   // Loading state
   if (loading) {
@@ -279,9 +270,9 @@ export default function ChatPage({
       {/* Header */}
       <header className="sticky top-0 z-10 bg-neutral-100/80 dark:bg-neutral-950/80 backdrop-blur-md border-b border-neutral-200/50 dark:border-neutral-800/50">
         <div className="max-w-2xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <Link
-              className="w-8 h-8 rounded-full bg-white dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700 flex items-center justify-center hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
+              className="w-8 h-8 rounded-full bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md border border-neutral-200/50 dark:border-neutral-800/50 flex items-center justify-center hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95 flex-shrink-0"
               href="/"
             >
               <ArrowLeft
@@ -289,20 +280,20 @@ export default function ChatPage({
                 strokeWidth={2}
               />
             </Link>
-            <div>
-              <h1 className="text-sm font-medium text-neutral-800 dark:text-neutral-100">
-                Shared Chat
+            <div className="min-w-0">
+              <h1 className="text-sm font-medium text-neutral-800 dark:text-neutral-100 truncate">
+                {firstQuery}
               </h1>
-              <p className="text-[10px] text-neutral-400 dark:text-neutral-500 font-mono">
-                {conversations.length} {conversations.length === 1 ? "message" : "messages"}
+              <p className="text-[10px] text-neutral-400 dark:text-neutral-500 font-mono truncate">
+                {slug}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             {/* Share Button */}
             <button
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-600 dark:text-neutral-300 bg-white dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700 rounded-full hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-600 dark:text-neutral-300 bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md border border-neutral-200/50 dark:border-neutral-800/50 rounded-full hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
               onClick={handleShare}
             >
               <AnimatePresence mode="wait">
@@ -335,7 +326,7 @@ export default function ChatPage({
             {/* Export Button */}
             <div className="relative">
               <button
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-600 dark:text-neutral-300 bg-white dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700 rounded-full hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-600 dark:text-neutral-300 bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md border border-neutral-200/50 dark:border-neutral-800/50 rounded-full hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowExportMenu(!showExportMenu);
@@ -353,28 +344,28 @@ export default function ChatPage({
                 {showExportMenu && (
                   <motion.div
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    className="absolute right-0 mt-2 w-40 bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200/80 dark:border-neutral-700 shadow-lg overflow-hidden z-20"
+                    className="absolute right-0 mt-2 w-40 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md rounded-xl border border-neutral-200/50 dark:border-neutral-800/50 shadow-lg overflow-hidden z-20"
                     exit={{ opacity: 0, y: -4, scale: 0.95 }}
                     initial={{ opacity: 0, y: -4, scale: 0.95 }}
                     transition={{ duration: 0.15 }}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
-                      className="w-full px-3 py-2.5 text-xs text-left hover:bg-neutral-100 dark:hover:bg-neutral-700/50 transition-colors flex items-center gap-2.5 text-neutral-600 dark:text-neutral-300"
+                      className="w-full px-3 py-2.5 text-xs text-left hover:bg-neutral-100 dark:hover:bg-neutral-800/50 transition-colors flex items-center gap-2.5 text-neutral-600 dark:text-neutral-300"
                       onClick={exportAsMarkdown}
                     >
                       <FileText className="w-3.5 h-3.5 text-neutral-400" strokeWidth={1.5} />
                       Markdown
                     </button>
                     <button
-                      className="w-full px-3 py-2.5 text-xs text-left hover:bg-neutral-100 dark:hover:bg-neutral-700/50 transition-colors flex items-center gap-2.5 text-neutral-600 dark:text-neutral-300"
+                      className="w-full px-3 py-2.5 text-xs text-left hover:bg-neutral-100 dark:hover:bg-neutral-800/50 transition-colors flex items-center gap-2.5 text-neutral-600 dark:text-neutral-300"
                       onClick={exportAsJSON}
                     >
                       <FileJson className="w-3.5 h-3.5 text-neutral-400" strokeWidth={1.5} />
                       JSON
                     </button>
                     <button
-                      className="w-full px-3 py-2.5 text-xs text-left hover:bg-neutral-100 dark:hover:bg-neutral-700/50 transition-colors flex items-center gap-2.5 text-neutral-600 dark:text-neutral-300"
+                      className="w-full px-3 py-2.5 text-xs text-left hover:bg-neutral-100 dark:hover:bg-neutral-800/50 transition-colors flex items-center gap-2.5 text-neutral-600 dark:text-neutral-300"
                       onClick={exportAsText}
                     >
                       <FileType className="w-3.5 h-3.5 text-neutral-400" strokeWidth={1.5} />
@@ -390,11 +381,12 @@ export default function ChatPage({
 
       {/* Content */}
       <main className="flex-1 max-w-2xl mx-auto w-full px-3 sm:px-4 py-4 sm:py-6">
-        <div className="space-y-0">
+        <div className="space-y-6">
           {conversations.map((conv, index) => (
             <motion.div
-              key={conv.id}
+              key={index}
               animate={{ opacity: 1, y: 0 }}
+              className="bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md rounded-3xl border border-neutral-200/50 dark:border-neutral-800/50 p-4 sm:p-6"
               initial={{ opacity: 0, y: 16 }}
               transition={{ delay: index * 0.08, duration: 0.4, ease: "easeOut" }}
             >
@@ -407,14 +399,14 @@ export default function ChatPage({
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    {conv.is_follow_up && (
+                    {conv.isFollowUp && (
                       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] bg-accent-100 dark:bg-accent-900/30 text-accent-600 dark:text-accent-400 rounded-full">
                         <CornerDownRight className="w-2.5 h-2.5" strokeWidth={2} />
                         Follow-up
                       </span>
                     )}
                     <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
-                      {formatDate(conv.created_at)}
+                      {formatDate(conv.createdAt)}
                     </span>
                   </div>
                   <p className="text-xs sm:text-sm text-neutral-800 dark:text-neutral-100 font-medium">
@@ -425,12 +417,12 @@ export default function ChatPage({
 
               {/* Sources */}
               {conv.sources && conv.sources.length > 0 && (
-                <div className="ml-[30px] mb-3">
+                <div className="mb-3">
                   <div className="flex flex-wrap gap-1.5">
                     {conv.sources.slice(0, 8).map((source, i) => (
                       <a
                         key={i}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 border border-neutral-200/80 dark:border-neutral-700 rounded-full hover:border-accent-400 dark:hover:border-accent-500 transition-all"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] bg-accent-50 dark:bg-accent-900/20 text-accent-600 dark:text-accent-400 border border-accent-200/50 dark:border-accent-800/50 rounded-full hover:border-accent-400 dark:hover:border-accent-500 transition-all"
                         href={source.url}
                         rel="noopener noreferrer"
                         target="_blank"
@@ -448,23 +440,12 @@ export default function ChatPage({
               )}
 
               {/* Response */}
-              <div className="ml-[30px]">
+              <div>
                 <ResearchResponse
                   content={conv.response}
                   isStreaming={false}
                 />
               </div>
-
-              {/* Divider */}
-              {index < conversations.length - 1 && (
-                <div className="flex items-center gap-3 my-6 ml-[30px]">
-                  <div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-800" />
-                  <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
-                    Follow-up
-                  </span>
-                  <div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-800" />
-                </div>
-              )}
             </motion.div>
           ))}
         </div>

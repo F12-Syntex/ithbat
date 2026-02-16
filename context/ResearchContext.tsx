@@ -41,6 +41,7 @@ type ResearchAction =
   | { type: "SET_ERROR"; error: string }
   | { type: "COMPLETE" }
   | { type: "RESET" }
+  | { type: "SET_SLUG"; slug: string }
   | { type: "START_ANALYZING" }
   | { type: "APPEND_ANALYSIS"; content: string }
   | { type: "FINISH_ANALYZING" };
@@ -48,6 +49,7 @@ type ResearchAction =
 interface ResearchContextValue {
   state: ResearchState;
   isAnalyzing: boolean;
+  slug: string | null;
   startResearch: (query: string) => Promise<void>;
   askFollowUp: (question: string) => Promise<void>;
   diveDeeper: () => Promise<void>;
@@ -57,6 +59,7 @@ interface ResearchContextValue {
 
 interface ExtendedResearchState extends ResearchState {
   sessionId: string | null;
+  slug: string | null;
   isAnalyzing: boolean;
 }
 
@@ -70,6 +73,7 @@ const initialState: ExtendedResearchState = {
   conversationHistory: [],
   completedSessions: [],
   sessionId: null,
+  slug: null,
   isAnalyzing: false,
 };
 
@@ -84,12 +88,19 @@ function researchReducer(
         query: action.query,
         status: "researching",
         sessionId: null,
+        slug: null,
       };
 
     case "SET_SESSION_ID":
       return {
         ...state,
         sessionId: action.sessionId,
+      };
+
+    case "SET_SLUG":
+      return {
+        ...state,
+        slug: action.slug,
       };
 
     case "START_FOLLOWUP": {
@@ -220,6 +231,9 @@ function handleSSEEvent(
     case "session_init":
       if (event.sessionId) {
         dispatch({ type: "SET_SESSION_ID", sessionId: event.sessionId });
+      }
+      if (event.slug) {
+        dispatch({ type: "SET_SLUG", slug: event.slug });
       }
       break;
 
@@ -418,6 +432,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
       value={{
         state,
         isAnalyzing: state.isAnalyzing,
+        slug: state.slug,
         startResearch,
         askFollowUp,
         diveDeeper,

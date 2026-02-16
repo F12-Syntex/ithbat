@@ -60,6 +60,7 @@ export interface ResearchStepEvent {
     | "error"
     | "done";
   sessionId?: string;
+  slug?: string;
   step?: ResearchStepType;
   stepTitle?: string;
   content?: string;

@@ -1,22 +1,32 @@
 import type { ResearchStep, Source } from "@/types/research";
 
-import { createServerClient } from "./supabase";
+import {
+  blobSet,
+  blobGet,
+  blobDel,
+  blobExists,
+  blobList,
+  isBlobConfigured,
+} from "./kv";
+import { generateSlug, appendTimestamp } from "./slug";
 import { getCountryFromIP } from "./geolocation";
 
-export interface ConversationLog {
-  id?: string;
-  session_id: string;
+export interface ConversationEntry {
   query: string;
   response: string;
   steps: ResearchStep[];
   sources: Source[];
-  is_follow_up: boolean;
-  created_at?: string;
-  ip_address?: string;
-  user_agent?: string;
-  device_type?: string;
-  country?: string;
-  country_code?: string;
+  isFollowUp: boolean;
+  createdAt: string;
+}
+
+export interface ChatData {
+  sessionId: string;
+  slug: string;
+  conversations: ConversationEntry[];
+  deviceInfo: DeviceInfo;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface DeviceInfo {
@@ -29,260 +39,266 @@ export interface DeviceInfo {
 
 const MAX_SESSIONS = 20;
 
-// Parse user agent to determine device type
 function parseDeviceType(userAgent?: string): string {
   if (!userAgent) return "unknown";
   const ua = userAgent.toLowerCase();
 
-  if (ua.includes("mobile") || ua.includes("android") || ua.includes("iphone"))
+  if (
+    ua.includes("mobile") ||
+    ua.includes("android") ||
+    ua.includes("iphone")
+  )
     return "mobile";
   if (ua.includes("tablet") || ua.includes("ipad")) return "tablet";
 
   return "desktop";
 }
 
-async function cleanupOldSessions(): Promise<void> {
-  try {
-    const supabase = createServerClient();
-
-    if (!supabase) return;
-
-    const { data: sessions } = await supabase
-      .from("conversation_logs")
-      .select("session_id, created_at")
-      .order("created_at", { ascending: false });
-
-    if (!sessions || sessions.length === 0) return;
-
-    const uniqueSessions: string[] = [];
-    const seen = new Set<string>();
-
-    for (const s of sessions) {
-      if (!seen.has(s.session_id)) {
-        seen.add(s.session_id);
-        uniqueSessions.push(s.session_id);
-      }
-    }
-
-    if (uniqueSessions.length > MAX_SESSIONS) {
-      const sessionsToDelete = uniqueSessions.slice(MAX_SESSIONS);
-
-      const { error } = await supabase
-        .from("conversation_logs")
-        .delete()
-        .in("session_id", sessionsToDelete);
-
-      if (error) {
-        console.error("Failed to cleanup old sessions:", error);
-      }
-    }
-  } catch (err) {
-    console.error("Error cleaning up old sessions:", err);
-  }
+/** Check if a slug already exists */
+export async function isSlugTaken(slug: string): Promise<boolean> {
+  return blobExists(`chat:${slug}`);
 }
 
-export async function logConversation(
+/** Generate a unique slug for a query, appending timestamp if needed */
+export async function resolveUniqueSlug(query: string): Promise<string> {
+  let slug = generateSlug(query);
+
+  if (!slug) slug = "chat";
+  if (await isSlugTaken(slug)) {
+    slug = appendTimestamp(slug);
+  }
+
+  return slug;
+}
+
+/** Create a new chat with the first conversation entry */
+export async function createChat(
+  slug: string,
   sessionId: string,
   query: string,
   response: string,
   steps: ResearchStep[],
   sources: Source[],
-  isFollowUp: boolean = false,
   deviceInfo?: DeviceInfo,
 ): Promise<void> {
+  if (!isBlobConfigured) {
+    console.warn("Blob not configured, skipping chat creation");
+
+    return;
+  }
+
   try {
-    const supabase = createServerClient();
+    const enrichedDevice: DeviceInfo = { ...deviceInfo };
 
-    if (!supabase) {
-      console.warn("Supabase not configured, skipping conversation logging");
-
-      return;
+    if (deviceInfo?.userAgent) {
+      enrichedDevice.deviceType = parseDeviceType(deviceInfo.userAgent);
     }
-
-    const insertData: Record<string, unknown> = {
-      session_id: sessionId,
-      query,
-      response,
-      steps: JSON.stringify(steps),
-      sources: JSON.stringify(sources),
-      is_follow_up: isFollowUp,
-    };
-
-    // Add device info if available
     if (deviceInfo?.ip) {
-      insertData.ip_address = deviceInfo.ip;
-
-      // Get country info from IP (non-blocking, best effort)
       try {
         const geoInfo = await getCountryFromIP(deviceInfo.ip);
 
         if (geoInfo) {
-          insertData.country = geoInfo.country;
-          insertData.country_code = geoInfo.countryCode;
+          enrichedDevice.country = geoInfo.country;
+          enrichedDevice.countryCode = geoInfo.countryCode;
         }
       } catch {
         // Silently ignore geolocation errors
       }
     }
 
-    // Add pre-fetched country info if available
-    if (deviceInfo?.country) {
-      insertData.country = deviceInfo.country;
-    }
-    if (deviceInfo?.countryCode) {
-      insertData.country_code = deviceInfo.countryCode;
-    }
+    const now = new Date().toISOString();
+    const chatData: ChatData = {
+      sessionId,
+      slug,
+      conversations: [
+        {
+          query,
+          response,
+          steps,
+          sources,
+          isFollowUp: false,
+          createdAt: now,
+        },
+      ],
+      deviceInfo: enrichedDevice,
+      createdAt: now,
+      updatedAt: now,
+    };
 
-    if (deviceInfo?.userAgent) {
-      insertData.user_agent = deviceInfo.userAgent;
-      insertData.device_type = parseDeviceType(deviceInfo.userAgent);
-    }
+    await Promise.all([
+      blobSet(`chat:${slug}`, chatData),
+      blobSet(`session:${sessionId}`, slug),
+    ]);
 
-    const { error } = await supabase
-      .from("conversation_logs")
-      .insert(insertData);
+    // Update the sessions index
+    await updateSessionsIndex(slug, Date.now());
 
-    if (error) {
-      console.error("Failed to log conversation:", error);
-    }
-
-    cleanupOldSessions().catch((err) => console.error("Cleanup error:", err));
+    // Cleanup old sessions
+    cleanupOldSessions().catch((err) =>
+      console.error("Cleanup error:", err),
+    );
   } catch (err) {
-    console.error("Error logging conversation:", err);
+    console.error("Failed to create chat:", err);
   }
 }
 
-export async function getConversationLogs(
-  limit: number = 50,
-  offset: number = 0,
-): Promise<{ logs: ConversationLog[]; total: number }> {
-  const supabase = createServerClient();
+/** Append a follow-up conversation to an existing chat */
+export async function appendToChat(
+  slug: string,
+  query: string,
+  response: string,
+  steps: ResearchStep[],
+  sources: Source[],
+): Promise<void> {
+  if (!isBlobConfigured) {
+    console.warn("Blob not configured, skipping chat append");
 
-  if (!supabase) {
-    console.warn("Supabase not configured");
-
-    return { logs: [], total: 0 };
+    return;
   }
 
-  const { count } = await supabase
-    .from("conversation_logs")
-    .select("*", { count: "exact", head: true });
+  try {
+    const chatData = await blobGet<ChatData>(`chat:${slug}`);
 
-  const { data, error } = await supabase
-    .from("conversation_logs")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .range(offset, offset + limit - 1);
+    if (!chatData) {
+      console.error("Chat not found for slug:", slug);
 
-  if (error) {
-    console.error("Failed to fetch conversation logs:", error);
+      return;
+    }
 
-    return { logs: [], total: 0 };
+    chatData.conversations.push({
+      query,
+      response,
+      steps,
+      sources,
+      isFollowUp: true,
+      createdAt: new Date().toISOString(),
+    });
+    chatData.updatedAt = new Date().toISOString();
+
+    await blobSet(`chat:${slug}`, chatData);
+    await updateSessionsIndex(slug, Date.now());
+  } catch (err) {
+    console.error("Failed to append to chat:", err);
   }
-
-  const logs = (data || []).map((row) => ({
-    id: row.id,
-    session_id: row.session_id,
-    query: row.query,
-    response: row.response,
-    steps: typeof row.steps === "string" ? JSON.parse(row.steps) : row.steps,
-    sources:
-      typeof row.sources === "string" ? JSON.parse(row.sources) : row.sources,
-    is_follow_up: row.is_follow_up,
-    created_at: row.created_at,
-    ip_address: row.ip_address,
-    user_agent: row.user_agent,
-    device_type: row.device_type,
-    country: row.country,
-    country_code: row.country_code,
-  }));
-
-  return { logs, total: count || 0 };
 }
 
-export async function deleteSession(sessionId: string): Promise<boolean> {
-  const supabase = createServerClient();
-
-  if (!supabase) {
-    console.warn("Supabase not configured");
-
-    return false;
-  }
-
-  const { error } = await supabase
-    .from("conversation_logs")
-    .delete()
-    .eq("session_id", sessionId);
-
-  if (error) {
-    console.error("Failed to delete session:", error);
-
-    return false;
-  }
-
-  return true;
+/** Get chat data by slug */
+export async function getChatBySlug(
+  slug: string,
+): Promise<ChatData | null> {
+  return blobGet<ChatData>(`chat:${slug}`);
 }
 
-export async function deleteLog(logId: string): Promise<boolean> {
-  const supabase = createServerClient();
-
-  if (!supabase) {
-    console.warn("Supabase not configured");
-
-    return false;
-  }
-
-  const { error } = await supabase
-    .from("conversation_logs")
-    .delete()
-    .eq("id", logId);
-
-  if (error) {
-    console.error("Failed to delete log:", error);
-
-    return false;
-  }
-
-  return true;
-}
-
-export async function getConversationsBySession(
+/** Reverse lookup: get slug from sessionId */
+export async function getSlugBySessionId(
   sessionId: string,
-): Promise<ConversationLog[]> {
-  const supabase = createServerClient();
+): Promise<string | null> {
+  return blobGet<string>(`session:${sessionId}`);
+}
 
-  if (!supabase) {
-    console.warn("Supabase not configured");
+// Sessions index: a single blob storing { slug: timestamp } for ordering
+interface SessionsIndex {
+  entries: Record<string, number>; // slug -> timestamp
+}
 
-    return [];
+async function getSessionsIndex(): Promise<SessionsIndex> {
+  const index = await blobGet<SessionsIndex>("sessions-index");
+
+  return index || { entries: {} };
+}
+
+async function updateSessionsIndex(
+  slug: string,
+  timestamp: number,
+): Promise<void> {
+  const index = await getSessionsIndex();
+
+  index.entries[slug] = timestamp;
+  await blobSet("sessions-index", index);
+}
+
+async function removeFromSessionsIndex(slug: string): Promise<void> {
+  const index = await getSessionsIndex();
+
+  delete index.entries[slug];
+  await blobSet("sessions-index", index);
+}
+
+/** Get all sessions for admin listing (paginated, newest first) */
+export async function getAllSessions(
+  offset: number = 0,
+  limit: number = 50,
+): Promise<{ sessions: ChatData[]; total: number }> {
+  if (!isBlobConfigured) return { sessions: [], total: 0 };
+
+  try {
+    const index = await getSessionsIndex();
+    const sorted = Object.entries(index.entries)
+      .sort((a, b) => b[1] - a[1]) // newest first
+      .map(([slug]) => slug);
+
+    const total = sorted.length;
+    const page = sorted.slice(offset, offset + limit);
+
+    if (page.length === 0) {
+      return { sessions: [], total };
+    }
+
+    const chatPromises = page.map((slug) => blobGet<ChatData>(`chat:${slug}`));
+    const chats = await Promise.all(chatPromises);
+
+    const sessions = chats.filter((c): c is ChatData => c !== null);
+
+    return { sessions, total };
+  } catch (err) {
+    console.error("Failed to get all sessions:", err);
+
+    return { sessions: [], total: 0 };
   }
+}
 
-  const { data, error } = await supabase
-    .from("conversation_logs")
-    .select("*")
-    .eq("session_id", sessionId)
-    .order("created_at", { ascending: true });
+/** Delete a chat by slug */
+export async function deleteChat(slug: string): Promise<boolean> {
+  if (!isBlobConfigured) return false;
 
-  if (error) {
-    console.error("Failed to fetch session conversations:", error);
+  try {
+    const chatData = await blobGet<ChatData>(`chat:${slug}`);
 
-    return [];
+    if (!chatData) return false;
+
+    await Promise.all([
+      blobDel(`chat:${slug}`),
+      blobDel(`session:${chatData.sessionId}`),
+    ]);
+
+    await removeFromSessionsIndex(slug);
+
+    return true;
+  } catch (err) {
+    console.error("Failed to delete chat:", err);
+
+    return false;
   }
+}
 
-  return (data || []).map((row) => ({
-    id: row.id,
-    session_id: row.session_id,
-    query: row.query,
-    response: row.response,
-    steps: typeof row.steps === "string" ? JSON.parse(row.steps) : row.steps,
-    sources:
-      typeof row.sources === "string" ? JSON.parse(row.sources) : row.sources,
-    is_follow_up: row.is_follow_up,
-    created_at: row.created_at,
-    ip_address: row.ip_address,
-    user_agent: row.user_agent,
-    device_type: row.device_type,
-    country: row.country,
-    country_code: row.country_code,
-  }));
+/** Cleanup old sessions beyond MAX_SESSIONS */
+async function cleanupOldSessions(): Promise<void> {
+  if (!isBlobConfigured) return;
+
+  try {
+    const index = await getSessionsIndex();
+    const sorted = Object.entries(index.entries)
+      .sort((a, b) => b[1] - a[1])
+      .map(([slug]) => slug);
+
+    if (sorted.length <= MAX_SESSIONS) return;
+
+    const toDelete = sorted.slice(MAX_SESSIONS);
+
+    for (const slug of toDelete) {
+      await deleteChat(slug);
+    }
+  } catch (err) {
+    console.error("Error cleaning up old sessions:", err);
+  }
 }

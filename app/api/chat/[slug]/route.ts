@@ -1,28 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getConversationsBySession } from "@/lib/conversation-logger";
+import { getChatBySlug } from "@/lib/conversation-logger";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ sessionId: string }> },
+  { params }: { params: Promise<{ slug: string }> },
 ) {
-  const { sessionId } = await params;
+  const { slug } = await params;
 
-  if (!sessionId) {
+  if (!slug) {
     return NextResponse.json(
-      { error: "Session ID is required" },
+      { error: "Slug is required" },
       { status: 400 },
     );
   }
 
   try {
-    const conversations = await getConversationsBySession(sessionId);
+    const chatData = await getChatBySlug(slug);
 
-    if (conversations.length === 0) {
+    if (!chatData) {
       return NextResponse.json({ error: "Chat not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ conversations, sessionId });
+    return NextResponse.json({
+      conversations: chatData.conversations,
+      slug: chatData.slug,
+      sessionId: chatData.sessionId,
+    });
   } catch (error) {
     console.error("Error fetching chat:", error);
 

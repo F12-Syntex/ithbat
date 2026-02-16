@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import {
-  getConversationLogs,
-  deleteSession,
-  deleteLog,
-} from "@/lib/conversation-logger";
+import { getAllSessions, deleteChat } from "@/lib/conversation-logger";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -12,9 +8,9 @@ export async function GET(request: NextRequest) {
   const offset = parseInt(searchParams.get("offset") || "0", 10);
 
   try {
-    const { logs, total } = await getConversationLogs(limit, offset);
+    const { sessions, total } = await getAllSessions(offset, limit);
 
-    return NextResponse.json({ logs, total, limit, offset });
+    return NextResponse.json({ sessions, total, limit, offset });
   } catch (error) {
     console.error("Error fetching logs:", error);
 
@@ -27,38 +23,25 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const { sessionId, logId } = await request.json();
+    const { slug } = await request.json();
 
-    if (sessionId) {
-      const success = await deleteSession(sessionId);
-
-      if (!success) {
-        return NextResponse.json(
-          { error: "Failed to delete session" },
-          { status: 500 },
-        );
-      }
-
-      return NextResponse.json({ success: true, deleted: "session" });
+    if (!slug) {
+      return NextResponse.json(
+        { error: "slug is required" },
+        { status: 400 },
+      );
     }
 
-    if (logId) {
-      const success = await deleteLog(logId);
+    const success = await deleteChat(slug);
 
-      if (!success) {
-        return NextResponse.json(
-          { error: "Failed to delete log" },
-          { status: 500 },
-        );
-      }
-
-      return NextResponse.json({ success: true, deleted: "log" });
+    if (!success) {
+      return NextResponse.json(
+        { error: "Failed to delete chat" },
+        { status: 500 },
+      );
     }
 
-    return NextResponse.json(
-      { error: "sessionId or logId required" },
-      { status: 400 },
-    );
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting:", error);
 
