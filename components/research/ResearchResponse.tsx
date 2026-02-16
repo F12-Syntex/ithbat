@@ -215,6 +215,25 @@ export function ResearchResponse({
       >
         <ReactMarkdown
           components={{
+            // Render images with rounded styling
+            img: ({ src, alt }) => {
+              if (!src) return null;
+              return (
+                <span className="block my-4">
+                  <img
+                    alt={alt || ""}
+                    className="rounded-2xl border border-neutral-200/80 dark:border-neutral-700 max-h-80 w-auto"
+                    loading="lazy"
+                    src={src}
+                  />
+                  {alt && (
+                    <span className="block text-[11px] text-neutral-400 dark:text-neutral-500 mt-1.5 ml-0.5">
+                      {alt}
+                    </span>
+                  )}
+                </span>
+              );
+            },
             // Render links as SourceInfoBadge for source URLs
             a: ({ href, children }) => {
               const linkText =

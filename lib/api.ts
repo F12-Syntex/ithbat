@@ -9,6 +9,7 @@ export async function* streamResearch(
   conversationHistory?: ConversationTurn[],
   sessionId?: string,
   language?: string,
+  images?: string[],
 ): AsyncGenerator<ResearchStepEvent> {
   const response = await fetch("/api/research", {
     method: "POST",
@@ -20,6 +21,7 @@ export async function* streamResearch(
       conversationHistory,
       sessionId,
       language,
+      images,
     }),
     signal,
   });

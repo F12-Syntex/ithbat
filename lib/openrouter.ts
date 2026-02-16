@@ -1,8 +1,12 @@
 import { aiConfig, type ModelTier } from "./ai-config";
 
-interface ChatMessage {
+export type ContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
+export interface ChatMessage {
   role: "system" | "user" | "assistant";
-  content: string;
+  content: string | ContentPart[];
 }
 
 interface StreamOptions {
@@ -229,4 +233,79 @@ export function getOpenRouterClient(): OpenRouterClient {
   }
 
   return clientInstance;
+}
+
+/**
+ * Call Perplexity's Chat Completions API directly.
+ * Supports images via standard OpenAI multimodal format.
+ * Used for all SEARCH tier calls instead of OpenRouter.
+ */
+export async function* streamPerplexity(
+  messages: ChatMessage[],
+  options: { maxTokens?: number; temperature?: number } = {},
+): AsyncGenerator<string> {
+  const apiKey = process.env.PERPLEXITY_API_KEY;
+  if (!apiKey) {
+    throw new Error("PERPLEXITY_API_KEY environment variable is not set");
+  }
+
+  const model = aiConfig.models.SEARCH;
+
+  const response = await fetch("https://api.perplexity.ai/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "sonar",
+      messages,
+      stream: true,
+      max_tokens: options.maxTokens || model.maxTokens,
+      temperature: options.temperature || model.temperature,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Perplexity API error: ${response.status} - ${error}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error("No response body");
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const data = line.slice(6).trim();
+          if (data === "[DONE]") return;
+
+          try {
+            const parsed = JSON.parse(data);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              yield content;
+            }
+          } catch {
+            // Skip malformed chunks
+          }
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
 }

@@ -23,12 +23,14 @@ import {
 } from "@/types/research";
 
 type ResearchAction =
-  | { type: "START_RESEARCH"; query: string }
+  | { type: "START_RESEARCH"; query: string; images?: string[] }
   | {
       type: "START_FOLLOWUP";
       query: string;
+      images?: string[];
       previousQuery: string;
       previousResponse: string;
+      previousImages?: string[];
     }
   | { type: "SET_SESSION_ID"; sessionId: string }
   | { type: "ADD_STEP"; stepType: ResearchStepType; stepTitle?: string }
@@ -53,6 +55,7 @@ type ResearchAction =
       response: string;
       steps: ResearchStep[];
       sources: Source[];
+      images: string[];
       completedSessions: CompletedSession[];
       conversationHistory: ConversationTurn[];
     }
@@ -64,8 +67,8 @@ interface ResearchContextValue {
   state: ResearchState;
   isAnalyzing: boolean;
   slug: string | null;
-  startResearch: (query: string) => Promise<void>;
-  askFollowUp: (question: string) => Promise<void>;
+  startResearch: (query: string, images?: string[]) => Promise<void>;
+  askFollowUp: (question: string, images?: string[]) => Promise<void>;
   diveDeeper: () => Promise<void>;
   hydrateChat: (slug: string) => Promise<boolean>;
   cancelResearch: () => void;
@@ -80,6 +83,7 @@ interface ExtendedResearchState extends ResearchState {
 
 const initialState: ExtendedResearchState = {
   query: "",
+  images: [],
   status: "idle",
   steps: [],
   sources: [],
@@ -101,6 +105,7 @@ function researchReducer(
       return {
         ...initialState,
         query: action.query,
+        images: action.images || [],
         status: "researching",
         sessionId: null,
         slug: null,
@@ -124,6 +129,7 @@ function researchReducer(
         sessionId: action.sessionId,
         slug: action.slug,
         query: action.query,
+        images: action.images,
         response: action.response,
         steps: action.steps,
         sources: action.sources,
@@ -137,11 +143,13 @@ function researchReducer(
         query: action.previousQuery,
         response: action.previousResponse,
         steps: state.steps,
+        ...(action.previousImages?.length ? { images: action.previousImages } : {}),
       };
 
       return {
         ...initialState,
         query: action.query,
+        images: action.images || [],
         status: "researching",
         conversationHistory: [
           ...(state.conversationHistory || []),
@@ -341,11 +349,11 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
   const languageRef = useRef(settings.language);
   languageRef.current = settings.language;
 
-  const startResearch = useCallback(async (query: string) => {
+  const startResearch = useCallback(async (query: string, images?: string[]) => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
 
-    dispatch({ type: "START_RESEARCH", query });
+    dispatch({ type: "START_RESEARCH", query, images });
 
     try {
       for await (const event of streamResearch(
@@ -354,6 +362,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
         undefined,
         undefined,
         languageRef.current,
+        images,
       )) {
         handleSSEEvent(event, dispatch);
       }
@@ -427,7 +436,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
     }
   }, [state.query, state.response, state.status, state.conversationHistory, state.sessionId]);
 
-  const askFollowUp = useCallback(async (question: string) => {
+  const askFollowUp = useCallback(async (question: string, images?: string[]) => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
 
@@ -442,8 +451,10 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
     dispatch({
       type: "START_FOLLOWUP",
       query: question,
+      images,
       previousQuery,
       previousResponse,
+      previousImages: state.images.length > 0 ? state.images : undefined,
     });
 
     const currentSessionId = (state as ExtendedResearchState).sessionId;
@@ -455,6 +466,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
         conversationHistory,
         currentSessionId || undefined,
         languageRef.current,
+        images,
       )) {
         handleSSEEvent(event, dispatch);
       }
@@ -477,6 +489,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
         response: string;
         steps: ResearchStep[];
         sources: Source[];
+        images?: string[];
         isFollowUp: boolean;
       }>;
 
@@ -492,6 +505,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
           query: c.query,
           response: c.response,
           steps: c.steps || [],
+          ...(c.images?.length ? { images: c.images } : {}),
         }));
 
       const conversationHistory: ConversationTurn[] = conversations
@@ -509,6 +523,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
         response: last.response,
         steps: last.steps || [],
         sources: last.sources || [],
+        images: last.images || [],
         completedSessions,
         conversationHistory,
       });

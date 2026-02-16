@@ -84,10 +84,10 @@ export function ResearchContainer() {
   }, [slug]);
 
   const startResearch = useCallback(
-    (query: string) => baseStartResearch(query),
+    (query: string, images?: string[]) => baseStartResearch(query, images),
     [baseStartResearch],
   );
-  const askFollowUp = (question: string) => baseAskFollowUp(question);
+  const askFollowUp = (question: string, images?: string[]) => baseAskFollowUp(question, images);
 
   // Handler to clear suggested query after it's been applied to the input
   const handleSuggestedQueryApplied = useCallback(
@@ -382,6 +382,20 @@ export function ResearchContainer() {
                         )}
                       </div>
 
+                      {/* Attached images */}
+                      {session.images && session.images.length > 0 && (
+                        <div className="flex gap-2 mb-2 ml-7">
+                          {session.images.map((img, i) => (
+                            <img
+                              key={i}
+                              alt={`Attachment ${i + 1}`}
+                              className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover border border-neutral-200/80 dark:border-neutral-700"
+                              src={img}
+                            />
+                          ))}
+                        </div>
+                      )}
+
                       {/* Previous Pipeline */}
                       <div className="mb-3">
                         <ResearchPipeline
@@ -424,6 +438,20 @@ export function ResearchContainer() {
                           {state.query}
                         </span>
                       </div>
+
+                      {/* Current query images */}
+                      {state.images && state.images.length > 0 && (
+                        <div className="flex gap-2 mb-2 ml-7">
+                          {state.images.map((img, i) => (
+                            <img
+                              key={i}
+                              alt={`Attachment ${i + 1}`}
+                              className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover border border-neutral-200/80 dark:border-neutral-700"
+                              src={img}
+                            />
+                          ))}
+                        </div>
+                      )}
 
                       {/* Research Pipeline */}
                       <div className="mb-3">

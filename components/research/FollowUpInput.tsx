@@ -1,12 +1,25 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
-import { motion } from "framer-motion";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowRight, ImagePlus, X } from "lucide-react";
 
 import { useTranslation } from "@/lib/i18n";
 
+const MAX_IMAGES = 3;
+const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 interface FollowUpInputProps {
-  onSubmit: (question: string) => void;
+  onSubmit: (question: string, images?: string[]) => void;
   isLoading?: boolean;
   previousQuery: string;
 }
@@ -43,7 +56,10 @@ export function FollowUpInput({
   previousQuery,
 }: FollowUpInputProps) {
   const [value, setValue] = useState("");
+  const [images, setImages] = useState<{ file: File; preview: string; base64: string }[]>([]);
+  const [imageError, setImageError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { t } = useTranslation();
 
   const suggestionKeys = useMemo(
@@ -55,12 +71,23 @@ export function FollowUpInput({
     inputRef.current?.focus();
   }, []);
 
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      images.forEach((img) => URL.revokeObjectURL(img.preview));
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const hasContent = value.trim() || images.length > 0;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (value.trim() && !isLoading) {
-      onSubmit(value.trim());
-      setValue("");
-    }
+    if (!hasContent || isLoading) return;
+    const base64Images = images.length > 0 ? images.map((i) => i.base64) : undefined;
+    onSubmit(value.trim(), base64Images);
+    setValue("");
+    setImages([]);
+    setImageError(null);
   };
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -68,6 +95,55 @@ export function FollowUpInput({
       onSubmit(suggestion);
     }
   };
+
+  const addImageFiles = useCallback(async (files: File[]) => {
+    if (files.length === 0) return;
+    setImageError(null);
+    const remaining = MAX_IMAGES - images.length;
+    const toAdd = files.slice(0, remaining);
+    if (files.length > remaining) {
+      setImageError(`Max ${MAX_IMAGES} images`);
+    }
+    for (const file of toAdd) {
+      if (file.size > MAX_IMAGE_SIZE) {
+        setImageError(`${file.name} exceeds 4MB limit`);
+        continue;
+      }
+      try {
+        const base64 = await fileToBase64(file);
+        const preview = URL.createObjectURL(file);
+        setImages((prev) => [...prev, { file, preview, base64 }]);
+      } catch {
+        setImageError(`Failed to read ${file.name}`);
+      }
+    }
+  }, [images.length]);
+
+  const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
+    const items = Array.from(e.clipboardData.items);
+    const imageFiles = items
+      .filter((item) => item.type.startsWith("image/"))
+      .map((item) => item.getAsFile())
+      .filter((f): f is File => f !== null);
+    if (imageFiles.length > 0) {
+      e.preventDefault();
+      await addImageFiles(imageFiles);
+    }
+  }, [addImageFiles]);
+
+  const handleImageSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    await addImageFiles(files);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, [addImageFiles]);
+
+  const removeImage = useCallback((index: number) => {
+    setImages((prev) => {
+      URL.revokeObjectURL(prev[index].preview);
+      return prev.filter((_, i) => i !== index);
+    });
+    setImageError(null);
+  }, []);
 
   return (
     <motion.div
@@ -117,60 +193,106 @@ export function FollowUpInput({
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div className="relative">
-          <input
-            ref={inputRef}
-            className="w-full px-4 py-3 pr-12 text-base sm:text-sm bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl focus:outline-none focus:border-accent-400 dark:focus:border-accent-500 focus:ring-1 focus:ring-accent-400/20 dark:focus:ring-accent-500/20 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 transition-all shadow-sm dark:shadow-none"
-            disabled={isLoading}
-            placeholder={`${t("research.followUp")} "${previousQuery.slice(0, 30)}${previousQuery.length > 30 ? "..." : ""}"...`}
-            type="text"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-          />
-
-          <button
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-accent-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            disabled={!value.trim() || isLoading}
-            type="submit"
-          >
-            {isLoading ? (
-              <svg
-                className="w-4 h-4 animate-spin"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
+        <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200/80 dark:border-neutral-800 shadow-sm dark:shadow-none focus-within:border-neutral-300 dark:focus-within:border-neutral-700 focus-within:shadow-md dark:focus-within:shadow-none transition-all" onPaste={handlePaste}>
+          {/* Image previews */}
+          <AnimatePresence>
+            {images.length > 0 && (
+              <motion.div
+                animate={{ opacity: 1, height: "auto" }}
+                className="flex gap-2 px-3 sm:px-4 pt-2.5 sm:pt-3 overflow-x-auto"
+                exit={{ opacity: 0, height: 0 }}
+                initial={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.15 }}
               >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                />
-                <path
-                  className="opacity-75"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  fill="currentColor"
-                />
-              </svg>
-            ) : (
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  d="M13 5l7 7-7 7M5 5l7 7-7 7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+                {images.map((img, i) => (
+                  <motion.div
+                    key={img.preview}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="relative flex-shrink-0 group/img"
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                  >
+                    <img
+                      alt={`Upload ${i + 1}`}
+                      className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl object-cover border border-neutral-200/80 dark:border-neutral-700"
+                      src={img.preview}
+                    />
+                    <button
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-neutral-800 dark:bg-neutral-200 text-white dark:text-neutral-800 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity"
+                      type="button"
+                      onClick={() => removeImage(i)}
+                    >
+                      <X className="w-2.5 h-2.5" strokeWidth={3} />
+                    </button>
+                  </motion.div>
+                ))}
+              </motion.div>
             )}
-          </button>
+          </AnimatePresence>
+
+          {/* Input row */}
+          <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3">
+            {/* Image upload button */}
+            <button
+              className={`flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center transition-colors ${
+                images.length >= MAX_IMAGES
+                  ? "text-neutral-300 dark:text-neutral-600 cursor-not-allowed"
+                  : "text-neutral-400 hover:text-accent-500 dark:hover:text-accent-400"
+              }`}
+              disabled={images.length >= MAX_IMAGES || isLoading}
+              title="Add image"
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <ImagePlus className="w-4 h-4 sm:w-[18px] sm:h-[18px]" strokeWidth={1.5} />
+            </button>
+
+            <input
+              ref={fileInputRef}
+              accept="image/*"
+              className="hidden"
+              multiple
+              type="file"
+              onChange={handleImageSelect}
+            />
+
+            <input
+              ref={inputRef}
+              className="flex-1 bg-transparent text-base sm:text-sm text-neutral-800 dark:text-neutral-100 placeholder:text-neutral-400 outline-none border-none focus:ring-0"
+              disabled={isLoading}
+              placeholder={`${t("research.followUp")} "${previousQuery.slice(0, 30)}${previousQuery.length > 30 ? "..." : ""}"...`}
+              type="text"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+            />
+
+            <button
+              className={`flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center transition-colors ${
+                hasContent
+                  ? "bg-neutral-100 dark:bg-neutral-800 text-accent-600 dark:text-accent-400"
+                  : "bg-neutral-100 dark:bg-neutral-800 text-neutral-400"
+              }`}
+              disabled={!hasContent || isLoading}
+              type="submit"
+            >
+              <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" strokeWidth={2} />
+            </button>
+          </div>
         </div>
+
+        {/* Image error */}
+        <AnimatePresence>
+          {imageError && (
+            <motion.p
+              animate={{ opacity: 1, y: 0 }}
+              className="text-[11px] text-red-500 mt-1.5 ml-3"
+              exit={{ opacity: 0 }}
+              initial={{ opacity: 0, y: -4 }}
+            >
+              {imageError}
+            </motion.p>
+          )}
+        </AnimatePresence>
       </form>
     </motion.div>
   );

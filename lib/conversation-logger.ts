@@ -15,6 +15,7 @@ export interface ConversationEntry {
   response: string;
   steps: ResearchStep[];
   sources: Source[];
+  images?: string[];
   isFollowUp: boolean;
   createdAt: string;
 }
@@ -54,6 +55,7 @@ export async function createChat(
   steps: ResearchStep[],
   sources: Source[],
   userHash?: string,
+  images?: string[],
 ): Promise<void> {
   if (!isBlobConfigured) {
     console.warn("Blob not configured, skipping chat creation");
@@ -73,6 +75,7 @@ export async function createChat(
           response,
           steps,
           sources,
+          ...(images && images.length > 0 ? { images } : {}),
           isFollowUp: false,
           createdAt: now,
         },
@@ -97,6 +100,7 @@ export async function appendToChat(
   response: string,
   steps: ResearchStep[],
   sources: Source[],
+  images?: string[],
 ): Promise<void> {
   if (!isBlobConfigured) {
     console.warn("Blob not configured, skipping chat append");
@@ -118,6 +122,7 @@ export async function appendToChat(
       response,
       steps,
       sources,
+      ...(images && images.length > 0 ? { images } : {}),
       isFollowUp: true,
       createdAt: new Date().toISOString(),
     });

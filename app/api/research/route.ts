@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 
-import { getOpenRouterClient } from "@/lib/openrouter";
+import { getOpenRouterClient, streamPerplexity, type ContentPart } from "@/lib/openrouter";
 import {
   ISLAMIC_RESEARCH_SYSTEM_PROMPT,
   UNDERSTANDING_PROMPT,
@@ -232,7 +232,11 @@ export async function POST(request: NextRequest) {
     conversationHistory = [],
     sessionId: providedSessionId,
     language = "en",
+    images = [],
   } = await request.json();
+  const validImages = Array.isArray(images)
+    ? (images as string[]).filter((img) => typeof img === "string" && img.startsWith("data:image/"))
+    : [];
   const history = conversationHistory as ConversationTurn[];
   const sessionId = providedSessionId || crypto.randomUUID();
   const isFollowUp = history.length > 0;
@@ -377,14 +381,23 @@ export async function POST(request: NextRequest) {
           query: isFollowUp ? `${query}${conversationContext}` : query,
         });
 
+        // Build multimodal content if images are present
+        const searchUserContent: string | ContentPart[] =
+          validImages.length > 0
+            ? [
+                { type: "text" as const, text: researchPrompt },
+                ...validImages.map((img) => ({
+                  type: "image_url" as const,
+                  image_url: { url: img },
+                })),
+              ]
+            : researchPrompt;
+
         let perplexityResponse = "";
-        for await (const chunk of client.streamChat(
-          [
-            { role: "system", content: ISLAMIC_RESEARCH_SYSTEM_PROMPT },
-            { role: "user", content: researchPrompt },
-          ],
-          "SEARCH",
-        )) {
+        for await (const chunk of streamPerplexity([
+          { role: "system", content: ISLAMIC_RESEARCH_SYSTEM_PROMPT },
+          { role: "user", content: searchUserContent },
+        ])) {
           perplexityResponse += chunk;
         }
 
@@ -480,10 +493,11 @@ export async function POST(request: NextRequest) {
         // Log conversation to KV (must await before closing stream,
         // otherwise serverless function terminates before write completes)
         try {
+          const logImages = validImages.length > 0 ? validImages : undefined;
           if (isFollowUp) {
-            await appendToChat(slug!, query, formattedResponse, allSteps, allSources);
+            await appendToChat(slug!, query, formattedResponse, allSteps, allSources, logImages);
           } else {
-            await createChat(slug!, sessionId, query, formattedResponse, allSteps, allSources, userHash);
+            await createChat(slug!, sessionId, query, formattedResponse, allSteps, allSources, userHash, logImages);
           }
         } catch (err) {
           console.error("Failed to log conversation:", err);

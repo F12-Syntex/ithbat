@@ -15,6 +15,7 @@ import {
   ChevronDown,
   User,
   Lock,
+  ImageIcon,
 } from "lucide-react";
 
 const LOGS_PASSWORD = "ithbat2024";
@@ -27,6 +28,7 @@ interface ChatSession {
   conversations: Array<{
     query: string;
     response: string;
+    images?: string[];
     isFollowUp: boolean;
     createdAt: string;
   }>;
@@ -92,6 +94,11 @@ function ChatCard({
     session.conversations[session.conversations.length - 1]?.response || "";
   const msgCount = session.conversations.length;
   const isDeleting = deleting === session.slug;
+  const totalImages = session.conversations.reduce(
+    (sum, c) => sum + (c.images?.length || 0),
+    0,
+  );
+  const firstImages = session.conversations.find((c) => c.images?.length)?.images;
 
   return (
     <motion.div
@@ -132,7 +139,32 @@ function ChatCard({
           {truncateResponse(lastResponse)}
         </p>
 
+        {/* Image thumbnails */}
+        {firstImages && firstImages.length > 0 && (
+          <div className="flex items-center gap-1.5 mt-2">
+            {firstImages.slice(0, 3).map((img, i) => (
+              <img
+                key={i}
+                alt={`Attachment ${i + 1}`}
+                className="w-8 h-8 rounded-lg object-cover border border-neutral-200/80 dark:border-neutral-700"
+                src={img}
+              />
+            ))}
+            {totalImages > 3 && (
+              <span className="text-[10px] text-neutral-400 dark:text-neutral-500 ml-0.5">
+                +{totalImages - 3}
+              </span>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center gap-3 mt-2">
+          {totalImages > 0 && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded-md font-medium">
+              <ImageIcon className="w-2.5 h-2.5" strokeWidth={2} />
+              {totalImages}
+            </span>
+          )}
           {msgCount > 1 && (
             <span className="inline-flex items-center gap-1 text-[11px] text-accent-600 dark:text-accent-400 bg-accent-50 dark:bg-accent-900/20 px-1.5 py-0.5 rounded-md font-medium">
               <MessageCircle className="w-2.5 h-2.5" strokeWidth={2} />
@@ -166,7 +198,7 @@ export default function LogsPage() {
     label: string;
   } | null>(null);
   const [filter, setFilter] = useState("");
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
     new Set(),
   );
 
@@ -272,7 +304,7 @@ export default function LogsPage() {
   }, [filtered]);
 
   const toggleGroup = (hash: string) => {
-    setCollapsedGroups((prev) => {
+    setExpandedGroups((prev) => {
       const next = new Set(prev);
       if (next.has(hash)) {
         next.delete(hash);
@@ -509,7 +541,7 @@ export default function LogsPage() {
         ) : (
           <div className="space-y-5">
             {userGroups.map((group, groupIndex) => {
-              const isCollapsed = collapsedGroups.has(group.userHash);
+              const isCollapsed = !expandedGroups.has(group.userHash);
               const label =
                 group.userHash === "unknown" ? "Unknown" : group.userHash;
 

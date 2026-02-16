@@ -34,10 +34,12 @@ export interface CompletedSession {
   query: string;
   response: string;
   steps: ResearchStep[];
+  images?: string[];
 }
 
 export interface ResearchState {
   query: string;
+  images: string[];
   status: ResearchStatus;
   steps: ResearchStep[];
   sources: Source[];
