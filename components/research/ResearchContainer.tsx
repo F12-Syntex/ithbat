@@ -104,10 +104,7 @@ export function ResearchContainer() {
   const { addEntry } = useChatHistory();
   const [suggestedQuery, setSuggestedQuery] = useState<string | undefined>();
   const [linkCopied, setLinkCopied] = useState(false);
-  const [dockMerged, setDockMerged] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const followUpRef = useRef<HTMLDivElement>(null);
-  const inlineDockSlotRef = useRef<HTMLDivElement>(null);
 
   const handleExportPdf = useCallback(async () => {
     if (!state.response || !state.query) return;
@@ -164,26 +161,6 @@ export function ResearchContainer() {
       addEntry(slug, state.query, messageCount);
     }
   }, [state.status, slug, state.query, state.completedSessions?.length, addEntry]);
-
-  // Merge detection: check if mergeable elements are near the dock
-  const checkMerge = useCallback(() => {
-    const el = followUpRef.current;
-    if (!el) { setDockMerged(false); return; }
-    const rect = el.getBoundingClientRect();
-    const dockY = window.innerHeight - 60;
-    // Element overlaps with dock zone
-    setDockMerged(rect.bottom > dockY && rect.top < window.innerHeight);
-  }, []);
-
-  useEffect(() => {
-    const scrollEl = scrollRef.current;
-    if (!scrollEl) return;
-    const handler = () => requestAnimationFrame(checkMerge);
-    scrollEl.addEventListener("scroll", handler, { passive: true });
-    // Check once on mount/update
-    handler();
-    return () => scrollEl.removeEventListener("scroll", handler);
-  }, [checkMerge, state.status]);
 
   const isResearching = state.status === "researching";
   const hasResults =
@@ -323,16 +300,14 @@ export function ResearchContainer() {
       <div className="relative h-screen h-[100dvh] overflow-hidden bg-neutral-100 dark:bg-neutral-950 flex flex-col">
         {/* Floating Bottom Dock */}
         <Dock
-          inlineSlotRef={inlineDockSlotRef}
           linkCopied={linkCopied}
-          merged={dockMerged}
           onNewSearch={reset}
           onShare={handleShareLink}
           shareDisabled={!slug || state.status !== "completed"}
         />
 
         {/* Main Content Area */}
-        <div ref={scrollRef} className="flex-1 min-h-0 flex flex-col overflow-y-auto pb-20">
+        <div ref={scrollRef} className="flex-1 min-h-0 flex flex-col overflow-y-auto pb-24">
           {/* Search Section - Centers when no results, scrolls with content when results exist */}
           <div
             className={`flex flex-col items-center justify-center px-3 sm:px-4 transition-all duration-500 ease-out ${
@@ -634,16 +609,11 @@ export function ResearchContainer() {
 
                   {/* Follow-up Input */}
                   {state.status === "completed" && state.response && !isAnalyzing && (
-                    <div ref={followUpRef} className="flex items-end gap-3">
-                      <div className="flex-1 min-w-0">
-                        <FollowUpInput
-                          isLoading={isResearching}
-                          previousQuery={state.query}
-                          onSubmit={askFollowUp}
-                        />
-                      </div>
-                      <div ref={inlineDockSlotRef} />
-                    </div>
+                    <FollowUpInput
+                      isLoading={isResearching}
+                      previousQuery={state.query}
+                      onSubmit={askFollowUp}
+                    />
                   )}
 
                   {/* Error */}

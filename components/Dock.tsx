@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -53,8 +52,6 @@ function formatRelativeTime(dateStr: string): string {
 type SheetType = "history" | "settings" | null;
 
 interface DockProps {
-  merged: boolean;
-  inlineSlotRef: React.RefObject<HTMLDivElement | null>;
   shareDisabled: boolean;
   onNewSearch: () => void;
   onShare: () => void;
@@ -112,8 +109,6 @@ function PillButtons({
 }
 
 export function Dock({
-  merged,
-  inlineSlotRef,
   shareDisabled,
   onNewSearch,
   onShare,
@@ -188,14 +183,14 @@ export function Dock({
         )}
       </AnimatePresence>
 
-      {/* Floating Dock Pill — fades out when merged */}
+      {/* Floating Dock Pill */}
       <motion.div
         animate={{
-          opacity: merged || openSheet ? 0 : 1,
-          y: merged || openSheet ? 20 : 0,
+          opacity: openSheet ? 0 : 1,
+          y: openSheet ? 20 : 0,
         }}
         className="fixed left-1/2 z-40 -translate-x-1/2 bottom-5"
-        style={{ pointerEvents: merged || openSheet ? "none" : "auto" }}
+        style={{ pointerEvents: openSheet ? "none" : "auto" }}
         transition={{
           type: "spring",
           stiffness: 400,
@@ -207,30 +202,6 @@ export function Dock({
           <PillButtons {...pillButtonProps} />
         </div>
       </motion.div>
-
-      {/* Inline Dock Pill — portaled next to FollowUpInput when merged */}
-      {merged &&
-        inlineSlotRef.current &&
-        createPortal(
-          <AnimatePresence>
-            <motion.div
-              key="inline-dock"
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 30, scale: 0.95 }}
-              initial={{ opacity: 0, x: 30, scale: 0.95 }}
-              transition={{
-                type: "spring",
-                stiffness: 400,
-                damping: 30,
-              }}
-            >
-              <div className="flex items-center justify-center gap-1 px-2 py-1.5 backdrop-blur-xl shadow-lg bg-white/80 dark:bg-neutral-900/80 border border-neutral-200/50 dark:border-neutral-800/50 rounded-full">
-                <PillButtons {...pillButtonProps} />
-              </div>
-            </motion.div>
-          </AnimatePresence>,
-          inlineSlotRef.current,
-        )}
     </>
   );
 }
