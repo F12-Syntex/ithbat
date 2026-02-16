@@ -4,18 +4,15 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@heroui/button";
-import { Input } from "@heroui/input";
-import { Chip } from "@heroui/chip";
-import { Spinner } from "@heroui/spinner";
 import {
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  useDisclosure,
-} from "@heroui/modal";
+  ArrowLeft,
+  RefreshCw,
+  Trash2,
+  MessageCircle,
+  Clock,
+  Search,
+  X,
+} from "lucide-react";
 
 const LOGS_PASSWORD = "ithbat2024";
 const AUTH_KEY = "ithbat_logs_auth";
@@ -29,37 +26,8 @@ interface ChatSession {
     isFollowUp: boolean;
     createdAt: string;
   }>;
-  deviceInfo: {
-    deviceType?: string;
-    country?: string;
-    countryCode?: string;
-  };
   createdAt: string;
   updatedAt: string;
-}
-
-function getCountryFlag(countryCode?: string): string {
-  if (!countryCode || countryCode.length !== 2 || countryCode === "XX") {
-    return "";
-  }
-  const codePoints = countryCode
-    .toUpperCase()
-    .split("")
-    .map((char) => 127397 + char.charCodeAt(0));
-
-  return String.fromCodePoint(...codePoints);
-}
-
-function getDeviceIcon(deviceType?: string): string {
-  switch (deviceType?.toLowerCase()) {
-    case "mobile":
-      return "\ud83d\udcf1";
-    case "tablet":
-      return "\ud83d\udccb";
-    case "desktop":
-    default:
-      return "\ud83d\udcbb";
-  }
 }
 
 function formatRelativeTime(dateStr: string): string {
@@ -70,12 +38,26 @@ function formatRelativeTime(dateStr: string): string {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return "now";
+  if (diffMins < 1) return "just now";
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
 
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function truncateResponse(response: string, maxLen = 120): string {
+  // Strip markdown formatting for preview
+  const plain = response
+    .replace(/[#*_~`>]/g, "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\n+/g, " ")
+    .trim();
+
+  if (plain.length <= maxLen) return plain;
+
+  return plain.slice(0, maxLen).replace(/\s+\S*$/, "") + "...";
 }
 
 export default function LogsPage() {
@@ -87,13 +69,14 @@ export default function LogsPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{
     slug: string;
     label: string;
   } | null>(null);
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [filter, setFilter] = useState("");
 
   useEffect(() => {
     const auth = sessionStorage.getItem(AUTH_KEY);
@@ -102,8 +85,9 @@ export default function LogsPage() {
     setCheckingAuth(false);
   }, []);
 
-  const fetchSessions = useCallback(async () => {
-    setLoading(true);
+  const fetchSessions = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
     try {
       const res = await fetch("/api/logs?limit=50&offset=0");
 
@@ -117,6 +101,7 @@ export default function LogsPage() {
       setError(err instanceof Error ? err.message : "Failed to load logs");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -135,11 +120,6 @@ export default function LogsPage() {
     }
   };
 
-  const openDeleteModal = (slug: string, label: string) => {
-    setDeleteTarget({ slug, label });
-    onOpen();
-  };
-
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(deleteTarget.slug);
@@ -152,7 +132,6 @@ export default function LogsPage() {
 
       if (!res.ok) throw new Error("Delete failed");
       await fetchSessions();
-      onClose();
     } catch (err) {
       console.error("Delete error:", err);
     } finally {
@@ -161,31 +140,28 @@ export default function LogsPage() {
     }
   };
 
-  // Compute stats
-  const stats = (() => {
-    const countries: Record<string, number> = {};
-    const devices: Record<string, number> = {};
+  const filtered = filter
+    ? sessions.filter((s) =>
+        s.conversations.some((c) =>
+          c.query.toLowerCase().includes(filter.toLowerCase()),
+        ),
+      )
+    : sessions;
 
-    sessions.forEach((s) => {
-      const cc = s.deviceInfo?.countryCode || "XX";
-
-      countries[cc] = (countries[cc] || 0) + 1;
-      const dt = s.deviceInfo?.deviceType || "desktop";
-
-      devices[dt] = (devices[dt] || 0) + 1;
-    });
-
-    return { countries, devices };
-  })();
-
+  // Loading auth check
   if (checkingAuth) {
     return (
       <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950 flex items-center justify-center">
-        <Spinner size="lg" />
+        <motion.div
+          animate={{ rotate: 360 }}
+          className="w-5 h-5 border-2 border-neutral-300 dark:border-neutral-700 border-t-accent-500 dark:border-t-accent-400 rounded-full"
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+        />
       </div>
     );
   }
 
+  // Login screen
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950 flex items-center justify-center p-4">
@@ -194,33 +170,56 @@ export default function LogsPage() {
           className="w-full max-w-xs"
           initial={{ opacity: 0, y: 10 }}
         >
-          <div className="bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md rounded-3xl border border-neutral-200/50 dark:border-neutral-800/50 p-6">
-            <h1 className="text-lg font-medium text-neutral-900 dark:text-neutral-100 text-center mb-6">
+          <div className="bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md rounded-3xl border border-neutral-200/50 dark:border-neutral-800/50 p-8">
+            <div className="flex items-center justify-center mb-6">
+              <div className="w-10 h-10 rounded-2xl bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center">
+                <MessageCircle
+                  className="w-5 h-5 text-accent-600 dark:text-accent-400"
+                  strokeWidth={1.5}
+                />
+              </div>
+            </div>
+            <h1 className="text-base font-medium text-neutral-900 dark:text-neutral-100 text-center mb-1">
               Research Logs
             </h1>
-            <form className="space-y-4" onSubmit={handleLogin}>
-              <Input
-                errorMessage={authError ? "Wrong password" : undefined}
-                isInvalid={authError}
-                placeholder="Password"
-                type="password"
-                value={password}
-                variant="bordered"
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  setAuthError(false);
-                }}
-              />
-              <Button className="w-full" color="primary" type="submit">
+            <p className="text-xs text-neutral-400 dark:text-neutral-500 text-center mb-6">
+              Enter password to view conversations
+            </p>
+            <form className="space-y-3" onSubmit={handleLogin}>
+              <div className="relative">
+                <input
+                  className={`w-full h-10 px-4 text-sm bg-white dark:bg-neutral-800 border rounded-xl outline-none transition-all placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-neutral-800 dark:text-neutral-200 ${
+                    authError
+                      ? "border-red-300 dark:border-red-700 focus:border-red-400"
+                      : "border-neutral-200 dark:border-neutral-700 focus:border-accent-400 dark:focus:border-accent-500"
+                  }`}
+                  placeholder="Password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setAuthError(false);
+                  }}
+                />
+                {authError && (
+                  <p className="text-xs text-red-500 mt-1.5 ml-1">
+                    Incorrect password
+                  </p>
+                )}
+              </div>
+              <button
+                className="w-full h-10 bg-accent-500 hover:bg-accent-600 text-white text-sm font-medium rounded-xl transition-colors active:scale-[0.98]"
+                type="submit"
+              >
                 Continue
-              </Button>
+              </button>
             </form>
             <div className="text-center mt-4">
               <Link
-                className="text-sm text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+                className="text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
                 href="/"
               >
-                Back
+                Back to search
               </Link>
             </div>
           </div>
@@ -229,169 +228,183 @@ export default function LogsPage() {
     );
   }
 
+  // Main logs view
   return (
     <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-neutral-100/80 dark:bg-neutral-950/80 backdrop-blur-md border-b border-neutral-200/50 dark:border-neutral-800/50">
-        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
-              className="w-8 h-8 rounded-full bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md border border-neutral-200/50 dark:border-neutral-800/50 flex items-center justify-center hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
+              className="w-8 h-8 rounded-full bg-white/60 dark:bg-neutral-900/60 border border-neutral-200/50 dark:border-neutral-800/50 flex items-center justify-center hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
               href="/"
             >
-              <span className="text-neutral-500 dark:text-neutral-400 text-lg">&larr;</span>
+              <ArrowLeft className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" strokeWidth={2} />
             </Link>
-            <span className="text-base font-medium text-neutral-800 dark:text-neutral-200">
-              Research Logs
+            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+              Logs
             </span>
-            <Chip color="primary" size="sm" variant="flat">
-              {total} sessions
-            </Chip>
+            {total > 0 && (
+              <span className="text-xs text-neutral-400 dark:text-neutral-500 tabular-nums">
+                {total}
+              </span>
+            )}
           </div>
-          <Button
-            isLoading={loading}
-            size="sm"
-            variant="light"
-            onPress={fetchSessions}
+          <button
+            className="w-8 h-8 rounded-full bg-white/60 dark:bg-neutral-900/60 border border-neutral-200/50 dark:border-neutral-800/50 flex items-center justify-center hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95 disabled:opacity-50"
+            disabled={refreshing}
+            type="button"
+            onClick={() => fetchSessions(true)}
           >
-            Refresh
-          </Button>
+            <RefreshCw
+              className={`w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400 ${refreshing ? "animate-spin" : ""}`}
+              strokeWidth={2}
+            />
+          </button>
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-6">
-        {/* Stats */}
-        {sessions.length > 0 && (
-          <motion.div
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md rounded-2xl border border-neutral-200/50 dark:border-neutral-800/50 p-4"
-            initial={{ opacity: 0, y: 8 }}
-          >
-            <div className="flex flex-wrap gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-neutral-500">Sessions:</span>
-                <span className="font-medium text-neutral-800 dark:text-neutral-200">
-                  {sessions.length}
-                </span>
-              </div>
-              <div className="w-px h-5 bg-neutral-200 dark:bg-neutral-700" />
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-neutral-500">Countries:</span>
-                <div className="flex items-center gap-1">
-                  {Object.entries(stats.countries)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 8)
-                    .map(([code, count]) => (
-                      <span
-                        key={code}
-                        className="text-lg"
-                        title={`${code}: ${count}`}
-                      >
-                        {getCountryFlag(code)}
-                      </span>
-                    ))}
-                  {Object.keys(stats.countries).length > 8 && (
-                    <span className="text-xs text-neutral-500">
-                      +{Object.keys(stats.countries).length - 8}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="w-px h-5 bg-neutral-200 dark:bg-neutral-700" />
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-neutral-500">Devices:</span>
-                <div className="flex items-center gap-2 text-sm">
-                  {Object.entries(stats.devices).map(([type, count]) => (
-                    <span
-                      key={type}
-                      className="text-neutral-600 dark:text-neutral-400"
-                      title={`${type}: ${count}`}
-                    >
-                      {getDeviceIcon(type)} {count}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </motion.div>
+      <main className="max-w-2xl mx-auto px-4 py-5">
+        {/* Search filter */}
+        {sessions.length > 3 && (
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" strokeWidth={2} />
+            <input
+              className="w-full h-9 pl-9 pr-8 text-sm bg-white/60 dark:bg-neutral-900/60 border border-neutral-200/50 dark:border-neutral-800/50 rounded-xl outline-none focus:border-accent-400 dark:focus:border-accent-500 transition-all placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-neutral-800 dark:text-neutral-200"
+              placeholder="Filter conversations..."
+              type="text"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+            />
+            {filter && (
+              <button
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+                type="button"
+                onClick={() => setFilter("")}
+              >
+                <X className="w-3 h-3" strokeWidth={2.5} />
+              </button>
+            )}
+          </div>
         )}
 
         {/* Content */}
         {loading && sessions.length === 0 ? (
-          <div className="flex justify-center py-20">
-            <Spinner size="lg" />
+          <div className="flex flex-col items-center justify-center py-24 gap-3">
+            <motion.div
+              animate={{ rotate: 360 }}
+              className="w-5 h-5 border-2 border-neutral-300 dark:border-neutral-700 border-t-accent-500 dark:border-t-accent-400 rounded-full"
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            />
+            <span className="text-xs text-neutral-400 dark:text-neutral-500">
+              Loading conversations...
+            </span>
           </div>
         ) : error ? (
-          <div className="text-center py-20">
-            <p className="text-red-500 mb-4">{error}</p>
-            <Button color="danger" variant="flat" onPress={fetchSessions}>
-              Retry
-            </Button>
+          <div className="flex flex-col items-center py-24 gap-3">
+            <p className="text-sm text-red-500">{error}</p>
+            <button
+              className="text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 underline underline-offset-2"
+              type="button"
+              onClick={() => fetchSessions()}
+            >
+              Try again
+            </button>
           </div>
         ) : sessions.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-neutral-500 mb-2">No conversations logged yet</p>
-            <p className="text-sm text-neutral-400">
-              Conversations will appear here after users search
+          <div className="flex flex-col items-center py-24 gap-2">
+            <div className="w-10 h-10 rounded-2xl bg-neutral-200/50 dark:bg-neutral-800/50 flex items-center justify-center mb-1">
+              <MessageCircle
+                className="w-5 h-5 text-neutral-400 dark:text-neutral-500"
+                strokeWidth={1.5}
+              />
+            </div>
+            <p className="text-sm text-neutral-500">No conversations yet</p>
+            <p className="text-xs text-neutral-400 dark:text-neutral-500">
+              Conversations will appear here after research queries
             </p>
           </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center py-24 gap-2">
+            <p className="text-sm text-neutral-500">No matches</p>
+            <button
+              className="text-xs text-accent-500 hover:text-accent-600"
+              type="button"
+              onClick={() => setFilter("")}
+            >
+              Clear filter
+            </button>
+          </div>
         ) : (
-          <div className="space-y-3">
-            <AnimatePresence>
-              {sessions.map((session, index) => {
-                const firstQuery = session.conversations[0]?.query || "Untitled";
+          <div className="space-y-2">
+            <AnimatePresence mode="popLayout">
+              {filtered.map((session, index) => {
+                const firstQuery =
+                  session.conversations[0]?.query || "Untitled";
+                const lastResponse =
+                  session.conversations[session.conversations.length - 1]
+                    ?.response || "";
                 const msgCount = session.conversations.length;
+                const isDeleting = deleting === session.slug;
 
                 return (
                   <motion.div
                     key={session.slug}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md rounded-2xl border border-neutral-200/50 dark:border-neutral-800/50 p-4 cursor-pointer hover:border-accent-400/50 dark:hover:border-accent-500/50 transition-all group"
-                    exit={{ opacity: 0, scale: 0.95 }}
+                    className={`group relative rounded-2xl border transition-all cursor-pointer ${
+                      isDeleting
+                        ? "opacity-50 pointer-events-none"
+                        : "bg-white/60 dark:bg-neutral-900/60 border-neutral-200/50 dark:border-neutral-800/50 hover:border-accent-400/50 dark:hover:border-accent-500/50"
+                    }`}
+                    exit={{ opacity: 0, x: -20 }}
                     initial={{ opacity: 0, y: 12 }}
-                    transition={{ delay: index * 0.03, duration: 0.3 }}
+                    layout
+                    transition={{
+                      delay: index * 0.02,
+                      duration: 0.25,
+                      layout: { duration: 0.2 },
+                    }}
                     onClick={() => router.push(`/chat/${session.slug}`)}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200 line-clamp-1 group-hover:text-accent-600 dark:group-hover:text-accent-400 transition-colors">
+                    <div className="px-4 py-3.5">
+                      {/* Title row */}
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className="text-sm font-medium text-neutral-800 dark:text-neutral-200 line-clamp-1 group-hover:text-accent-600 dark:group-hover:text-accent-400 transition-colors">
                           {firstQuery}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                          <Chip
-                            color={msgCount > 1 ? "primary" : "default"}
-                            size="sm"
-                            variant="flat"
-                          >
-                            {msgCount} {msgCount === 1 ? "msg" : "msgs"}
-                          </Chip>
-                          {session.deviceInfo?.countryCode && (
-                            <span className="text-base leading-none" title={session.deviceInfo.country}>
-                              {getCountryFlag(session.deviceInfo.countryCode)}
-                            </span>
-                          )}
-                          <span className="text-xs leading-none" title={session.deviceInfo?.deviceType}>
-                            {getDeviceIcon(session.deviceInfo?.deviceType)}
-                          </span>
-                          <span className="text-[11px] text-neutral-400 dark:text-neutral-500">
-                            {formatRelativeTime(session.updatedAt)}
-                          </span>
-                        </div>
+                        </h3>
+                        <button
+                          className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all opacity-0 group-hover:opacity-100"
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTarget({
+                              slug: session.slug,
+                              label: firstQuery.slice(0, 40),
+                            });
+                          }}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+                        </button>
                       </div>
 
-                      <button
-                        className="w-8 h-8 flex items-center justify-center text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors text-lg flex-shrink-0 opacity-0 group-hover:opacity-100"
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openDeleteModal(
-                            session.slug,
-                            firstQuery.slice(0, 30),
-                          );
-                        }}
-                      >
-                        &times;
-                      </button>
+                      {/* Response preview */}
+                      <p className="text-xs text-neutral-400 dark:text-neutral-500 line-clamp-2 mt-1 leading-relaxed">
+                        {truncateResponse(lastResponse)}
+                      </p>
+
+                      {/* Meta row */}
+                      <div className="flex items-center gap-3 mt-2.5">
+                        {msgCount > 1 && (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-accent-600 dark:text-accent-400 bg-accent-50 dark:bg-accent-900/20 px-1.5 py-0.5 rounded-md font-medium">
+                            <MessageCircle className="w-2.5 h-2.5" strokeWidth={2} />
+                            {msgCount}
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1 text-[11px] text-neutral-400 dark:text-neutral-500">
+                          <Clock className="w-2.5 h-2.5" strokeWidth={2} />
+                          {formatRelativeTime(session.updatedAt)}
+                        </span>
+                      </div>
                     </div>
                   </motion.div>
                 );
@@ -401,31 +414,51 @@ export default function LogsPage() {
         )}
       </main>
 
-      {/* Delete Modal */}
-      <Modal isOpen={isOpen} size="sm" onClose={onClose}>
-        <ModalContent>
-          <ModalHeader className="text-base">Delete Session?</ModalHeader>
-          <ModalBody>
-            <p className="text-neutral-500 text-sm">
-              This will permanently delete the session &quot;
-              {deleteTarget?.label}...&quot; and all its messages.
-            </p>
-          </ModalBody>
-          <ModalFooter>
-            <Button size="sm" variant="light" onPress={onClose}>
-              Cancel
-            </Button>
-            <Button
-              color="danger"
-              isLoading={deleting === deleteTarget?.slug}
-              size="sm"
-              onPress={handleDelete}
+      {/* Delete confirmation overlay */}
+      <AnimatePresence>
+        {deleteTarget && (
+          <motion.div
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 dark:bg-black/50 backdrop-blur-sm"
+            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            onClick={() => setDeleteTarget(null)}
+          >
+            <motion.div
+              animate={{ opacity: 1, scale: 1 }}
+              className="w-full max-w-xs bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200/50 dark:border-neutral-800/50 shadow-xl p-5"
+              exit={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
             >
-              Delete
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+              <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100 mb-1">
+                Delete conversation?
+              </h3>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-5 leading-relaxed">
+                &ldquo;{deleteTarget.label}&rdquo; and all follow-ups will be
+                permanently removed.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <button
+                  className="h-8 px-3 text-xs text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                  type="button"
+                  onClick={() => setDeleteTarget(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="h-8 px-3 text-xs text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors disabled:opacity-50 active:scale-[0.98]"
+                  disabled={!!deleting}
+                  type="button"
+                  onClick={handleDelete}
+                >
+                  {deleting ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

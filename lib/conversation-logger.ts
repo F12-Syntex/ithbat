@@ -9,7 +9,6 @@ import {
   isBlobConfigured,
 } from "./kv";
 import { generateSlug, appendTimestamp } from "./slug";
-import { getCountryFromIP } from "./geolocation";
 
 export interface ConversationEntry {
   query: string;
@@ -24,35 +23,11 @@ export interface ChatData {
   sessionId: string;
   slug: string;
   conversations: ConversationEntry[];
-  deviceInfo: DeviceInfo;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface DeviceInfo {
-  ip?: string;
-  userAgent?: string;
-  deviceType?: string;
-  country?: string;
-  countryCode?: string;
-}
-
 const MAX_SESSIONS = 20;
-
-function parseDeviceType(userAgent?: string): string {
-  if (!userAgent) return "unknown";
-  const ua = userAgent.toLowerCase();
-
-  if (
-    ua.includes("mobile") ||
-    ua.includes("android") ||
-    ua.includes("iphone")
-  )
-    return "mobile";
-  if (ua.includes("tablet") || ua.includes("ipad")) return "tablet";
-
-  return "desktop";
-}
 
 /** Check if a slug already exists */
 export async function isSlugTaken(slug: string): Promise<boolean> {
@@ -79,7 +54,6 @@ export async function createChat(
   response: string,
   steps: ResearchStep[],
   sources: Source[],
-  deviceInfo?: DeviceInfo,
 ): Promise<void> {
   if (!isBlobConfigured) {
     console.warn("Blob not configured, skipping chat creation");
@@ -88,24 +62,6 @@ export async function createChat(
   }
 
   try {
-    const enrichedDevice: DeviceInfo = { ...deviceInfo };
-
-    if (deviceInfo?.userAgent) {
-      enrichedDevice.deviceType = parseDeviceType(deviceInfo.userAgent);
-    }
-    if (deviceInfo?.ip) {
-      try {
-        const geoInfo = await getCountryFromIP(deviceInfo.ip);
-
-        if (geoInfo) {
-          enrichedDevice.country = geoInfo.country;
-          enrichedDevice.countryCode = geoInfo.countryCode;
-        }
-      } catch {
-        // Silently ignore geolocation errors
-      }
-    }
-
     const now = new Date().toISOString();
     const chatData: ChatData = {
       sessionId,
@@ -120,7 +76,6 @@ export async function createChat(
           createdAt: now,
         },
       ],
-      deviceInfo: enrichedDevice,
       createdAt: now,
       updatedAt: now,
     };

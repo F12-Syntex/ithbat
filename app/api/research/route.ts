@@ -214,12 +214,6 @@ interface ConversationTurn {
 }
 
 export async function POST(request: NextRequest) {
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown";
-  const userAgent = request.headers.get("user-agent") || undefined;
-
   const {
     query,
     conversationHistory = [],
@@ -408,7 +402,7 @@ export async function POST(request: NextRequest) {
         // Log conversation to KV
         const logPromise = isFollowUp
           ? appendToChat(slug!, query, formattedResponse, allSteps, allSources)
-          : createChat(slug!, sessionId, query, formattedResponse, allSteps, allSources, { ip, userAgent });
+          : createChat(slug!, sessionId, query, formattedResponse, allSteps, allSources);
         logPromise.catch((err) => console.error("Failed to log conversation:", err));
 
         send({ type: "done" });

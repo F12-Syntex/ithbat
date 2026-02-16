@@ -15,6 +15,8 @@ import {
   type ResearchStep,
   type ResearchStepType,
   type ResearchStepEvent,
+  type CompletedSession,
+  type ConversationTurn,
   type Source,
   createStep,
 } from "@/types/research";
@@ -42,6 +44,17 @@ type ResearchAction =
   | { type: "COMPLETE" }
   | { type: "RESET" }
   | { type: "SET_SLUG"; slug: string }
+  | {
+      type: "HYDRATE_CHAT";
+      sessionId: string;
+      slug: string;
+      query: string;
+      response: string;
+      steps: ResearchStep[];
+      sources: Source[];
+      completedSessions: CompletedSession[];
+      conversationHistory: ConversationTurn[];
+    }
   | { type: "START_ANALYZING" }
   | { type: "APPEND_ANALYSIS"; content: string }
   | { type: "FINISH_ANALYZING" };
@@ -53,6 +66,7 @@ interface ResearchContextValue {
   startResearch: (query: string) => Promise<void>;
   askFollowUp: (question: string) => Promise<void>;
   diveDeeper: () => Promise<void>;
+  hydrateChat: (slug: string) => Promise<boolean>;
   cancelResearch: () => void;
   reset: () => void;
 }
@@ -103,6 +117,20 @@ function researchReducer(
         slug: action.slug,
       };
 
+    case "HYDRATE_CHAT":
+      return {
+        ...initialState,
+        sessionId: action.sessionId,
+        slug: action.slug,
+        query: action.query,
+        response: action.response,
+        steps: action.steps,
+        sources: action.sources,
+        completedSessions: action.completedSessions,
+        conversationHistory: action.conversationHistory,
+        status: "completed",
+      };
+
     case "START_FOLLOWUP": {
       const currentSession = {
         query: action.previousQuery,
@@ -120,6 +148,7 @@ function researchReducer(
         ],
         completedSessions: [...(state.completedSessions || []), currentSession],
         sessionId: state.sessionId,
+        slug: state.slug,
       };
     }
 
@@ -427,6 +456,60 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
     }
   }, [state.query, state.response, state.conversationHistory, state.sessionId]);
 
+  const hydrateChat = useCallback(async (chatSlug: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/chat/${chatSlug}`);
+
+      if (!res.ok) return false;
+
+      const data = await res.json();
+      const conversations = data.conversations as Array<{
+        query: string;
+        response: string;
+        steps: ResearchStep[];
+        sources: Source[];
+        isFollowUp: boolean;
+      }>;
+
+      if (!conversations || conversations.length === 0) return false;
+
+      // Last conversation becomes the current state
+      const last = conversations[conversations.length - 1];
+
+      // All previous conversations become completedSessions + conversationHistory
+      const completedSessions: CompletedSession[] = conversations
+        .slice(0, -1)
+        .map((c) => ({
+          query: c.query,
+          response: c.response,
+          steps: c.steps || [],
+        }));
+
+      const conversationHistory: ConversationTurn[] = conversations
+        .slice(0, -1)
+        .map((c) => ({
+          query: c.query,
+          response: c.response,
+        }));
+
+      dispatch({
+        type: "HYDRATE_CHAT",
+        sessionId: data.sessionId || "",
+        slug: chatSlug,
+        query: last.query,
+        response: last.response,
+        steps: last.steps || [],
+        sources: last.sources || [],
+        completedSessions,
+        conversationHistory,
+      });
+
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
   return (
     <ResearchContext.Provider
       value={{
@@ -436,6 +519,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
         startResearch,
         askFollowUp,
         diveDeeper,
+        hydrateChat,
         cancelResearch,
         reset,
       }}
