@@ -27,8 +27,6 @@ export interface ChatData {
   updatedAt: string;
 }
 
-const MAX_SESSIONS = 20;
-
 /** Check if a slug already exists */
 export async function isSlugTaken(slug: string): Promise<boolean> {
   return blobExists(`chat:${slug}`);
@@ -84,14 +82,6 @@ export async function createChat(
       blobSet(`chat:${slug}`, chatData),
       blobSet(`session:${sessionId}`, slug),
     ]);
-
-    // Update the sessions index
-    await updateSessionsIndex(slug, Date.now());
-
-    // Cleanup old sessions
-    cleanupOldSessions().catch((err) =>
-      console.error("Cleanup error:", err),
-    );
   } catch (err) {
     console.error("Failed to create chat:", err);
   }
@@ -131,7 +121,6 @@ export async function appendToChat(
     chatData.updatedAt = new Date().toISOString();
 
     await blobSet(`chat:${slug}`, chatData);
-    await updateSessionsIndex(slug, Date.now());
   } catch (err) {
     console.error("Failed to append to chat:", err);
   }
@@ -151,35 +140,7 @@ export async function getSlugBySessionId(
   return blobGet<string>(`session:${sessionId}`);
 }
 
-// Sessions index: a single blob storing { slug: timestamp } for ordering
-interface SessionsIndex {
-  entries: Record<string, number>; // slug -> timestamp
-}
-
-async function getSessionsIndex(): Promise<SessionsIndex> {
-  const index = await blobGet<SessionsIndex>("sessions-index");
-
-  return index || { entries: {} };
-}
-
-async function updateSessionsIndex(
-  slug: string,
-  timestamp: number,
-): Promise<void> {
-  const index = await getSessionsIndex();
-
-  index.entries[slug] = timestamp;
-  await blobSet("sessions-index", index);
-}
-
-async function removeFromSessionsIndex(slug: string): Promise<void> {
-  const index = await getSessionsIndex();
-
-  delete index.entries[slug];
-  await blobSet("sessions-index", index);
-}
-
-/** Get all sessions for admin listing (paginated, newest first) */
+/** Get all sessions by listing all chat: blobs directly (no index needed) */
 export async function getAllSessions(
   offset: number = 0,
   limit: number = 50,
@@ -187,24 +148,29 @@ export async function getAllSessions(
   if (!isBlobConfigured) return { sessions: [], total: 0 };
 
   try {
-    const index = await getSessionsIndex();
-    const sorted = Object.entries(index.entries)
-      .sort((a, b) => b[1] - a[1]) // newest first
-      .map(([slug]) => slug);
+    // List all chat blobs directly — no fragile index to lose entries
+    const keys = await blobList("chat:");
 
-    const total = sorted.length;
-    const page = sorted.slice(offset, offset + limit);
-
-    if (page.length === 0) {
-      return { sessions: [], total };
+    if (keys.length === 0) {
+      return { sessions: [], total: 0 };
     }
 
-    const chatPromises = page.map((slug) => blobGet<ChatData>(`chat:${slug}`));
+    // Fetch all chat data in parallel
+    const chatPromises = keys.map((key) => blobGet<ChatData>(key));
     const chats = await Promise.all(chatPromises);
 
-    const sessions = chats.filter((c): c is ChatData => c !== null);
+    // Filter nulls, sort newest first by updatedAt
+    const allSessions = chats
+      .filter((c): c is ChatData => c !== null)
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      );
 
-    return { sessions, total };
+    const total = allSessions.length;
+    const page = allSessions.slice(offset, offset + limit);
+
+    return { sessions: page, total };
   } catch (err) {
     console.error("Failed to get all sessions:", err);
 
@@ -226,34 +192,10 @@ export async function deleteChat(slug: string): Promise<boolean> {
       blobDel(`session:${chatData.sessionId}`),
     ]);
 
-    await removeFromSessionsIndex(slug);
-
     return true;
   } catch (err) {
     console.error("Failed to delete chat:", err);
 
     return false;
-  }
-}
-
-/** Cleanup old sessions beyond MAX_SESSIONS */
-async function cleanupOldSessions(): Promise<void> {
-  if (!isBlobConfigured) return;
-
-  try {
-    const index = await getSessionsIndex();
-    const sorted = Object.entries(index.entries)
-      .sort((a, b) => b[1] - a[1])
-      .map(([slug]) => slug);
-
-    if (sorted.length <= MAX_SESSIONS) return;
-
-    const toDelete = sorted.slice(MAX_SESSIONS);
-
-    for (const slug of toDelete) {
-      await deleteChat(slug);
-    }
-  } catch (err) {
-    console.error("Error cleaning up old sessions:", err);
   }
 }
