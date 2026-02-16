@@ -9,13 +9,15 @@ import {
   ClipboardPaste,
   Sun,
   Moon,
-  Settings,
   RefreshCw,
   Download,
   Layers,
   Sparkles,
   Share2,
   Check,
+  Menu,
+  History,
+  Settings,
 } from "lucide-react";
 
 import { SearchInput } from "./SearchInput";
@@ -25,11 +27,12 @@ import { ResearchPipeline } from "./pipeline";
 import { SourceCitationCard } from "./response/SourceCitationCard";
 
 import { ContextMenu } from "@/components/ContextMenu";
-import { SettingsPanel } from "@/components/SettingsPanel";
+import { Dock, type DockTab } from "@/components/Dock";
 import { IntroModal } from "@/components/IntroModal";
 import { HowItWorks } from "@/components/HowItWorks";
 import { useResearch } from "@/hooks/useResearch";
 import { useTheme } from "@/context/ThemeContext";
+import { useChatHistory } from "@/hooks/useChatHistory";
 
 // Pool of common Islamic questions
 const EXAMPLE_QUESTIONS = [
@@ -102,7 +105,9 @@ export function ResearchContainer() {
     reset,
   } = useResearch();
   const { theme, setTheme, themes } = useTheme();
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const { addEntry } = useChatHistory();
+  const [dockOpen, setDockOpen] = useState(false);
+  const [dockTab, setDockTab] = useState<DockTab>("history");
   const [suggestedQuery, setSuggestedQuery] = useState<string | undefined>();
   const [linkCopied, setLinkCopied] = useState(false);
 
@@ -153,6 +158,14 @@ export function ResearchContainer() {
   useEffect(() => {
     setExampleQuestions(getRandomQuestions(3));
   }, []);
+
+  // Save to local history when research completes
+  useEffect(() => {
+    if (state.status === "completed" && slug && state.query) {
+      const messageCount = (state.completedSessions?.length || 0) + 1;
+      addEntry(slug, state.query, messageCount);
+    }
+  }, [state.status, slug, state.query, state.completedSessions?.length, addEntry]);
 
   const isResearching = state.status === "researching";
   const hasResults =
@@ -267,6 +280,11 @@ export function ResearchContainer() {
     },
     { divider: true as const },
     {
+      label: "History",
+      icon: <History className="w-4 h-4" strokeWidth={2} />,
+      onClick: () => { setDockTab("history"); setDockOpen(true); },
+    },
+    {
       label: theme.mode === "dark" ? "Light Mode" : "Dark Mode",
       icon:
         theme.mode === "dark" ? (
@@ -279,7 +297,7 @@ export function ResearchContainer() {
     {
       label: "Settings",
       icon: <Settings className="w-4 h-4" strokeWidth={2} />,
-      onClick: () => setSettingsOpen(true),
+      onClick: () => { setDockTab("settings"); setDockOpen(true); },
     },
     { divider: true as const },
     {
@@ -295,22 +313,24 @@ export function ResearchContainer() {
       <IntroModal />
 
       <div className="relative h-screen h-[100dvh] overflow-hidden bg-neutral-100 dark:bg-neutral-950 flex flex-col">
-        {/* Settings Button - Fixed top right (desktop only) */}
+        {/* Dock Button - Fixed top left (desktop only) */}
         <button
-          aria-label="Settings"
-          className="hidden sm:flex fixed top-4 right-4 z-40 w-10 h-10 rounded-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 items-center justify-center shadow-sm hover:shadow-md hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
-          onClick={() => setSettingsOpen(true)}
+          aria-label="Menu"
+          className="hidden sm:flex fixed top-4 left-4 z-40 w-10 h-10 rounded-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 items-center justify-center shadow-sm hover:shadow-md hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
+          onClick={() => setDockOpen(true)}
         >
-          <Settings
+          <Menu
             className="w-5 h-5 text-neutral-500 dark:text-neutral-400"
             strokeWidth={1.5}
           />
         </button>
 
-        {/* Settings Panel */}
-        <SettingsPanel
-          isOpen={settingsOpen}
-          onClose={() => setSettingsOpen(false)}
+        {/* Dock (History + Settings) */}
+        <Dock
+          activeTab={dockTab}
+          isOpen={dockOpen}
+          onClose={() => setDockOpen(false)}
+          onTabChange={setDockTab}
         />
 
         {/* Main Content Area */}
@@ -360,13 +380,13 @@ export function ResearchContainer() {
                   onSuggestedQueryApplied={handleSuggestedQueryApplied}
                 />
               </div>
-              {/* Mobile settings button */}
+              {/* Mobile dock button */}
               <button
-                aria-label="Settings"
+                aria-label="Menu"
                 className="sm:hidden flex-shrink-0 w-[42px] h-[42px] rounded-full bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 flex items-center justify-center hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
-                onClick={() => setSettingsOpen(true)}
+                onClick={() => setDockOpen(true)}
               >
-                <Settings
+                <Menu
                   className="w-4 h-4 text-neutral-500 dark:text-neutral-400"
                   strokeWidth={1.5}
                 />
