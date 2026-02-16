@@ -29,6 +29,7 @@ import { HowItWorks } from "@/components/HowItWorks";
 import { useResearch } from "@/hooks/useResearch";
 import { useTheme } from "@/context/ThemeContext";
 import { useChatHistory } from "@/hooks/useChatHistory";
+import { useTranslation } from "@/lib/i18n";
 
 // Pool of common Islamic questions
 const EXAMPLE_QUESTIONS = [
@@ -102,6 +103,7 @@ export function ResearchContainer() {
   } = useResearch();
   const { theme, setTheme, themes } = useTheme();
   const { addEntry } = useChatHistory();
+  const { t } = useTranslation();
   const [suggestedQuery, setSuggestedQuery] = useState<string | undefined>();
   const [linkCopied, setLinkCopied] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -191,18 +193,18 @@ export function ResearchContainer() {
 
   const contextMenuItems = [
     {
-      label: "New Search",
+      label: t("menu.newSearch"),
       icon: <Search className="w-4 h-4" strokeWidth={2} />,
       onClick: reset,
     },
     {
-      label: "Paste & Search",
+      label: t("menu.pasteSearch"),
       icon: <Clipboard className="w-4 h-4" strokeWidth={2} />,
       onClick: handlePasteAndSearch,
     },
     { divider: true as const },
     {
-      label: "Copy",
+      label: t("menu.copy"),
       icon: <Copy className="w-4 h-4" strokeWidth={2} />,
       onClick: () => {
         const selection = window.getSelection()?.toString();
@@ -213,12 +215,11 @@ export function ResearchContainer() {
       },
     },
     {
-      label: "Paste",
+      label: t("menu.paste"),
       icon: <ClipboardPaste className="w-4 h-4" strokeWidth={2} />,
       onClick: async () => {
         try {
           const text = await navigator.clipboard.readText();
-          // Focus on active input and paste
           const activeElement = document.activeElement as HTMLInputElement;
 
           if (
@@ -242,7 +243,7 @@ export function ResearchContainer() {
     },
     { divider: true as const },
     {
-      label: "Copy Response",
+      label: t("menu.copyResponse"),
       icon: <Copy className="w-4 h-4" strokeWidth={2} />,
       onClick: () => {
         if (state.response) {
@@ -252,19 +253,19 @@ export function ResearchContainer() {
       disabled: !state.response,
     },
     {
-      label: "Share Link",
+      label: t("menu.shareLink"),
       icon: <Share2 className="w-4 h-4" strokeWidth={2} />,
       onClick: handleShareLink,
       disabled: !slug || state.status !== "completed",
     },
     {
-      label: "Share as PDF",
+      label: t("menu.sharePdf"),
       icon: <Download className="w-4 h-4" strokeWidth={2} />,
       onClick: handleExportPdf,
       disabled: !state.response || state.status !== "completed",
     },
     {
-      label: "Copy Query",
+      label: t("menu.copyQuery"),
       icon: <Copy className="w-4 h-4" strokeWidth={2} />,
       onClick: () => {
         if (state.query) {
@@ -275,7 +276,7 @@ export function ResearchContainer() {
     },
     { divider: true as const },
     {
-      label: theme.mode === "dark" ? "Light Mode" : "Dark Mode",
+      label: theme.mode === "dark" ? t("menu.lightMode") : t("menu.darkMode"),
       icon:
         theme.mode === "dark" ? (
           <Sun className="w-4 h-4" strokeWidth={2} />
@@ -286,7 +287,7 @@ export function ResearchContainer() {
     },
     { divider: true as const },
     {
-      label: "Reload Page",
+      label: t("menu.reload"),
       icon: <RefreshCw className="w-4 h-4" strokeWidth={2} />,
       onClick: () => window.location.reload(),
     },
@@ -331,12 +332,12 @@ export function ResearchContainer() {
                     {/* Tooltip */}
                     <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-10">
                       <div className="px-2.5 py-1 bg-neutral-800 dark:bg-neutral-200 text-neutral-100 dark:text-neutral-800 text-[11px] rounded-full whitespace-nowrap">
-                        affirmation / confirmation
+                        {t("app.tooltip")}
                       </div>
                     </div>
                   </div>
                   <p className="text-neutral-400 dark:text-neutral-500 text-xs sm:text-sm mt-2">
-                    Search hadith, Quran, and scholarly rulings
+                    {t("app.tagline")}
                   </p>
                 </motion.div>
               )}
@@ -425,7 +426,7 @@ export function ResearchContainer() {
                             type="button"
                             onClick={reset}
                           >
-                            New conversation
+                            {t("research.newConversation")}
                           </button>
                         )}
                       </div>
@@ -451,7 +452,7 @@ export function ResearchContainer() {
                       <div className="flex items-center gap-3 my-6">
                         <div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-800" />
                         <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
-                          Follow-up
+                          {t("research.followUp")}
                         </span>
                         <div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-800" />
                       </div>
@@ -547,7 +548,7 @@ export function ResearchContainer() {
                                   />
                                 </motion.div>
                                 <span className="text-accent-600 dark:text-accent-400 font-medium">
-                                  Diving deeper...
+                                  {t("research.divingDeeper")}
                                 </span>
                               </>
                             ) : (
@@ -563,7 +564,7 @@ export function ResearchContainer() {
                                   />
                                 </motion.div>
                                 <span className="text-neutral-600 dark:text-neutral-300 group-hover:text-accent-600 dark:group-hover:text-accent-400 font-medium transition-colors">
-                                  Dive deeper
+                                  {t("research.diveDeeper")}
                                 </span>
                                 <Sparkles
                                   className="w-3 h-3 text-neutral-300 dark:text-neutral-600 group-hover:text-accent-400 dark:group-hover:text-accent-500 transition-colors"
@@ -597,7 +598,7 @@ export function ResearchContainer() {
                                   />
                                 ))}
                                 <span className="text-[10px] text-neutral-400 dark:text-neutral-500 ml-1">
-                                  Finding more evidence
+                                  {t("research.findingMore")}
                                 </span>
                               </motion.div>
                             )}
@@ -637,7 +638,7 @@ export function ResearchContainer() {
                       initial={{ opacity: 0 }}
                       transition={{ delay: 0.3 }}
                     >
-                      Consult a qualified scholar for personal rulings
+                      {t("app.disclaimer")}
                     </motion.p>
                   )}
                 </div>

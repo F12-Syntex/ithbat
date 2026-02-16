@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, type FormEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Square, Settings } from "lucide-react";
 
+import { useTranslation } from "@/lib/i18n";
+
 interface SearchInputProps {
   onSearch: (query: string) => void;
   onCancel?: () => void;
@@ -23,6 +25,7 @@ export function SearchInput({
 }: SearchInputProps) {
   const [query, setQuery] = useState("");
   const lastSubmittedQuery = useRef<string | null>(null);
+  const { t } = useTranslation();
 
   // Use refs for callbacks to avoid triggering the effect when they change
   const onSearchRef = useRef(onSearch);
@@ -89,7 +92,7 @@ export function SearchInput({
           <input
             className="flex-1 bg-transparent text-base sm:text-sm text-neutral-800 dark:text-neutral-100 placeholder:text-neutral-400 outline-none border-none focus:ring-0"
             placeholder={
-              isLoading ? "Type to start a new search..." : "Ask a question..."
+              isLoading ? t("search.placeholderLoading") : t("search.placeholder")
             }
             type="text"
             value={query}
@@ -100,7 +103,7 @@ export function SearchInput({
             // Stop button when loading
             <button
               className="flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center transition-colors bg-red-500 hover:bg-red-600 text-white"
-              title="Stop research"
+              title={t("search.stopResearch")}
               type="button"
               onClick={handleStopClick}
             >
@@ -151,11 +154,10 @@ export function SearchInput({
 
               <div className="px-5 pt-2 pb-4">
                 <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
-                  Start new search?
+                  {t("search.newSearchTitle")}
                 </h3>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                  This will stop the current research and discard any incomplete
-                  results.
+                  {t("search.newSearchDesc")}
                 </p>
               </div>
 
@@ -165,14 +167,14 @@ export function SearchInput({
                   type="button"
                   onClick={handleConfirm}
                 >
-                  Stop & Search
+                  {t("search.stopAndSearch")}
                 </button>
                 <button
                   className="w-full py-3.5 text-base text-neutral-600 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-3xl transition-colors"
                   type="button"
                   onClick={handleCancelDialog}
                 >
-                  Cancel
+                  {t("search.cancel")}
                 </button>
               </div>
             </motion.div>
@@ -187,11 +189,10 @@ export function SearchInput({
             >
               <div className="p-5">
                 <h3 className="text-base font-medium text-neutral-900 dark:text-neutral-100 mb-2">
-                  Start new search?
+                  {t("search.newSearchTitle")}
                 </h3>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                  This will stop the current research and discard any incomplete
-                  results.
+                  {t("search.newSearchDesc")}
                 </p>
               </div>
 
@@ -201,7 +202,7 @@ export function SearchInput({
                   type="button"
                   onClick={handleCancelDialog}
                 >
-                  Cancel
+                  {t("search.cancel")}
                 </button>
                 <div className="w-px bg-neutral-200 dark:bg-neutral-800" />
                 <button
@@ -209,7 +210,7 @@ export function SearchInput({
                   type="button"
                   onClick={handleConfirm}
                 >
-                  Stop & Search
+                  {t("search.stopAndSearch")}
                 </button>
               </div>
             </motion.div>

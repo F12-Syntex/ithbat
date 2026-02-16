@@ -8,6 +8,7 @@ export async function* streamResearch(
   signal?: AbortSignal,
   conversationHistory?: ConversationTurn[],
   sessionId?: string,
+  language?: string,
 ): AsyncGenerator<ResearchStepEvent> {
   const response = await fetch("/api/research", {
     method: "POST",
@@ -18,6 +19,7 @@ export async function* streamResearch(
       query,
       conversationHistory,
       sessionId,
+      language,
     }),
     signal,
   });

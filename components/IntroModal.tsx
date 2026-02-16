@@ -3,10 +3,13 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
+import { useTranslation } from "@/lib/i18n";
+
 const INTRO_SEEN_KEY = "ithbat_intro_seen";
 
 export function IntroModal() {
   const [isOpen, setIsOpen] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     // Check if user has seen the intro
@@ -58,10 +61,10 @@ export function IntroModal() {
                 </svg>
               </div>
               <h2 className="text-xl font-semibold text-neutral-800 dark:text-neutral-100">
-                Welcome to Ithbat
+                {t("intro.welcome")}
               </h2>
               <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-                Islamic Knowledge Research
+                {t("intro.subtitle")}
               </p>
             </div>
 
@@ -85,11 +88,10 @@ export function IntroModal() {
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-neutral-800 dark:text-neutral-100">
-                    Research Islamic Knowledge
+                    {t("intro.feature1.title")}
                   </h3>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                    Search Quran, Hadith, and scholarly sources for authentic
-                    rulings and guidance.
+                    {t("intro.feature1.desc")}
                   </p>
                 </div>
               </div>
@@ -112,11 +114,10 @@ export function IntroModal() {
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-neutral-800 dark:text-neutral-100">
-                    Verified Sources
+                    {t("intro.feature2.title")}
                   </h3>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                    Citations from sunnah.com, quran.com, islamqa.info, and
-                    other trusted Islamic resources.
+                    {t("intro.feature2.desc")}
                   </p>
                 </div>
               </div>
@@ -139,11 +140,10 @@ export function IntroModal() {
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-neutral-800 dark:text-neutral-100">
-                    For Educational Use
+                    {t("intro.feature3.title")}
                   </h3>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                    This tool is for learning purposes. Always consult qualified
-                    scholars for personal rulings.
+                    {t("intro.feature3.desc")}
                   </p>
                 </div>
               </div>
@@ -165,10 +165,7 @@ export function IntroModal() {
                     />
                   </svg>
                   <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                    Conversations are logged anonymously for analysis and
-                    improvement. No personal data is collected. Please use this
-                    service responsibly and avoid harmful or inappropriate
-                    queries.
+                    {t("intro.privacy")}
                   </p>
                 </div>
               </div>
@@ -180,7 +177,7 @@ export function IntroModal() {
                 className="w-full py-2.5 bg-accent-500 hover:bg-accent-600 text-white text-sm font-medium rounded-3xl transition-colors"
                 onClick={handleClose}
               >
-                Get Started
+                {t("intro.getStarted")}
               </button>
             </div>
           </motion.div>

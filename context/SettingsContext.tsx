@@ -8,12 +8,16 @@ import {
   type ReactNode,
 } from "react";
 
+import type { Language } from "@/lib/i18n";
+
 interface Settings {
   showTimestamps: boolean;
+  language: Language;
 }
 
 const DEFAULT_SETTINGS: Settings = {
   showTimestamps: true,
+  language: "en",
 };
 
 interface SettingsContextValue {

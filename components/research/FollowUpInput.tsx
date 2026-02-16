@@ -3,70 +3,38 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 
+import { useTranslation } from "@/lib/i18n";
+
 interface FollowUpInputProps {
   onSubmit: (question: string) => void;
   isLoading?: boolean;
   previousQuery: string;
 }
 
-// Generate contextual follow-up suggestions based on the query
-function generateSuggestions(query: string): string[] {
+// Generate contextual follow-up suggestion keys based on the query
+function getSuggestionKeys(query: string): string[] {
   const q = query.toLowerCase();
-  const suggestions: string[] = [];
+  const keys: string[] = [];
 
-  // Topic-specific suggestions
   if (q.includes("halal") || q.includes("haram") || q.includes("permissible") || q.includes("allowed")) {
-    suggestions.push(
-      "What are the conditions for this ruling?",
-      "Are there scholarly differences of opinion?",
-      "What is the evidence from the Quran?",
-    );
+    keys.push("suggest.conditions", "suggest.differences", "suggest.quranEvidence");
   } else if (q.includes("prayer") || q.includes("salah") || q.includes("salat")) {
-    suggestions.push(
-      "What are the conditions for validity?",
-      "What invalidates this prayer?",
-      "What is the Sunnah way to perform it?",
-    );
+    keys.push("suggest.validity", "suggest.invalidates", "suggest.sunnah");
   } else if (q.includes("hadith")) {
-    suggestions.push(
-      "Is this hadith authentic?",
-      "What do scholars say about this hadith?",
-      "Are there related hadith on this topic?",
-    );
+    keys.push("suggest.authentic", "suggest.scholarsHadith", "suggest.relatedHadith");
   } else if (q.includes("quran") || q.includes("surah") || q.includes("ayah") || q.includes("verse")) {
-    suggestions.push(
-      "What is the tafsir of this verse?",
-      "What is the context of revelation?",
-      "Are there related verses on this topic?",
-    );
+    keys.push("suggest.tafsir", "suggest.revelation", "suggest.relatedVerses");
   } else if (q.includes("zakat") || q.includes("charity")) {
-    suggestions.push(
-      "How is it calculated?",
-      "Who is eligible to receive it?",
-      "When should it be paid?",
-    );
+    keys.push("suggest.calculated", "suggest.eligible", "suggest.whenPaid");
   } else if (q.includes("fasting") || q.includes("ramadan") || q.includes("sawm")) {
-    suggestions.push(
-      "What breaks the fast?",
-      "What are the exemptions?",
-      "What is the fidyah for missing fasts?",
-    );
+    keys.push("suggest.breaksFast", "suggest.exemptions", "suggest.fidyah");
   } else if (q.includes("marriage") || q.includes("nikah") || q.includes("spouse") || q.includes("husband") || q.includes("wife")) {
-    suggestions.push(
-      "What are the rights and obligations?",
-      "What do the scholars say about this?",
-      "What is the evidence from Quran and Sunnah?",
-    );
+    keys.push("suggest.rights", "suggest.scholarsSay", "suggest.quranSunnah");
   } else {
-    // Generic follow-ups
-    suggestions.push(
-      "What is the evidence from hadith?",
-      "Are there different scholarly opinions?",
-      "Can you explain this in more detail?",
-    );
+    keys.push("suggest.hadithEvidence", "suggest.differentOpinions", "suggest.moreDetail");
   }
 
-  return suggestions.slice(0, 3);
+  return keys.slice(0, 3);
 }
 
 export function FollowUpInput({
@@ -76,9 +44,10 @@ export function FollowUpInput({
 }: FollowUpInputProps) {
   const [value, setValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const { t } = useTranslation();
 
-  const suggestions = useMemo(
-    () => generateSuggestions(previousQuery),
+  const suggestionKeys = useMemo(
+    () => getSuggestionKeys(previousQuery),
     [previousQuery],
   );
 
@@ -122,26 +91,29 @@ export function FollowUpInput({
           />
         </svg>
         <span className="text-xs text-neutral-500 dark:text-neutral-400">
-          Ask a follow-up question
+          {t("research.askFollowUp")}
         </span>
       </div>
 
       {/* Suggestions */}
       <div className="flex flex-wrap gap-1.5 mb-3">
-        {suggestions.map((suggestion, i) => (
-          <motion.button
-            key={suggestion}
-            animate={{ opacity: 1, y: 0 }}
-            className="px-3 py-1.5 text-xs text-neutral-600 dark:text-neutral-300 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full hover:border-accent-300 dark:hover:border-accent-700 hover:text-accent-600 dark:hover:text-accent-400 transition-colors shadow-sm dark:shadow-none disabled:opacity-50"
-            disabled={isLoading}
-            initial={{ opacity: 0, y: 6 }}
-            transition={{ delay: 0.3 + i * 0.05 }}
-            type="button"
-            onClick={() => handleSuggestionClick(suggestion)}
-          >
-            {suggestion}
-          </motion.button>
-        ))}
+        {suggestionKeys.map((key, i) => {
+          const text = t(key);
+          return (
+            <motion.button
+              key={key}
+              animate={{ opacity: 1, y: 0 }}
+              className="px-3 py-1.5 text-xs text-neutral-600 dark:text-neutral-300 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full hover:border-accent-300 dark:hover:border-accent-700 hover:text-accent-600 dark:hover:text-accent-400 transition-colors shadow-sm dark:shadow-none disabled:opacity-50"
+              disabled={isLoading}
+              initial={{ opacity: 0, y: 6 }}
+              transition={{ delay: 0.3 + i * 0.05 }}
+              type="button"
+              onClick={() => handleSuggestionClick(text)}
+            >
+              {text}
+            </motion.button>
+          );
+        })}
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -150,7 +122,7 @@ export function FollowUpInput({
             ref={inputRef}
             className="w-full px-4 py-3 pr-12 text-base sm:text-sm bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl focus:outline-none focus:border-accent-400 dark:focus:border-accent-500 focus:ring-1 focus:ring-accent-400/20 dark:focus:ring-accent-500/20 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 transition-all shadow-sm dark:shadow-none"
             disabled={isLoading}
-            placeholder={`Follow up on "${previousQuery.slice(0, 30)}${previousQuery.length > 30 ? "..." : ""}"...`}
+            placeholder={`${t("research.followUp")} "${previousQuery.slice(0, 30)}${previousQuery.length > 30 ? "..." : ""}"...`}
             type="text"
             value={value}
             onChange={(e) => setValue(e.target.value)}

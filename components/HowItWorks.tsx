@@ -13,38 +13,20 @@ import {
 } from "lucide-react";
 
 import { getTrustedDomainsForUI } from "@/types/sources";
+import { useTranslation } from "@/lib/i18n";
 
-const steps: { icon: LucideIcon; title: string; description: string }[] = [
-  {
-    icon: Lightbulb,
-    title: "Understanding",
-    description:
-      "AI analyzes your question to understand the Islamic context, madhab preferences, and key topics.",
-  },
-  {
-    icon: Search,
-    title: "Finding Sources",
-    description:
-      "Searches trusted Islamic databases including Quran, Hadith collections (Bukhari, Muslim, etc.), and scholarly fatawa.",
-  },
-  {
-    icon: Globe,
-    title: "Analyzing",
-    description:
-      "Visits each source to extract relevant content, and gather scholarly opinions.",
-  },
-  {
-    icon: FileText,
-    title: "Compiling",
-    description:
-      "Synthesizes findings into a clear answer with proper citations, so you can verify each claim yourself.",
-  },
+const stepKeys: { icon: LucideIcon; titleKey: string; descKey: string }[] = [
+  { icon: Lightbulb, titleKey: "how.step1.title", descKey: "how.step1.desc" },
+  { icon: Search, titleKey: "how.step2.title", descKey: "how.step2.desc" },
+  { icon: Globe, titleKey: "how.step3.title", descKey: "how.step3.desc" },
+  { icon: FileText, titleKey: "how.step4.title", descKey: "how.step4.desc" },
 ];
 
 const trustedSources = getTrustedDomainsForUI();
 
 export function HowItWorks() {
   const [isOpen, setIsOpen] = useState(false);
+  const { t } = useTranslation();
 
   return (
     <div className="w-full max-w-md">
@@ -54,7 +36,7 @@ export function HowItWorks() {
         onClick={() => setIsOpen(!isOpen)}
       >
         <HelpCircle className="w-4 h-4" strokeWidth={1.5} />
-        <span>How it works</span>
+        <span>{t("how.toggle")}</span>
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.2 }}
@@ -77,15 +59,15 @@ export function HowItWorks() {
               {/* Process Steps */}
               <div className="space-y-4 mb-5">
                 <h4 className="text-xs font-semibold text-neutral-800 dark:text-neutral-100 uppercase tracking-wider">
-                  Research Process
+                  {t("how.processTitle")}
                 </h4>
                 <div className="space-y-3">
-                  {steps.map((step, index) => {
+                  {stepKeys.map((step, index) => {
                     const Icon = step.icon;
 
                     return (
                       <motion.div
-                        key={step.title}
+                        key={step.titleKey}
                         animate={{ opacity: 1, x: 0 }}
                         className="flex gap-3"
                         initial={{ opacity: 0, x: -10 }}
@@ -96,10 +78,10 @@ export function HowItWorks() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
-                            {step.title}
+                            {t(step.titleKey)}
                           </p>
                           <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                            {step.description}
+                            {t(step.descKey)}
                           </p>
                         </div>
                       </motion.div>
@@ -114,7 +96,7 @@ export function HowItWorks() {
               {/* Trusted Sources */}
               <div>
                 <h4 className="text-xs font-semibold text-neutral-800 dark:text-neutral-100 uppercase tracking-wider mb-3">
-                  Trusted Sources
+                  {t("how.sourcesTitle")}
                 </h4>
                 <div className="flex flex-wrap gap-2">
                   {trustedSources.map((source) => (
@@ -136,8 +118,7 @@ export function HowItWorks() {
 
               {/* Note */}
               <p className="mt-4 text-[10px] text-neutral-400 dark:text-neutral-500 leading-relaxed">
-                All answers include source citations ( we try to ). Always verify with a
-                qualified scholar for personal rulings. AI can make mistakes!
+                {t("how.note")}
               </p>
             </div>
           </motion.div>

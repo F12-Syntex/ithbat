@@ -266,6 +266,20 @@ If the raw research contains Wikipedia links, REMOVE them entirely.
 - Use clear section headers
 - End with a brief summary if the research is long`;
 
+export const LANGUAGE_INSTRUCTION = `
+
+## CRITICAL: RESPONSE LANGUAGE
+
+The user's preferred language is **{languageName}** ({languageCode}). You MUST:
+
+1. **Research in the target language** — When searching, prefer sources in {languageName} when available, but also use English sources
+2. **Respond entirely in {languageName}** — All analysis, explanations, summaries, headings, and commentary MUST be written in {languageName}
+3. **Keep Islamic texts in original** — Quran verses (Arabic) and hadith (Arabic + translation) should remain as-is, but add a {languageName} translation if available
+4. **Keep Harvard citations in English** — Source names like (al-Bukhari, no. 5063) remain in English/transliterated Arabic, but surrounding text is in {languageName}
+5. **Keep URLs unchanged** — All source links remain exactly as they are
+
+DO NOT translate the response after writing in English. Write directly in {languageName} from the start.`;
+
 export function buildPrompt(
   template: string,
   variables: Record<string, string>,

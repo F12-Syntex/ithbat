@@ -6,6 +6,7 @@ import {
   UNDERSTANDING_PROMPT,
   WEB_RESEARCH_PROMPT,
   FORMATTING_PROMPT,
+  LANGUAGE_INSTRUCTION,
   buildPrompt,
   extractUrlsFromMarkdown,
 } from "@/lib/prompts";
@@ -218,10 +219,21 @@ export async function POST(request: NextRequest) {
     query,
     conversationHistory = [],
     sessionId: providedSessionId,
+    language = "en",
   } = await request.json();
   const history = conversationHistory as ConversationTurn[];
   const sessionId = providedSessionId || crypto.randomUUID();
   const isFollowUp = history.length > 0;
+
+  // Language mapping for prompt injection
+  const LANGUAGE_NAMES: Record<string, string> = {
+    en: "English", ar: "Arabic", ja: "Japanese",
+    ur: "Urdu", fr: "French", zh: "Chinese",
+  };
+  const languageName = LANGUAGE_NAMES[language] || "English";
+  const languageInstruction = language !== "en"
+    ? buildPrompt(LANGUAGE_INSTRUCTION, { languageName, languageCode: language })
+    : "";
 
   // Resolve slug: generate new for first request, look up for follow-ups
   let slug: string | null = null;
@@ -301,7 +313,7 @@ export async function POST(request: NextRequest) {
           query: isFollowUp
             ? `[Follow-up Question] ${query}${conversationContext}`
             : query,
-        });
+        }) + languageInstruction;
 
         let understandingContent = "";
         for await (const chunk of client.streamChat(
@@ -330,7 +342,7 @@ export async function POST(request: NextRequest) {
 
         const researchPrompt = buildPrompt(WEB_RESEARCH_PROMPT, {
           query: isFollowUp ? `${query}${conversationContext}` : query,
-        });
+        }) + languageInstruction;
 
         let perplexityResponse = "";
         for await (const chunk of client.streamChat(
@@ -377,7 +389,7 @@ export async function POST(request: NextRequest) {
         const formattingPrompt = buildPrompt(FORMATTING_PROMPT, {
           research: perplexityResponse,
           query,
-        });
+        }) + languageInstruction;
 
         let formattedResponse = "";
         for await (const chunk of client.streamChat(

@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { streamResearch } from "@/lib/api";
+import { useSettings } from "@/context/SettingsContext";
 import {
   type ResearchState,
   type ResearchStep,
@@ -336,6 +337,9 @@ const ResearchContext = createContext<ResearchContextValue | null>(null);
 export function ResearchProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(researchReducer, initialState);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const { settings } = useSettings();
+  const languageRef = useRef(settings.language);
+  languageRef.current = settings.language;
 
   const startResearch = useCallback(async (query: string) => {
     abortControllerRef.current?.abort();
@@ -347,6 +351,9 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
       for await (const event of streamResearch(
         query,
         abortControllerRef.current.signal,
+        undefined,
+        undefined,
+        languageRef.current,
       )) {
         handleSSEEvent(event, dispatch);
       }
@@ -392,6 +399,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
         abortControllerRef.current.signal,
         conversationHistory,
         currentSessionId || undefined,
+        languageRef.current,
       )) {
         if (event.type === "source" && event.source) {
           dispatch({ type: "ADD_SOURCE", source: event.source });
@@ -446,6 +454,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
         abortControllerRef.current.signal,
         conversationHistory,
         currentSessionId || undefined,
+        languageRef.current,
       )) {
         handleSSEEvent(event, dispatch);
       }

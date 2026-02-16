@@ -15,6 +15,7 @@ import {
   Share2,
   Check,
   ArrowRight,
+  Globe,
 } from "lucide-react";
 
 import { useTheme, type ThemeAccent } from "@/context/ThemeContext";
@@ -23,6 +24,7 @@ import {
   useChatHistory,
   type ChatHistoryEntry,
 } from "@/hooks/useChatHistory";
+import { useTranslation, LANGUAGES, type Language } from "@/lib/i18n";
 
 const ACCENT_COLORS: Record<ThemeAccent, { bg: string; ring: string }> = {
   emerald: { bg: "bg-emerald-500", ring: "ring-emerald-500/30" },
@@ -49,7 +51,7 @@ function formatRelativeTime(dateStr: string): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-type PanelType = "history" | "settings" | null;
+type PanelType = "history" | "settings" | "language" | null;
 
 interface DockProps {
   shareDisabled: boolean;
@@ -66,6 +68,7 @@ export function Dock({
 }: DockProps) {
   const [openPanel, setOpenPanel] = useState<PanelType>(null);
   const dockRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation();
 
   const togglePanel = (panel: PanelType) => {
     setOpenPanel((prev) => (prev === panel ? null : panel));
@@ -100,7 +103,7 @@ export function Dock({
             {/* Panel header */}
             <div className="px-4 py-3 flex items-center justify-between flex-shrink-0 border-b border-neutral-100 dark:border-neutral-800">
               <h2 className="text-xs font-semibold text-neutral-900 dark:text-white uppercase tracking-wider">
-                {openPanel === "history" ? "History" : "Settings"}
+                {openPanel === "history" ? t("dock.history") : openPanel === "language" ? t("settings.language") : t("dock.settings")}
               </h2>
             </div>
 
@@ -108,6 +111,8 @@ export function Dock({
             <div className="flex-1 min-h-0 overflow-y-auto">
               {openPanel === "history" ? (
                 <HistoryTab onClose={() => setOpenPanel(null)} />
+              ) : openPanel === "language" ? (
+                <LanguageTab />
               ) : (
                 <SettingsTab />
               )}
@@ -124,12 +129,12 @@ export function Dock({
         <DockButton
           active={openPanel === "history"}
           icon={<History className="w-4 h-4" strokeWidth={1.5} />}
-          label="History"
+          label={t("dock.history")}
           onClick={() => togglePanel("history")}
         />
         <DockButton
           icon={<Plus className="w-4 h-4" strokeWidth={1.5} />}
-          label="New"
+          label={t("dock.new")}
           onClick={onNewSearch}
         />
         <DockButton
@@ -141,13 +146,19 @@ export function Dock({
               <Share2 className="w-4 h-4" strokeWidth={1.5} />
             )
           }
-          label={linkCopied ? "Copied" : "Share"}
+          label={linkCopied ? t("dock.copied") : t("dock.share")}
           onClick={onShare}
+        />
+        <DockButton
+          active={openPanel === "language"}
+          icon={<Globe className="w-4 h-4" strokeWidth={1.5} />}
+          label={t("settings.language")}
+          onClick={() => togglePanel("language")}
         />
         <DockButton
           active={openPanel === "settings"}
           icon={<Settings className="w-4 h-4" strokeWidth={1.5} />}
-          label="Settings"
+          label={t("dock.settings")}
           onClick={() => togglePanel("settings")}
         />
       </motion.div>
@@ -194,6 +205,7 @@ const MAX_PREVIEW_ENTRIES = 5;
 function HistoryTab({ onClose }: { onClose: () => void }) {
   const router = useRouter();
   const { entries, removeEntry } = useChatHistory();
+  const { t } = useTranslation();
 
   const handleNavigate = (slug: string) => {
     onClose();
@@ -208,7 +220,7 @@ function HistoryTab({ onClose }: { onClose: () => void }) {
           strokeWidth={1.5}
         />
         <p className="text-xs text-neutral-400 dark:text-neutral-500">
-          No conversations yet
+          {t("history.noConversations")}
         </p>
       </div>
     );
@@ -239,7 +251,7 @@ function HistoryTab({ onClose }: { onClose: () => void }) {
             router.push("/history");
           }}
         >
-          {hasMore ? `Show all (${entries.length})` : "Show all"}
+          {hasMore ? `${t("history.showAll")} (${entries.length})` : t("history.showAll")}
           <ArrowRight className="w-3 h-3" strokeWidth={2} />
         </button>
       </div>
@@ -297,11 +309,12 @@ function SettingsTab() {
   const router = useRouter();
   const { theme, setTheme, themes } = useTheme();
   const { settings, updateSetting } = useSettings();
+  const { t } = useTranslation();
   const tapCount = useRef(0);
   const tapTimer = useRef<ReturnType<typeof setTimeout>>();
 
-  const darkThemes = themes.filter((t) => t.mode === "dark");
-  const lightThemes = themes.filter((t) => t.mode === "light");
+  const darkThemes = themes.filter((th) => th.mode === "dark");
+  const lightThemes = themes.filter((th) => th.mode === "light");
 
   const handleVersionTap = () => {
     tapCount.current += 1;
@@ -322,7 +335,7 @@ function SettingsTab() {
     <div className="px-4 py-3 space-y-4">
       {/* Accent color */}
       <div className="flex items-center justify-between">
-        <span className="text-xs text-neutral-500 dark:text-neutral-400">Color</span>
+        <span className="text-xs text-neutral-500 dark:text-neutral-400">{t("settings.color")}</span>
         <div className="flex items-center gap-2">
           {(["emerald", "blue", "purple", "rose", "amber", "cyan"] as const).map(
             (accent) => (
@@ -337,7 +350,7 @@ function SettingsTab() {
                 }`}
                 onClick={() => {
                   const newTheme = themes.find(
-                    (t) => t.accent === accent && t.mode === theme.mode,
+                    (th) => th.accent === accent && th.mode === theme.mode,
                   );
                   if (newTheme) setTheme(newTheme);
                 }}
@@ -349,7 +362,7 @@ function SettingsTab() {
 
       {/* Light / Dark toggle */}
       <div className="flex items-center justify-between">
-        <span className="text-xs text-neutral-500 dark:text-neutral-400">Mode</span>
+        <span className="text-xs text-neutral-500 dark:text-neutral-400">{t("settings.mode")}</span>
         <div className="flex bg-neutral-100 dark:bg-neutral-800 rounded-full p-0.5">
           <button
             className={`px-3 py-1 text-[11px] font-medium rounded-full transition-all ${
@@ -358,12 +371,12 @@ function SettingsTab() {
                 : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
             }`}
             onClick={() => {
-              const newTheme = lightThemes.find((t) => t.accent === theme.accent);
+              const newTheme = lightThemes.find((th) => th.accent === theme.accent);
               if (newTheme) setTheme(newTheme);
             }}
           >
             <Sun className="w-3.5 h-3.5 inline-block mr-1 -mt-px" strokeWidth={2} />
-            Light
+            {t("settings.light")}
           </button>
           <button
             className={`px-3 py-1 text-[11px] font-medium rounded-full transition-all ${
@@ -372,12 +385,12 @@ function SettingsTab() {
                 : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
             }`}
             onClick={() => {
-              const newTheme = darkThemes.find((t) => t.accent === theme.accent);
+              const newTheme = darkThemes.find((th) => th.accent === theme.accent);
               if (newTheme) setTheme(newTheme);
             }}
           >
             <Moon className="w-3.5 h-3.5 inline-block mr-1 -mt-px" strokeWidth={2} />
-            Dark
+            {t("settings.dark")}
           </button>
         </div>
       </div>
@@ -385,7 +398,7 @@ function SettingsTab() {
       {/* Show timestamps */}
       <label className="flex items-center justify-between cursor-pointer">
         <span className="text-xs text-neutral-500 dark:text-neutral-400">
-          Timestamps
+          {t("settings.timestamps")}
         </span>
         <div
           className={`w-9 h-5 rounded-full p-0.5 transition-colors ${
@@ -416,6 +429,43 @@ function SettingsTab() {
         <span className="text-[10px] text-neutral-300 dark:text-neutral-600">ithbat</span>
         <span className="text-[10px] text-neutral-300 dark:text-neutral-600">v0.5</span>
       </div>
+    </div>
+  );
+}
+
+// ─── Language Panel Content ──────────────────────────────────────────
+
+function LanguageTab() {
+  const { settings, updateSetting } = useSettings();
+
+  return (
+    <div className="py-1">
+      {LANGUAGES.map((lang) => {
+        const isActive = settings.language === lang.code;
+
+        return (
+          <button
+            key={lang.code}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+              isActive
+                ? "bg-accent-50 dark:bg-accent-900/20"
+                : "hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
+            }`}
+            type="button"
+            onClick={() => updateSetting("language", lang.code)}
+          >
+            <span className={`text-sm ${isActive ? "text-accent-600 dark:text-accent-400 font-medium" : "text-neutral-700 dark:text-neutral-300"}`}>
+              {lang.nativeName}
+            </span>
+            <span className="text-[11px] text-neutral-400 dark:text-neutral-500">
+              {lang.name}
+            </span>
+            {isActive && (
+              <Check className="w-3.5 h-3.5 text-accent-500 ml-auto" strokeWidth={2.5} />
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }
