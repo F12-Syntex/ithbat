@@ -14,6 +14,7 @@ import {
   X,
   ChevronDown,
   User,
+  Lock,
 } from "lucide-react";
 
 const LOGS_PASSWORD = "ithbat2024";
@@ -53,7 +54,11 @@ function formatRelativeTime(dateStr: string): string {
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
 
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+  });
 }
 
 function truncateResponse(response: string, maxLen = 120): string {
@@ -90,7 +95,6 @@ function ChatCard({
 
   return (
     <motion.div
-      key={session.slug}
       animate={{ opacity: 1, y: 0 }}
       className={`group relative rounded-2xl border transition-all cursor-pointer ${
         isDeleting
@@ -107,7 +111,7 @@ function ChatCard({
       }}
       onClick={() => onClick(session.slug)}
     >
-      <div className="px-4 py-3.5">
+      <div className="px-3 sm:px-4 py-3 sm:py-3.5">
         <div className="flex items-start justify-between gap-3">
           <h3 className="text-sm font-medium text-neutral-800 dark:text-neutral-200 line-clamp-1 group-hover:text-accent-600 dark:group-hover:text-accent-400 transition-colors">
             {firstQuery}
@@ -128,7 +132,7 @@ function ChatCard({
           {truncateResponse(lastResponse)}
         </p>
 
-        <div className="flex items-center gap-3 mt-2.5">
+        <div className="flex items-center gap-3 mt-2">
           {msgCount > 1 && (
             <span className="inline-flex items-center gap-1 text-[11px] text-accent-600 dark:text-accent-400 bg-accent-50 dark:bg-accent-900/20 px-1.5 py-0.5 rounded-md font-medium">
               <MessageCircle className="w-2.5 h-2.5" strokeWidth={2} />
@@ -162,7 +166,9 @@ export default function LogsPage() {
     label: string;
   } | null>(null);
   const [filter, setFilter] = useState("");
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
+    new Set(),
+  );
 
   useEffect(() => {
     const auth = sessionStorage.getItem(AUTH_KEY);
@@ -249,11 +255,11 @@ export default function LogsPage() {
     }
 
     return Array.from(groupMap.entries())
-      .map(([userHash, sessions]) => ({
+      .map(([userHash, grpSessions]) => ({
         userHash,
-        sessions,
-        latestUpdate: sessions[0]?.updatedAt || "",
-        totalMessages: sessions.reduce(
+        sessions: grpSessions,
+        latestUpdate: grpSessions[0]?.updatedAt || "",
+        totalMessages: grpSessions.reduce(
           (sum, s) => sum + s.conversations.length,
           0,
         ),
@@ -282,10 +288,19 @@ export default function LogsPage() {
     return (
       <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950 flex items-center justify-center">
         <motion.div
-          animate={{ rotate: 360 }}
-          className="w-5 h-5 border-2 border-neutral-300 dark:border-neutral-700 border-t-accent-500 dark:border-t-accent-400 rounded-full"
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-        />
+          animate={{ opacity: 1 }}
+          className="flex flex-col items-center gap-4"
+          initial={{ opacity: 0 }}
+        >
+          <motion.div
+            animate={{ rotate: 360 }}
+            className="w-6 h-6 border-2 border-neutral-300 dark:border-neutral-700 border-t-accent-500 dark:border-t-accent-400 rounded-full"
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          />
+          <span className="text-xs text-neutral-400 dark:text-neutral-500">
+            Loading...
+          </span>
+        </motion.div>
       </div>
     );
   }
@@ -299,16 +314,16 @@ export default function LogsPage() {
           className="w-full max-w-xs"
           initial={{ opacity: 0, y: 10 }}
         >
-          <div className="bg-white/60 dark:bg-neutral-900/60 backdrop-blur-md rounded-3xl border border-neutral-200/50 dark:border-neutral-800/50 p-8">
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200/80 dark:border-neutral-800 shadow-sm dark:shadow-none p-8">
             <div className="flex items-center justify-center mb-6">
               <div className="w-10 h-10 rounded-2xl bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center">
-                <MessageCircle
-                  className="w-5 h-5 text-accent-600 dark:text-accent-400"
+                <Lock
+                  className="w-4 h-4 text-accent-600 dark:text-accent-400"
                   strokeWidth={1.5}
                 />
               </div>
             </div>
-            <h1 className="text-base font-medium text-neutral-900 dark:text-neutral-100 text-center mb-1">
+            <h1 className="text-base font-medium text-neutral-800 dark:text-neutral-100 text-center mb-1">
               Research Logs
             </h1>
             <p className="text-xs text-neutral-400 dark:text-neutral-500 text-center mb-6">
@@ -317,10 +332,10 @@ export default function LogsPage() {
             <form className="space-y-3" onSubmit={handleLogin}>
               <div className="relative">
                 <input
-                  className={`w-full h-10 px-4 text-sm bg-white dark:bg-neutral-800 border rounded-xl outline-none transition-all placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-neutral-800 dark:text-neutral-200 ${
+                  className={`w-full h-10 px-4 text-base sm:text-sm bg-white dark:bg-neutral-800 border rounded-full outline-none transition-all placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-neutral-800 dark:text-neutral-200 ${
                     authError
                       ? "border-red-300 dark:border-red-700 focus:border-red-400"
-                      : "border-neutral-200 dark:border-neutral-700 focus:border-accent-400 dark:focus:border-accent-500"
+                      : "border-neutral-200/80 dark:border-neutral-700 focus:border-accent-400 dark:focus:border-accent-500"
                   }`}
                   placeholder="Password"
                   type="password"
@@ -331,23 +346,24 @@ export default function LogsPage() {
                   }}
                 />
                 {authError && (
-                  <p className="text-xs text-red-500 mt-1.5 ml-1">
+                  <p className="text-xs text-red-500 mt-1.5 ml-3">
                     Incorrect password
                   </p>
                 )}
               </div>
               <button
-                className="w-full h-10 bg-accent-500 hover:bg-accent-600 text-white text-sm font-medium rounded-xl transition-colors active:scale-[0.98]"
+                className="w-full h-10 bg-accent-500 hover:bg-accent-600 text-white text-sm font-medium rounded-full transition-colors active:scale-[0.98]"
                 type="submit"
               >
                 Continue
               </button>
             </form>
-            <div className="text-center mt-4">
+            <div className="text-center mt-5">
               <Link
-                className="text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
                 href="/"
               >
+                <ArrowLeft className="w-3 h-3" strokeWidth={2} />
                 Back to search
               </Link>
             </div>
@@ -362,13 +378,16 @@ export default function LogsPage() {
     <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-neutral-100/80 dark:bg-neutral-950/80 backdrop-blur-md border-b border-neutral-200/50 dark:border-neutral-800/50">
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-2xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               className="w-8 h-8 rounded-full bg-white/60 dark:bg-neutral-900/60 border border-neutral-200/50 dark:border-neutral-800/50 flex items-center justify-center hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
               href="/"
             >
-              <ArrowLeft className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" strokeWidth={2} />
+              <ArrowLeft
+                className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400"
+                strokeWidth={2}
+              />
             </Link>
             <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
               Logs
@@ -379,27 +398,37 @@ export default function LogsPage() {
               </span>
             )}
           </div>
-          <button
-            className="w-8 h-8 rounded-full bg-white/60 dark:bg-neutral-900/60 border border-neutral-200/50 dark:border-neutral-800/50 flex items-center justify-center hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95 disabled:opacity-50"
-            disabled={refreshing}
-            type="button"
-            onClick={() => fetchSessions(true)}
-          >
-            <RefreshCw
-              className={`w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400 ${refreshing ? "animate-spin" : ""}`}
-              strokeWidth={2}
-            />
-          </button>
+          <div className="flex items-center gap-2">
+            {userGroups.length > 0 && (
+              <span className="text-[10px] sm:text-[11px] text-neutral-400 dark:text-neutral-500 tabular-nums">
+                {userGroups.length} user{userGroups.length !== 1 ? "s" : ""}
+              </span>
+            )}
+            <button
+              className="w-8 h-8 rounded-full bg-white/60 dark:bg-neutral-900/60 border border-neutral-200/50 dark:border-neutral-800/50 flex items-center justify-center hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95 disabled:opacity-50"
+              disabled={refreshing}
+              type="button"
+              onClick={() => fetchSessions(true)}
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400 ${refreshing ? "animate-spin" : ""}`}
+                strokeWidth={2}
+              />
+            </button>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-5">
+      <main className="max-w-2xl mx-auto px-3 sm:px-4 py-5">
         {/* Search filter */}
         {sessions.length > 3 && (
           <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" strokeWidth={2} />
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400"
+              strokeWidth={2}
+            />
             <input
-              className="w-full h-9 pl-9 pr-8 text-sm bg-white/60 dark:bg-neutral-900/60 border border-neutral-200/50 dark:border-neutral-800/50 rounded-xl outline-none focus:border-accent-400 dark:focus:border-accent-500 transition-all placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-neutral-800 dark:text-neutral-200"
+              className="w-full h-9 pl-9 pr-8 text-base sm:text-sm bg-white/60 dark:bg-neutral-900/60 border border-neutral-200/50 dark:border-neutral-800/50 rounded-xl outline-none focus:border-accent-400 dark:focus:border-accent-500 transition-all placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-neutral-800 dark:text-neutral-200"
               placeholder="Filter conversations..."
               type="text"
               value={filter}
@@ -419,21 +448,34 @@ export default function LogsPage() {
 
         {/* Content */}
         {loading && sessions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-3">
+          <div className="flex flex-col items-center justify-center py-24 gap-4">
             <motion.div
-              animate={{ rotate: 360 }}
-              className="w-5 h-5 border-2 border-neutral-300 dark:border-neutral-700 border-t-accent-500 dark:border-t-accent-400 rounded-full"
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            />
+              animate={{ opacity: 1 }}
+              initial={{ opacity: 0 }}
+            >
+              <motion.div
+                animate={{ rotate: 360 }}
+                className="w-6 h-6 border-2 border-neutral-300 dark:border-neutral-700 border-t-accent-500 dark:border-t-accent-400 rounded-full"
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              />
+            </motion.div>
             <span className="text-xs text-neutral-400 dark:text-neutral-500">
               Loading conversations...
             </span>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center py-24 gap-3">
-            <p className="text-sm text-red-500">{error}</p>
+            <div className="w-10 h-10 rounded-2xl bg-red-100 dark:bg-red-900/20 flex items-center justify-center mb-1">
+              <MessageCircle
+                className="w-5 h-5 text-red-500 dark:text-red-400"
+                strokeWidth={1.5}
+              />
+            </div>
+            <p className="text-sm text-neutral-800 dark:text-neutral-200 font-medium">
+              {error}
+            </p>
             <button
-              className="text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 underline underline-offset-2"
+              className="text-xs text-accent-500 hover:text-accent-600 dark:hover:text-accent-400 transition-colors"
               type="button"
               onClick={() => fetchSessions()}
             >
@@ -457,7 +499,7 @@ export default function LogsPage() {
           <div className="flex flex-col items-center py-24 gap-2">
             <p className="text-sm text-neutral-500">No matches</p>
             <button
-              className="text-xs text-accent-500 hover:text-accent-600"
+              className="text-xs text-accent-500 hover:text-accent-600 dark:hover:text-accent-400 transition-colors"
               type="button"
               onClick={() => setFilter("")}
             >
@@ -465,54 +507,66 @@ export default function LogsPage() {
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
-            {userGroups.map((group) => {
+          <div className="space-y-5">
+            {userGroups.map((group, groupIndex) => {
               const isCollapsed = collapsedGroups.has(group.userHash);
               const label =
-                group.userHash === "unknown"
-                  ? "Unknown"
-                  : group.userHash;
+                group.userHash === "unknown" ? "Unknown" : group.userHash;
 
               return (
-                <div key={group.userHash}>
+                <motion.div
+                  key={group.userHash}
+                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, y: 12 }}
+                  transition={{ delay: groupIndex * 0.05, duration: 0.3 }}
+                >
                   {/* Group header */}
                   <button
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/40 dark:bg-neutral-900/40 border border-neutral-200/30 dark:border-neutral-800/30 hover:border-neutral-300 dark:hover:border-neutral-700 transition-all mb-2"
+                    className="w-full flex items-center gap-2.5 px-3 sm:px-4 py-2.5 rounded-2xl bg-white/60 dark:bg-neutral-900/60 border border-neutral-200/50 dark:border-neutral-800/50 hover:border-accent-400/50 dark:hover:border-accent-500/50 transition-all active:scale-[0.99]"
                     type="button"
                     onClick={() => toggleGroup(group.userHash)}
                   >
-                    <div className="w-6 h-6 rounded-lg bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center flex-shrink-0">
-                      <User className="w-3 h-3 text-accent-600 dark:text-accent-400" strokeWidth={2} />
+                    <div className="w-8 h-8 rounded-full bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center flex-shrink-0">
+                      <User
+                        className="w-3.5 h-3.5 text-accent-600 dark:text-accent-400"
+                        strokeWidth={2}
+                      />
                     </div>
-                    <span className="text-xs font-mono font-medium text-neutral-600 dark:text-neutral-300">
-                      {label}
-                    </span>
-                    <span className="text-[11px] text-neutral-400 dark:text-neutral-500">
-                      {group.sessions.length} chat{group.sessions.length !== 1 ? "s" : ""}
-                      {" \u00b7 "}
-                      {group.totalMessages} msg{group.totalMessages !== 1 ? "s" : ""}
-                    </span>
-                    <span className="flex items-center gap-1 text-[11px] text-neutral-400 dark:text-neutral-500 ml-auto">
-                      <Clock className="w-2.5 h-2.5" strokeWidth={2} />
-                      {formatRelativeTime(group.latestUpdate)}
-                    </span>
-                    <ChevronDown
-                      className={`w-3.5 h-3.5 text-neutral-400 transition-transform ${
-                        isCollapsed ? "-rotate-90" : ""
-                      }`}
-                      strokeWidth={2}
-                    />
+                    <div className="flex flex-col items-start min-w-0">
+                      <span className="text-xs font-mono font-medium text-neutral-700 dark:text-neutral-200 truncate">
+                        {label}
+                      </span>
+                      <span className="text-[10px] sm:text-[11px] text-neutral-400 dark:text-neutral-500">
+                        {group.sessions.length} chat
+                        {group.sessions.length !== 1 ? "s" : ""}
+                        {" \u00b7 "}
+                        {group.totalMessages} msg
+                        {group.totalMessages !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 ml-auto flex-shrink-0">
+                      <span className="hidden sm:flex items-center gap-1 text-[11px] text-neutral-400 dark:text-neutral-500">
+                        <Clock className="w-2.5 h-2.5" strokeWidth={2} />
+                        {formatRelativeTime(group.latestUpdate)}
+                      </span>
+                      <ChevronDown
+                        className={`w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500 transition-transform duration-200 ${
+                          isCollapsed ? "-rotate-90" : ""
+                        }`}
+                        strokeWidth={2}
+                      />
+                    </div>
                   </button>
 
                   {/* Group chats */}
-                  <AnimatePresence mode="popLayout">
+                  <AnimatePresence initial={false}>
                     {!isCollapsed && (
                       <motion.div
                         animate={{ opacity: 1, height: "auto" }}
-                        className="space-y-2 pl-3"
-                        exit={{ opacity: 0, height: 0 }}
+                        className="space-y-2 mt-2 ml-4 sm:ml-5 border-l-2 border-neutral-200/50 dark:border-neutral-800/50 pl-3 sm:pl-4"
+                        exit={{ opacity: 0, height: 0, marginTop: 0 }}
                         initial={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.2 }}
+                        transition={{ duration: 0.2, ease: "easeInOut" }}
                       >
                         {group.sessions.map((session, index) => (
                           <ChatCard
@@ -521,15 +575,15 @@ export default function LogsPage() {
                             index={index}
                             session={session}
                             onClick={(slug) => router.push(`/chat/${slug}`)}
-                            onDelete={(slug, label) =>
-                              setDeleteTarget({ slug, label })
+                            onDelete={(slug, lbl) =>
+                              setDeleteTarget({ slug, label: lbl })
                             }
                           />
                         ))}
                       </motion.div>
                     )}
                   </AnimatePresence>
-                </div>
+                </motion.div>
               );
             })}
           </div>
@@ -541,14 +595,14 @@ export default function LogsPage() {
         {deleteTarget && (
           <motion.div
             animate={{ opacity: 1 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 dark:bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
             exit={{ opacity: 0 }}
             initial={{ opacity: 0 }}
             onClick={() => setDeleteTarget(null)}
           >
             <motion.div
               animate={{ opacity: 1, scale: 1 }}
-              className="w-full max-w-xs bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200/50 dark:border-neutral-800/50 shadow-xl p-5"
+              className="w-full max-w-xs bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-2xl p-5"
               exit={{ opacity: 0, scale: 0.95 }}
               initial={{ opacity: 0, scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
@@ -562,14 +616,14 @@ export default function LogsPage() {
               </p>
               <div className="flex gap-2 justify-end">
                 <button
-                  className="h-8 px-3 text-xs text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                  className="h-8 px-4 text-xs text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors"
                   type="button"
                   onClick={() => setDeleteTarget(null)}
                 >
                   Cancel
                 </button>
                 <button
-                  className="h-8 px-3 text-xs text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors disabled:opacity-50 active:scale-[0.98]"
+                  className="h-8 px-4 text-xs text-white bg-red-500 hover:bg-red-600 rounded-full transition-colors disabled:opacity-50 active:scale-[0.98]"
                   disabled={!!deleting}
                   type="button"
                   onClick={handleDelete}
