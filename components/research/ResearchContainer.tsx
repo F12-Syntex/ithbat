@@ -14,6 +14,7 @@ import {
   Layers,
   Sparkles,
   Share2,
+  Globe,
 } from "lucide-react";
 
 import { SearchInput } from "./SearchInput";
@@ -29,63 +30,12 @@ import { HowItWorks } from "@/components/HowItWorks";
 import { useResearch } from "@/hooks/useResearch";
 import { useTheme } from "@/context/ThemeContext";
 import { useChatHistory } from "@/hooks/useChatHistory";
-import { useTranslation } from "@/lib/i18n";
+import { useTranslation, EXAMPLE_QUESTIONS } from "@/lib/i18n";
+import type { Language } from "@/lib/i18n";
 
-// Pool of common Islamic questions
-const EXAMPLE_QUESTIONS = [
-  // Salah (Prayer)
-  "How to pray Fajr?",
-  "Prayer while traveling",
-  "Can I combine prayers?",
-  "What breaks wudu?",
-  "Is music haram?",
-  "Praying in congregation",
-  // Fasting
-  "What breaks the fast?",
-  "Fasting while sick",
-  "Making up missed fasts",
-  "Fasting on Ashura",
-  "Can I brush teeth while fasting?",
-  // Zakat & Charity
-  "Rules of Zakat",
-  "Zakat on gold",
-  "Who can receive Zakat?",
-  "Sadaqah vs Zakat",
-  // Hajj & Umrah
-  "Steps of Hajj",
-  "Umrah requirements",
-  "Ihram rules",
-  // Daily Life
-  "Is insurance halal?",
-  "Halal investing rules",
-  "Can Muslims have dogs?",
-  "Is cryptocurrency halal?",
-  "Beard in Islam",
-  "Hijab requirements",
-  // Marriage & Family
-  "Rights of the wife",
-  "Mahr requirements",
-  "Marriage in Islam",
-  "Divorce in Islam",
-  // Quran & Hadith
-  "How to memorize Quran?",
-  "Virtues of Surah Kahf",
-  "Best dhikr to recite",
-  "Dua for anxiety",
-  // Beliefs
-  "Signs of the Day of Judgment",
-  "Who are the angels?",
-  "What is Qadr?",
-  "Intercession in Islam",
-  // Ethics
-  "Backbiting in Islam",
-  "Lying exceptions",
-  "Treatment of parents",
-  "Rights of neighbors",
-];
-
-function getRandomQuestions(count: number): string[] {
-  const shuffled = [...EXAMPLE_QUESTIONS].sort(() => Math.random() - 0.5);
+function getRandomQuestions(count: number, lang: Language): string[] {
+  const questions = EXAMPLE_QUESTIONS[lang] || EXAMPLE_QUESTIONS.en;
+  const shuffled = [...questions].sort(() => Math.random() - 0.5);
 
   return shuffled.slice(0, count);
 }
@@ -103,7 +53,7 @@ export function ResearchContainer() {
   } = useResearch();
   const { theme, setTheme, themes } = useTheme();
   const { addEntry } = useChatHistory();
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const [suggestedQuery, setSuggestedQuery] = useState<string | undefined>();
   const [linkCopied, setLinkCopied] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -146,15 +96,16 @@ export function ResearchContainer() {
   );
 
   // Random example questions - set client-side only to avoid hydration mismatch
+  const defaultQuestions = EXAMPLE_QUESTIONS[lang] || EXAMPLE_QUESTIONS.en;
   const [exampleQuestions, setExampleQuestions] = useState<string[]>([
-    EXAMPLE_QUESTIONS[0],
-    EXAMPLE_QUESTIONS[1],
-    EXAMPLE_QUESTIONS[2],
+    defaultQuestions[0],
+    defaultQuestions[1],
+    defaultQuestions[2],
   ]);
 
   useEffect(() => {
-    setExampleQuestions(getRandomQuestions(3));
-  }, []);
+    setExampleQuestions(getRandomQuestions(3, lang));
+  }, [lang]);
 
   // Save to local history when research completes
   useEffect(() => {
@@ -506,6 +457,21 @@ export function ResearchContainer() {
                             isStreaming={isStreaming}
                           />
                         </div>
+                      )}
+
+                      {/* AI Translation Notice */}
+                      {lang !== "en" && state.status === "completed" && state.response && (
+                        <motion.div
+                          animate={{ opacity: 1 }}
+                          className="flex items-center justify-center gap-1.5 mt-3"
+                          initial={{ opacity: 0 }}
+                          transition={{ delay: 0.2 }}
+                        >
+                          <Globe className="w-3 h-3 text-neutral-400 dark:text-neutral-500" strokeWidth={2} />
+                          <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
+                            {t("research.aiTranslated")}
+                          </span>
+                        </motion.div>
                       )}
 
                       {/* Dive Deeper Button */}

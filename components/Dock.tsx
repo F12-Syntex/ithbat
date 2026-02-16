@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type PanInfo } from "framer-motion";
 import {
   Sun,
   Moon,
@@ -25,6 +25,20 @@ import {
   type ChatHistoryEntry,
 } from "@/hooks/useChatHistory";
 import { useTranslation, LANGUAGES, type Language } from "@/lib/i18n";
+
+function useIsMobile(breakpoint = 640) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
+    setIsMobile(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, [breakpoint]);
+
+  return isMobile;
+}
 
 const ACCENT_COLORS: Record<ThemeAccent, { bg: string; ring: string }> = {
   emerald: { bg: "bg-emerald-500", ring: "ring-emerald-500/30" },
@@ -69,6 +83,7 @@ export function Dock({
   const [openPanel, setOpenPanel] = useState<PanelType>(null);
   const dockRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
 
   const togglePanel = (panel: PanelType) => {
     setOpenPanel((prev) => (prev === panel ? null : panel));
@@ -76,9 +91,9 @@ export function Dock({
 
   const closePanel = useCallback(() => setOpenPanel(null), []);
 
-  // Close panel on any click outside the dock
+  // Close panel on any click outside the dock (desktop only)
   useEffect(() => {
-    if (!openPanel) return;
+    if (!openPanel || isMobile) return;
     const handlePointerDown = (e: PointerEvent) => {
       if (dockRef.current && !dockRef.current.contains(e.target as Node)) {
         closePanel();
@@ -86,83 +101,102 @@ export function Dock({
     };
     document.addEventListener("pointerdown", handlePointerDown);
     return () => document.removeEventListener("pointerdown", handlePointerDown);
-  }, [openPanel, closePanel]);
+  }, [openPanel, isMobile, closePanel]);
+
+  const panelTitle = openPanel === "history"
+    ? t("dock.history")
+    : openPanel === "language"
+      ? t("settings.language")
+      : t("dock.settings");
+
+  const panelContent = openPanel === "history" ? (
+    <HistoryTab onClose={closePanel} />
+  ) : openPanel === "language" ? (
+    <LanguageTab />
+  ) : openPanel === "settings" ? (
+    <SettingsTab />
+  ) : null;
 
   return (
-    <div ref={dockRef} className="fixed left-1/2 -translate-x-1/2 bottom-5 z-40 flex flex-col items-center">
-      {/* Popover panel — floats above the dock */}
+    <>
+      {/* Mobile bottom sheet */}
       <AnimatePresence>
-        {openPanel && (
-          <motion.div
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            className="relative z-40 mb-3 w-[320px] max-h-[60vh] bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 shadow-xl flex flex-col overflow-hidden"
-            exit={{ opacity: 0, y: 8, scale: 0.97 }}
-            initial={{ opacity: 0, y: 12, scale: 0.97 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
-          >
-            {/* Panel header */}
-            <div className="px-4 py-3 flex items-center justify-between flex-shrink-0 border-b border-neutral-100 dark:border-neutral-800">
-              <h2 className="text-xs font-semibold text-neutral-900 dark:text-white uppercase tracking-wider">
-                {openPanel === "history" ? t("dock.history") : openPanel === "language" ? t("settings.language") : t("dock.settings")}
-              </h2>
-            </div>
-
-            {/* Panel content */}
-            <div className="flex-1 min-h-0 overflow-y-auto">
-              {openPanel === "history" ? (
-                <HistoryTab onClose={() => setOpenPanel(null)} />
-              ) : openPanel === "language" ? (
-                <LanguageTab />
-              ) : (
-                <SettingsTab />
-              )}
-            </div>
-          </motion.div>
+        {openPanel && isMobile && (
+          <MobileSheet title={panelTitle} onClose={closePanel}>
+            {panelContent}
+          </MobileSheet>
         )}
       </AnimatePresence>
 
-      {/* Dock pill */}
-      <motion.div
-        layout
-        className="flex items-center gap-1 px-1.5 py-1.5 backdrop-blur-xl shadow-lg bg-white/80 dark:bg-neutral-900/80 border border-neutral-200/50 dark:border-neutral-800/50 rounded-full"
-      >
-        <DockButton
-          active={openPanel === "history"}
-          icon={<History className="w-4 h-4" strokeWidth={1.5} />}
-          label={t("dock.history")}
-          onClick={() => togglePanel("history")}
-        />
-        <DockButton
-          icon={<Plus className="w-4 h-4" strokeWidth={1.5} />}
-          label={t("dock.new")}
-          onClick={onNewSearch}
-        />
-        <DockButton
-          disabled={shareDisabled}
-          icon={
-            linkCopied ? (
-              <Check className="w-4 h-4 text-green-500" strokeWidth={2} />
-            ) : (
-              <Share2 className="w-4 h-4" strokeWidth={1.5} />
-            )
-          }
-          label={linkCopied ? t("dock.copied") : t("dock.share")}
-          onClick={onShare}
-        />
-        <DockButton
-          active={openPanel === "language"}
-          icon={<Globe className="w-4 h-4" strokeWidth={1.5} />}
-          label={t("settings.language")}
-          onClick={() => togglePanel("language")}
-        />
-        <DockButton
-          active={openPanel === "settings"}
-          icon={<Settings className="w-4 h-4" strokeWidth={1.5} />}
-          label={t("dock.settings")}
-          onClick={() => togglePanel("settings")}
-        />
-      </motion.div>
-    </div>
+      <div ref={dockRef} className="fixed left-1/2 -translate-x-1/2 bottom-5 z-40 flex flex-col items-center">
+        {/* Desktop popover panel — floats above the dock */}
+        <AnimatePresence>
+          {openPanel && !isMobile && (
+            <motion.div
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              className="relative z-40 mb-3 w-[320px] max-h-[60vh] bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 shadow-xl flex flex-col overflow-hidden"
+              exit={{ opacity: 0, y: 8, scale: 0.97 }}
+              initial={{ opacity: 0, y: 12, scale: 0.97 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+            >
+              {/* Panel header */}
+              <div className="px-4 py-3 flex items-center justify-between flex-shrink-0 border-b border-neutral-100 dark:border-neutral-800">
+                <h2 className="text-xs font-semibold text-neutral-900 dark:text-white uppercase tracking-wider">
+                  {panelTitle}
+                </h2>
+              </div>
+
+              {/* Panel content */}
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                {panelContent}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Dock pill */}
+        <motion.div
+          layout
+          className="flex items-center gap-1 px-1.5 py-1.5 backdrop-blur-xl shadow-lg bg-white/80 dark:bg-neutral-900/80 border border-neutral-200/50 dark:border-neutral-800/50 rounded-full"
+        >
+          <DockButton
+            active={openPanel === "history"}
+            icon={<History className="w-4 h-4" strokeWidth={1.5} />}
+            label={t("dock.history")}
+            onClick={() => togglePanel("history")}
+          />
+          <DockButton
+            icon={<Plus className="w-4 h-4" strokeWidth={1.5} />}
+            label={t("dock.new")}
+            onClick={onNewSearch}
+          />
+          <DockButton
+            disabled={shareDisabled}
+            icon={
+              linkCopied ? (
+                <Check className="w-4 h-4 text-green-500" strokeWidth={2} />
+              ) : (
+                <Share2 className="w-4 h-4" strokeWidth={1.5} />
+              )
+            }
+            label={linkCopied ? t("dock.copied") : t("dock.share")}
+            onClick={onShare}
+          />
+          <DockButton
+            active={openPanel === "language"}
+            icon={<Globe className="w-4 h-4" strokeWidth={1.5} />}
+            label={t("settings.language")}
+            onClick={() => togglePanel("language")}
+          />
+          <DockButton
+            active={openPanel === "settings"}
+            icon={<Settings className="w-4 h-4" strokeWidth={1.5} />}
+            label={t("dock.settings")}
+            onClick={() => togglePanel("settings")}
+          />
+        </motion.div>
+      </div>
+    </>
   );
 }
 
@@ -195,6 +229,68 @@ function DockButton({
     >
       {icon}
     </button>
+  );
+}
+
+// ─── Mobile Bottom Sheet ─────────────────────────────────────────────
+
+function MobileSheet({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  const handleDragEnd = (_: unknown, info: PanInfo) => {
+    if (info.velocity.y > 300 || info.offset.y > 100) {
+      onClose();
+    }
+  };
+
+  return (
+    <>
+      {/* Backdrop */}
+      <motion.div
+        animate={{ opacity: 1 }}
+        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+        exit={{ opacity: 0 }}
+        initial={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        onClick={onClose}
+      />
+
+      {/* Sheet */}
+      <motion.div
+        animate={{ y: 0 }}
+        className="fixed bottom-0 left-0 right-0 z-50 max-h-[80vh] bg-white dark:bg-neutral-900 rounded-t-2xl shadow-2xl flex flex-col overflow-hidden"
+        drag="y"
+        dragConstraints={{ top: 0 }}
+        dragElastic={{ top: 0, bottom: 0.3 }}
+        exit={{ y: "100%" }}
+        initial={{ y: "100%" }}
+        transition={{ type: "spring", damping: 30, stiffness: 300 }}
+        onDragEnd={handleDragEnd}
+      >
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-neutral-300 dark:bg-neutral-600" />
+        </div>
+
+        {/* Header */}
+        <div className="px-5 py-3 flex items-center justify-between flex-shrink-0 border-b border-neutral-100 dark:border-neutral-800">
+          <h2 className="text-sm font-semibold text-neutral-900 dark:text-white">
+            {title}
+          </h2>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+          {children}
+        </div>
+      </motion.div>
+    </>
   );
 }
 

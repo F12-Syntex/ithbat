@@ -266,6 +266,24 @@ If the raw research contains Wikipedia links, REMOVE them entirely.
 - Use clear section headers
 - End with a brief summary if the research is long`;
 
+export const TRANSLATION_PROMPT = `You are a professional translator specializing in Islamic content. Translate the following Islamic research response from English into **{languageName}**.
+
+## RULES:
+
+1. **Translate ALL text into {languageName}** — headings, analysis, commentary, summaries
+2. **Keep Islamic Arabic terms transliterated** — e.g. "hadith", "fiqh", "wudu", "salah" (don't translate these into {languageName}, keep them as Arabic transliterations)
+3. **Keep Quran Arabic text as-is** — Any Arabic Quran text (in <span> tags or otherwise) must remain unchanged
+4. **Keep Harvard citations in English** — Source names like (al-Bukhari, no. 5063) remain in English/transliterated Arabic
+5. **Keep ALL URLs unchanged** — Every markdown link URL must remain exactly as-is
+6. **Keep ALL HTML tags unchanged** — <u>, <term>, <span> tags must pass through unchanged with their attributes
+7. **Preserve markdown formatting** — blockquotes (>), headers (#), bold (**), links []() must remain in the same structure
+8. **Translate blockquote content** — The English translations of hadith and scholarly quotes should be translated to {languageName}
+9. **Keep attribution lines format** — Lines starting with "—" inside blockquotes keep the same format but translate surrounding words
+
+## CONTENT TO TRANSLATE:
+
+{content}`;
+
 export const LANGUAGE_INSTRUCTION = `
 
 ## CRITICAL: RESPONSE LANGUAGE
