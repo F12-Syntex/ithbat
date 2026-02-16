@@ -465,11 +465,17 @@ export async function POST(request: NextRequest) {
         send({ type: "response_start" });
         send({ type: "response_content", content: formattedResponse });
 
-        // Log conversation to KV
-        const logPromise = isFollowUp
-          ? appendToChat(slug!, query, formattedResponse, allSteps, allSources)
-          : createChat(slug!, sessionId, query, formattedResponse, allSteps, allSources);
-        logPromise.catch((err) => console.error("Failed to log conversation:", err));
+        // Log conversation to KV (must await before closing stream,
+        // otherwise serverless function terminates before write completes)
+        try {
+          if (isFollowUp) {
+            await appendToChat(slug!, query, formattedResponse, allSteps, allSources);
+          } else {
+            await createChat(slug!, sessionId, query, formattedResponse, allSteps, allSources);
+          }
+        } catch (err) {
+          console.error("Failed to log conversation:", err);
+        }
 
         send({ type: "done" });
       } catch (error) {
