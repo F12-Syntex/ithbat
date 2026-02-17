@@ -25,6 +25,7 @@ interface ChatSession {
   sessionId: string;
   slug: string;
   userHash?: string;
+  country?: string;
   conversations: Array<{
     query: string;
     response: string;
@@ -38,6 +39,7 @@ interface ChatSession {
 
 interface UserGroup {
   userHash: string;
+  country?: string;
   sessions: ChatSession[];
   latestUpdate: string;
   totalMessages: number;
@@ -61,6 +63,14 @@ function formatRelativeTime(dateStr: string): string {
     day: "numeric",
     year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
   });
+}
+
+function countryCodeToFlag(code: string): string {
+  const upper = code.toUpperCase();
+
+  return String.fromCodePoint(
+    ...Array.from(upper).map((c) => 0x1f1e6 + c.charCodeAt(0) - 65),
+  );
 }
 
 function truncateResponse(response: string, maxLen = 120): string {
@@ -290,6 +300,7 @@ export default function LogsPage() {
     return Array.from(groupMap.entries())
       .map(([userHash, grpSessions]) => ({
         userHash,
+        country: grpSessions.find((s) => s.country)?.country,
         sessions: grpSessions,
         latestUpdate: grpSessions[0]?.updatedAt || "",
         totalMessages: grpSessions.reduce(
@@ -565,8 +576,13 @@ export default function LogsPage() {
                       />
                     </div>
                     <div className="flex flex-col items-start min-w-0">
-                      <span className="text-xs font-mono font-medium text-neutral-700 dark:text-neutral-200 truncate">
+                      <span className="text-xs font-mono font-medium text-neutral-700 dark:text-neutral-200 truncate flex items-center gap-1.5">
                         {label}
+                        {group.country && (
+                          <span className="text-xs" title={group.country}>
+                            {countryCodeToFlag(group.country)}
+                          </span>
+                        )}
                       </span>
                       <span className="text-[10px] sm:text-[11px] text-neutral-400 dark:text-neutral-500">
                         {group.sessions.length} chat
@@ -574,6 +590,12 @@ export default function LogsPage() {
                         {" \u00b7 "}
                         {group.totalMessages} msg
                         {group.totalMessages !== 1 ? "s" : ""}
+                        {group.country && (
+                          <>
+                            {" \u00b7 "}
+                            {group.country}
+                          </>
+                        )}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 ml-auto flex-shrink-0">

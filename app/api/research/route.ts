@@ -266,6 +266,7 @@ export async function POST(request: NextRequest) {
     request.headers.get("x-real-ip") ||
     "unknown";
   const userHash = ip !== "unknown" ? await hashIP(ip) : undefined;
+  const country = request.headers.get("x-vercel-ip-country") || undefined;
 
   const {
     query,
@@ -450,7 +451,10 @@ export async function POST(request: NextRequest) {
         send({ type: "step_complete", step: "understanding" });
 
         // Check if the AI flagged this as a personal question
-        const personalMatch = understandingContent.match(/^PERSONAL:\s*(YES|NO)/im);
+        const personalMatch = understandingContent.match(
+          /^PERSONAL:\s*(YES|NO)/im,
+        );
+
         if (personalMatch && personalMatch[1].toUpperCase() === "YES") {
           send({ type: "personal_question" });
         }
@@ -624,6 +628,7 @@ export async function POST(request: NextRequest) {
               allSources,
               userHash,
               logImages,
+              country,
             );
           }
         } catch (err) {

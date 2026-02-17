@@ -24,6 +24,7 @@ export interface ChatData {
   sessionId: string;
   slug: string;
   userHash?: string;
+  country?: string;
   conversations: ConversationEntry[];
   createdAt: string;
   updatedAt: string;
@@ -56,6 +57,7 @@ export async function createChat(
   sources: Source[],
   userHash?: string,
   images?: string[],
+  country?: string,
 ): Promise<void> {
   if (!isBlobConfigured) {
     console.warn("Blob not configured, skipping chat creation");
@@ -69,6 +71,7 @@ export async function createChat(
       sessionId,
       slug,
       userHash,
+      ...(country ? { country } : {}),
       conversations: [
         {
           query,

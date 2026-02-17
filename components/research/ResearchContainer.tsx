@@ -469,7 +469,8 @@ export function ResearchContainer() {
                       )}
 
                       {/* Fatwa Warning Banner — client-side or server-side detection */}
-                      {(state.isPersonalQuestion || isPersonalQuestion(state.query, lang)) && (
+                      {(state.isPersonalQuestion ||
+                        isPersonalQuestion(state.query, lang)) && (
                         <FatwaWarningBanner message={t("app.fatwaWarning")} />
                       )}
 
