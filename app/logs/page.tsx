@@ -98,10 +98,13 @@ function ChatCard({
     (sum, c) => sum + (c.images?.length || 0),
     0,
   );
-  const firstImages = session.conversations.find((c) => c.images?.length)?.images;
+  const firstImages = session.conversations.find(
+    (c) => c.images?.length,
+  )?.images;
 
   return (
     <motion.div
+      layout
       animate={{ opacity: 1, y: 0 }}
       className={`group relative rounded-2xl border transition-all cursor-pointer ${
         isDeleting
@@ -110,7 +113,6 @@ function ChatCard({
       }`}
       exit={{ opacity: 0, x: -20 }}
       initial={{ opacity: 0, y: 12 }}
-      layout
       transition={{
         delay: index * 0.02,
         duration: 0.25,
@@ -198,9 +200,7 @@ export default function LogsPage() {
     label: string;
   } | null>(null);
   const [filter, setFilter] = useState("");
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    new Set(),
-  );
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const auth = sessionStorage.getItem(AUTH_KEY);
@@ -279,6 +279,7 @@ export default function LogsPage() {
     for (const session of filtered) {
       const hash = session.userHash || "unknown";
       const existing = groupMap.get(hash);
+
       if (existing) {
         existing.push(session);
       } else {
@@ -306,11 +307,13 @@ export default function LogsPage() {
   const toggleGroup = (hash: string) => {
     setExpandedGroups((prev) => {
       const next = new Set(prev);
+
       if (next.has(hash)) {
         next.delete(hash);
       } else {
         next.add(hash);
       }
+
       return next;
     });
   };
@@ -481,10 +484,7 @@ export default function LogsPage() {
         {/* Content */}
         {loading && sessions.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <motion.div
-              animate={{ opacity: 1 }}
-              initial={{ opacity: 0 }}
-            >
+            <motion.div animate={{ opacity: 1 }} initial={{ opacity: 0 }}>
               <motion.div
                 animate={{ rotate: 360 }}
                 className="w-6 h-6 border-2 border-neutral-300 dark:border-neutral-700 border-t-accent-500 dark:border-t-accent-400 rounded-full"

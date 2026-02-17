@@ -58,7 +58,10 @@ export default function HistoryPage() {
               className="w-8 h-8 rounded-full bg-white/60 dark:bg-neutral-900/60 border border-neutral-200/50 dark:border-neutral-800/50 flex items-center justify-center hover:border-accent-400 dark:hover:border-accent-500 transition-all active:scale-95"
               href="/"
             >
-              <ArrowLeft className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" strokeWidth={2} />
+              <ArrowLeft
+                className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400"
+                strokeWidth={2}
+              />
             </Link>
             <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
               {t("history.title")}
@@ -85,7 +88,10 @@ export default function HistoryPage() {
         {/* Search filter */}
         {entries.length > 3 && (
           <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" strokeWidth={2} />
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400"
+              strokeWidth={2}
+            />
             <input
               className="w-full h-9 pl-9 pr-8 text-sm bg-white/60 dark:bg-neutral-900/60 border border-neutral-200/50 dark:border-neutral-800/50 rounded-xl outline-none focus:border-accent-400 dark:focus:border-accent-500 transition-all placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-neutral-800 dark:text-neutral-200"
               placeholder={t("history.filterPlaceholder")}
@@ -114,7 +120,9 @@ export default function HistoryPage() {
                 strokeWidth={1.5}
               />
             </div>
-            <p className="text-sm text-neutral-500">{t("history.noConversations")}</p>
+            <p className="text-sm text-neutral-500">
+              {t("history.noConversations")}
+            </p>
             <p className="text-xs text-neutral-400 dark:text-neutral-500">
               {t("history.emptyDesc")}
             </p>
@@ -136,11 +144,11 @@ export default function HistoryPage() {
               {filtered.map((entry, index) => (
                 <motion.div
                   key={entry.slug}
+                  layout
                   animate={{ opacity: 1, y: 0 }}
                   className="group relative rounded-2xl border transition-all cursor-pointer bg-white/60 dark:bg-neutral-900/60 border-neutral-200/50 dark:border-neutral-800/50 hover:border-accent-400/50 dark:hover:border-accent-500/50"
                   exit={{ opacity: 0, x: -20 }}
                   initial={{ opacity: 0, y: 12 }}
-                  layout
                   transition={{
                     delay: index * 0.02,
                     duration: 0.25,
@@ -170,7 +178,10 @@ export default function HistoryPage() {
                     <div className="flex items-center gap-3 mt-2">
                       {entry.messageCount > 1 && (
                         <span className="inline-flex items-center gap-1 text-[11px] text-accent-600 dark:text-accent-400 bg-accent-50 dark:bg-accent-900/20 px-1.5 py-0.5 rounded-md font-medium">
-                          <MessageCircle className="w-2.5 h-2.5" strokeWidth={2} />
+                          <MessageCircle
+                            className="w-2.5 h-2.5"
+                            strokeWidth={2}
+                          />
                           {entry.messageCount}
                         </span>
                       )}

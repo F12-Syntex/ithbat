@@ -9,10 +9,7 @@ export async function GET(
   const { slug } = await params;
 
   if (!slug) {
-    return NextResponse.json(
-      { error: "Slug is required" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Slug is required" }, { status: 400 });
   }
 
   try {

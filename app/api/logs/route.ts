@@ -26,10 +26,7 @@ export async function DELETE(request: NextRequest) {
     const { slug } = await request.json();
 
     if (!slug) {
-      return NextResponse.json(
-        { error: "slug is required" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "slug is required" }, { status: 400 });
     }
 
     const success = await deleteChat(slug);

@@ -16,9 +16,12 @@ function loadEntries(): ChatHistoryEntry[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
+
     if (!raw) return [];
     const parsed = JSON.parse(raw);
+
     if (!Array.isArray(parsed)) return [];
+
     return parsed as ChatHistoryEntry[];
   } catch {
     return [];
@@ -48,6 +51,7 @@ export function useChatHistory() {
         const existing = prev.findIndex((e) => e.slug === slug);
 
         let next: ChatHistoryEntry[];
+
         if (existing >= 0) {
           // Update existing
           next = [...prev];
@@ -69,6 +73,7 @@ export function useChatHistory() {
         next = next.slice(0, MAX_ENTRIES);
 
         saveEntries(next);
+
         return next;
       });
     },
@@ -78,7 +83,9 @@ export function useChatHistory() {
   const removeEntry = useCallback((slug: string) => {
     setEntries((prev) => {
       const next = prev.filter((e) => e.slug !== slug);
+
       saveEntries(next);
+
       return next;
     });
   }, []);

@@ -138,10 +138,12 @@ export class OpenRouterClient {
 
       if (!response.ok) {
         const error = await response.text();
+
         throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
       }
 
       const reader = response.body?.getReader();
+
       if (!reader) {
         throw new Error("No response body");
       }
@@ -152,15 +154,18 @@ export class OpenRouterClient {
       try {
         while (true) {
           const { done, value } = await reader.read();
+
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
+
           buffer = lines.pop() || "";
 
           for (const line of lines) {
             if (line.startsWith("data: ")) {
               const data = line.slice(6).trim();
+
               if (data === "[DONE]") return;
 
               try {
@@ -169,12 +174,14 @@ export class OpenRouterClient {
 
                 // Extract content
                 const content = choice?.delta?.content;
+
                 if (content) {
                   yield content;
                 }
 
                 // Collect annotations/citations from delta or message
                 const deltaAnnotations = choice?.delta?.annotations;
+
                 if (Array.isArray(deltaAnnotations)) {
                   for (const ann of deltaAnnotations) {
                     if (ann.type === "url_citation" && ann.url) {
@@ -190,6 +197,7 @@ export class OpenRouterClient {
 
                 // Also check for citations in the message field (some models put them there)
                 const messageAnnotations = choice?.message?.annotations;
+
                 if (Array.isArray(messageAnnotations)) {
                   for (const ann of messageAnnotations) {
                     if (ann.type === "url_citation" && ann.url) {
@@ -245,6 +253,7 @@ export async function* streamPerplexity(
   options: { maxTokens?: number; temperature?: number } = {},
 ): AsyncGenerator<string> {
   const apiKey = process.env.PERPLEXITY_API_KEY;
+
   if (!apiKey) {
     throw new Error("PERPLEXITY_API_KEY environment variable is not set");
   }
@@ -268,10 +277,12 @@ export async function* streamPerplexity(
 
   if (!response.ok) {
     const error = await response.text();
+
     throw new Error(`Perplexity API error: ${response.status} - ${error}`);
   }
 
   const reader = response.body?.getReader();
+
   if (!reader) {
     throw new Error("No response body");
   }
@@ -282,20 +293,24 @@ export async function* streamPerplexity(
   try {
     while (true) {
       const { done, value } = await reader.read();
+
       if (done) break;
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
+
       buffer = lines.pop() || "";
 
       for (const line of lines) {
         if (line.startsWith("data: ")) {
           const data = line.slice(6).trim();
+
           if (data === "[DONE]") return;
 
           try {
             const parsed = JSON.parse(data);
             const content = parsed.choices?.[0]?.delta?.content;
+
             if (content) {
               yield content;
             }

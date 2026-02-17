@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  type ReactNode,
+} from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 type MenuItem =
@@ -28,13 +34,16 @@ export function ContextMenu({ items, children }: ContextMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   // Track the last focused input before the context menu steals focus
-  const lastFocusedInput = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  const lastFocusedInput = useRef<
+    HTMLInputElement | HTMLTextAreaElement | null
+  >(null);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
 
     // Capture the currently focused input before the menu opens
     const active = document.activeElement;
+
     if (
       active instanceof HTMLInputElement ||
       active instanceof HTMLTextAreaElement

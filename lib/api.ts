@@ -1,7 +1,4 @@
-import type {
-  ResearchStepEvent,
-  ConversationTurn,
-} from "@/types/research";
+import type { ResearchStepEvent, ConversationTurn } from "@/types/research";
 
 export async function* streamResearch(
   query: string,

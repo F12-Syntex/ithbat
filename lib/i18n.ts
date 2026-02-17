@@ -31,14 +31,18 @@ const translations: Record<Language, Record<string, string>> = {
     // App
     "app.tagline": "Search hadith, Quran, and scholarly rulings",
     "app.tooltip": "affirmation / confirmation",
-    "app.disclaimer": "Consult a qualified scholar for personal rulings",
+    "app.disclaimer":
+      "Ithbat is a research tool, not a fatwa service. Do not rely on these results for personal religious rulings. Always consult a qualified scholar.",
+    "app.fatwaWarning":
+      "This appears to be a personal question. Ithbat is for research only -- it is not a substitute for consulting a qualified scholar (mufti) for personal rulings (fatawa).",
 
     // Search
     "search.placeholder": "Ask a question...",
     "search.placeholderLoading": "Type to start a new search...",
     "search.stopResearch": "Stop research",
     "search.newSearchTitle": "Start new search?",
-    "search.newSearchDesc": "This will stop the current research and discard any incomplete results.",
+    "search.newSearchDesc":
+      "This will stop the current research and discard any incomplete results.",
     "search.stopAndSearch": "Stop & Search",
     "search.cancel": "Cancel",
 
@@ -72,27 +76,36 @@ const translations: Record<Language, Record<string, string>> = {
     "intro.welcome": "Welcome to Ithbat",
     "intro.subtitle": "Islamic Knowledge Research",
     "intro.feature1.title": "Research Islamic Knowledge",
-    "intro.feature1.desc": "Search Quran, Hadith, and scholarly sources for authentic rulings and guidance.",
+    "intro.feature1.desc":
+      "Search Quran, Hadith, and scholarly sources for authentic rulings and guidance.",
     "intro.feature2.title": "Verified Sources",
-    "intro.feature2.desc": "Citations from sunnah.com, quran.com, islamqa.info, and other trusted Islamic resources.",
+    "intro.feature2.desc":
+      "Citations from sunnah.com, quran.com, islamqa.info, and other trusted Islamic resources.",
     "intro.feature3.title": "For Educational Use",
-    "intro.feature3.desc": "This tool is for learning purposes. Always consult qualified scholars for personal rulings.",
-    "intro.privacy": "Conversations are logged anonymously for analysis and improvement. No personal data is collected. Please use this service responsibly and avoid harmful or inappropriate queries.",
+    "intro.feature3.desc":
+      "This tool is for learning purposes. Always consult qualified scholars for personal rulings.",
+    "intro.privacy":
+      "Conversations are logged anonymously for analysis and improvement. No personal data is collected. Please use this service responsibly and avoid harmful or inappropriate queries.",
     "intro.getStarted": "Get Started",
 
     // HowItWorks
     "how.toggle": "How it works",
     "how.processTitle": "Research Process",
     "how.sourcesTitle": "Trusted Sources",
-    "how.note": "All answers include source citations ( we try to ). Always verify with a qualified scholar for personal rulings. AI can make mistakes!",
+    "how.note":
+      "All answers include source citations ( we try to ). Always verify with a qualified scholar for personal rulings. AI can make mistakes!",
     "how.step1.title": "Understanding",
-    "how.step1.desc": "AI analyzes your question to understand the Islamic context, madhab preferences, and key topics.",
+    "how.step1.desc":
+      "AI analyzes your question to understand the Islamic context, madhab preferences, and key topics.",
     "how.step2.title": "Finding Sources",
-    "how.step2.desc": "Searches trusted Islamic databases including Quran, Hadith collections (Bukhari, Muslim, etc.), and scholarly fatawa.",
+    "how.step2.desc":
+      "Searches trusted Islamic databases including Quran, Hadith collections (Bukhari, Muslim, etc.), and scholarly fatawa.",
     "how.step3.title": "Analyzing",
-    "how.step3.desc": "Visits each source to extract relevant content, and gather scholarly opinions.",
+    "how.step3.desc":
+      "Visits each source to extract relevant content, and gather scholarly opinions.",
     "how.step4.title": "Compiling",
-    "how.step4.desc": "Synthesizes findings into a clear answer with proper citations, so you can verify each claim yourself.",
+    "how.step4.desc":
+      "Synthesizes findings into a clear answer with proper citations, so you can verify each claim yourself.",
 
     // Research
     "research.newConversation": "New conversation",
@@ -161,13 +174,17 @@ const translations: Record<Language, Record<string, string>> = {
   ar: {
     "app.tagline": "ابحث في الأحاديث والقرآن والأحكام الشرعية",
     "app.tooltip": "إثبات / تأكيد",
-    "app.disclaimer": "استشر عالماً مؤهلاً للأحكام الشخصية",
+    "app.disclaimer":
+      "إثبات أداة بحثية وليس خدمة إفتاء. لا تعتمد على هذه النتائج في الأحكام الشخصية. استشر دائماً عالماً مؤهلاً.",
+    "app.fatwaWarning":
+      "يبدو أن هذا سؤال شخصي. إثبات للبحث فقط — وليس بديلاً عن استشارة مفتٍ مؤهل للأحكام الشخصية (الفتاوى).",
 
     "search.placeholder": "اطرح سؤالاً...",
     "search.placeholderLoading": "اكتب لبدء بحث جديد...",
     "search.stopResearch": "إيقاف البحث",
     "search.newSearchTitle": "بدء بحث جديد؟",
-    "search.newSearchDesc": "سيؤدي هذا إلى إيقاف البحث الحالي وتجاهل أي نتائج غير مكتملة.",
+    "search.newSearchDesc":
+      "سيؤدي هذا إلى إيقاف البحث الحالي وتجاهل أي نتائج غير مكتملة.",
     "search.stopAndSearch": "إيقاف والبحث",
     "search.cancel": "إلغاء",
 
@@ -197,24 +214,32 @@ const translations: Record<Language, Record<string, string>> = {
     "intro.welcome": "مرحباً بك في إثبات",
     "intro.subtitle": "بحث في المعرفة الإسلامية",
     "intro.feature1.title": "ابحث في المعرفة الإسلامية",
-    "intro.feature1.desc": "ابحث في القرآن والحديث والمصادر العلمية للحصول على أحكام وإرشادات موثوقة.",
+    "intro.feature1.desc":
+      "ابحث في القرآن والحديث والمصادر العلمية للحصول على أحكام وإرشادات موثوقة.",
     "intro.feature2.title": "مصادر موثّقة",
-    "intro.feature2.desc": "استشهادات من sunnah.com وquran.com وislamqa.info وموارد إسلامية موثوقة أخرى.",
+    "intro.feature2.desc":
+      "استشهادات من sunnah.com وquran.com وislamqa.info وموارد إسلامية موثوقة أخرى.",
     "intro.feature3.title": "للاستخدام التعليمي",
-    "intro.feature3.desc": "هذه الأداة لأغراض التعلم. استشر دائماً العلماء المؤهلين للأحكام الشخصية.",
-    "intro.privacy": "يتم تسجيل المحادثات بشكل مجهول للتحليل والتحسين. لا يتم جمع أي بيانات شخصية. يرجى استخدام هذه الخدمة بمسؤولية.",
+    "intro.feature3.desc":
+      "هذه الأداة لأغراض التعلم. استشر دائماً العلماء المؤهلين للأحكام الشخصية.",
+    "intro.privacy":
+      "يتم تسجيل المحادثات بشكل مجهول للتحليل والتحسين. لا يتم جمع أي بيانات شخصية. يرجى استخدام هذه الخدمة بمسؤولية.",
     "intro.getStarted": "ابدأ الآن",
 
     "how.toggle": "كيف يعمل",
     "how.processTitle": "عملية البحث",
     "how.sourcesTitle": "المصادر الموثوقة",
-    "how.note": "جميع الإجابات تتضمن استشهادات بالمصادر. تحقق دائماً مع عالم مؤهل. الذكاء الاصطناعي قد يخطئ!",
+    "how.note":
+      "جميع الإجابات تتضمن استشهادات بالمصادر. تحقق دائماً مع عالم مؤهل. الذكاء الاصطناعي قد يخطئ!",
     "how.step1.title": "الفهم",
-    "how.step1.desc": "يحلل الذكاء الاصطناعي سؤالك لفهم السياق الإسلامي والمذهب والمواضيع الرئيسية.",
+    "how.step1.desc":
+      "يحلل الذكاء الاصطناعي سؤالك لفهم السياق الإسلامي والمذهب والمواضيع الرئيسية.",
     "how.step2.title": "البحث عن المصادر",
-    "how.step2.desc": "يبحث في قواعد البيانات الإسلامية الموثوقة بما في ذلك القرآن ومجموعات الأحاديث والفتاوى.",
+    "how.step2.desc":
+      "يبحث في قواعد البيانات الإسلامية الموثوقة بما في ذلك القرآن ومجموعات الأحاديث والفتاوى.",
     "how.step3.title": "التحليل",
-    "how.step3.desc": "يزور كل مصدر لاستخراج المحتوى ذي الصلة وجمع آراء العلماء.",
+    "how.step3.desc":
+      "يزور كل مصدر لاستخراج المحتوى ذي الصلة وجمع آراء العلماء.",
     "how.step4.title": "التجميع",
     "how.step4.desc": "يجمع النتائج في إجابة واضحة مع الاستشهادات المناسبة.",
 
@@ -280,7 +305,10 @@ const translations: Record<Language, Record<string, string>> = {
   ja: {
     "app.tagline": "ハディース、クルアーン、学術的見解を検索",
     "app.tooltip": "立証・確認",
-    "app.disclaimer": "個人的な裁定については資格のある学者に相談してください",
+    "app.disclaimer":
+      "Ithbatは研究ツールであり、ファトワサービスではありません。個人的な宗教的裁定にこの結果を頼らないでください。必ず資格のある学者に相談してください。",
+    "app.fatwaWarning":
+      "これは個人的な質問のようです。Ithbatは研究専用です — 個人的な裁定（ファトワ）については資格のある学者（ムフティー）に相談してください。",
 
     "search.placeholder": "質問を入力...",
     "search.placeholderLoading": "新しい検索を開始...",
@@ -316,22 +344,29 @@ const translations: Record<Language, Record<string, string>> = {
     "intro.welcome": "Ithbatへようこそ",
     "intro.subtitle": "イスラーム知識リサーチ",
     "intro.feature1.title": "イスラーム知識を調査",
-    "intro.feature1.desc": "クルアーン、ハディース、学術的ソースから信頼できる裁定とガイダンスを検索。",
+    "intro.feature1.desc":
+      "クルアーン、ハディース、学術的ソースから信頼できる裁定とガイダンスを検索。",
     "intro.feature2.title": "検証済みソース",
-    "intro.feature2.desc": "sunnah.com、quran.com、islamqa.infoなどの信頼できるイスラーム資料からの引用。",
+    "intro.feature2.desc":
+      "sunnah.com、quran.com、islamqa.infoなどの信頼できるイスラーム資料からの引用。",
     "intro.feature3.title": "教育目的",
-    "intro.feature3.desc": "このツールは学習目的です。個人的な裁定については必ず資格のある学者に相談してください。",
-    "intro.privacy": "会話は分析と改善のために匿名で記録されます。個人データは収集されません。",
+    "intro.feature3.desc":
+      "このツールは学習目的です。個人的な裁定については必ず資格のある学者に相談してください。",
+    "intro.privacy":
+      "会話は分析と改善のために匿名で記録されます。個人データは収集されません。",
     "intro.getStarted": "始める",
 
     "how.toggle": "仕組み",
     "how.processTitle": "調査プロセス",
     "how.sourcesTitle": "信頼できるソース",
-    "how.note": "すべての回答にはソースの引用が含まれます。必ず資格のある学者に確認してください。AIは間違える可能性があります！",
+    "how.note":
+      "すべての回答にはソースの引用が含まれます。必ず資格のある学者に確認してください。AIは間違える可能性があります！",
     "how.step1.title": "理解",
-    "how.step1.desc": "AIが質問を分析し、イスラームの文脈、学派の嗜好、主要トピックを理解します。",
+    "how.step1.desc":
+      "AIが質問を分析し、イスラームの文脈、学派の嗜好、主要トピックを理解します。",
     "how.step2.title": "ソース検索",
-    "how.step2.desc": "クルアーン、ハディース集、学術的ファトワを含む信頼できるデータベースを検索。",
+    "how.step2.desc":
+      "クルアーン、ハディース集、学術的ファトワを含む信頼できるデータベースを検索。",
     "how.step3.title": "分析",
     "how.step3.desc": "各ソースから関連コンテンツを抽出し、学者の意見を収集。",
     "how.step4.title": "編集",
@@ -372,7 +407,8 @@ const translations: Record<Language, Record<string, string>> = {
     "suggest.invalidates": "この礼拝を無効にするものは？",
     "suggest.sunnah": "スンナに基づく方法は？",
     "suggest.authentic": "このハディースは信頼できますか？",
-    "suggest.scholarsHadith": "学者はこのハディースについて何と言っていますか？",
+    "suggest.scholarsHadith":
+      "学者はこのハディースについて何と言っていますか？",
     "suggest.relatedHadith": "関連するハディースはありますか？",
     "suggest.tafsir": "この節のタフスィールは何ですか？",
     "suggest.revelation": "啓示の背景は何ですか？",
@@ -399,13 +435,17 @@ const translations: Record<Language, Record<string, string>> = {
   ur: {
     "app.tagline": "احادیث، قرآن، اور علمی فیصلوں کی تلاش",
     "app.tooltip": "اثبات / تصدیق",
-    "app.disclaimer": "ذاتی احکام کے لیے ایک اہل عالم سے مشورہ کریں",
+    "app.disclaimer":
+      "اثبات ایک تحقیقی ٹول ہے، فتویٰ سروس نہیں۔ ذاتی مذہبی احکام کے لیے ان نتائج پر انحصار نہ کریں۔ ہمیشہ ایک اہل عالم سے مشورہ کریں۔",
+    "app.fatwaWarning":
+      "یہ ذاتی سوال لگتا ہے۔ اثبات صرف تحقیق کے لیے ہے — یہ ذاتی احکام (فتاویٰ) کے لیے اہل مفتی سے مشورے کا متبادل نہیں ہے۔",
 
     "search.placeholder": "سوال پوچھیں...",
     "search.placeholderLoading": "نئی تلاش شروع کرنے کے لیے ٹائپ کریں...",
     "search.stopResearch": "تحقیق روکیں",
     "search.newSearchTitle": "نئی تلاش شروع کریں؟",
-    "search.newSearchDesc": "اس سے موجودہ تحقیق رک جائے گی اور نامکمل نتائج ضائع ہو جائیں گے۔",
+    "search.newSearchDesc":
+      "اس سے موجودہ تحقیق رک جائے گی اور نامکمل نتائج ضائع ہو جائیں گے۔",
     "search.stopAndSearch": "روکیں اور تلاش کریں",
     "search.cancel": "منسوخ",
 
@@ -435,26 +475,35 @@ const translations: Record<Language, Record<string, string>> = {
     "intro.welcome": "اثبات میں خوش آمدید",
     "intro.subtitle": "اسلامی علم کی تحقیق",
     "intro.feature1.title": "اسلامی علم کی تحقیق",
-    "intro.feature1.desc": "مستند احکام اور رہنمائی کے لیے قرآن، حدیث، اور علمی ذرائع تلاش کریں۔",
+    "intro.feature1.desc":
+      "مستند احکام اور رہنمائی کے لیے قرآن، حدیث، اور علمی ذرائع تلاش کریں۔",
     "intro.feature2.title": "تصدیق شدہ ذرائع",
-    "intro.feature2.desc": "sunnah.com، quran.com، islamqa.info اور دیگر معتبر اسلامی وسائل سے حوالہ جات۔",
+    "intro.feature2.desc":
+      "sunnah.com، quran.com، islamqa.info اور دیگر معتبر اسلامی وسائل سے حوالہ جات۔",
     "intro.feature3.title": "تعلیمی استعمال کے لیے",
-    "intro.feature3.desc": "یہ ٹول سیکھنے کے لیے ہے۔ ذاتی احکام کے لیے ہمیشہ اہل علماء سے مشورہ کریں۔",
-    "intro.privacy": "گفتگو تجزیہ اور بہتری کے لیے گمنام طور پر ریکارڈ کی جاتی ہے۔ کوئی ذاتی ڈیٹا جمع نہیں کیا جاتا۔",
+    "intro.feature3.desc":
+      "یہ ٹول سیکھنے کے لیے ہے۔ ذاتی احکام کے لیے ہمیشہ اہل علماء سے مشورہ کریں۔",
+    "intro.privacy":
+      "گفتگو تجزیہ اور بہتری کے لیے گمنام طور پر ریکارڈ کی جاتی ہے۔ کوئی ذاتی ڈیٹا جمع نہیں کیا جاتا۔",
     "intro.getStarted": "شروع کریں",
 
     "how.toggle": "یہ کیسے کام کرتا ہے",
     "how.processTitle": "تحقیق کا عمل",
     "how.sourcesTitle": "معتبر ذرائع",
-    "how.note": "تمام جوابات میں ذرائع کے حوالہ جات شامل ہیں۔ ہمیشہ ایک اہل عالم سے تصدیق کریں۔ AI غلطی کر سکتا ہے!",
+    "how.note":
+      "تمام جوابات میں ذرائع کے حوالہ جات شامل ہیں۔ ہمیشہ ایک اہل عالم سے تصدیق کریں۔ AI غلطی کر سکتا ہے!",
     "how.step1.title": "سمجھنا",
-    "how.step1.desc": "AI آپ کے سوال کا تجزیہ کرتا ہے تاکہ اسلامی سیاق، مذہب کی ترجیحات، اور اہم موضوعات کو سمجھ سکے۔",
+    "how.step1.desc":
+      "AI آپ کے سوال کا تجزیہ کرتا ہے تاکہ اسلامی سیاق، مذہب کی ترجیحات، اور اہم موضوعات کو سمجھ سکے۔",
     "how.step2.title": "ذرائع تلاش",
-    "how.step2.desc": "قرآن، حدیث کے مجموعے، اور علمی فتاوی سمیت معتبر ڈیٹابیس میں تلاش۔",
+    "how.step2.desc":
+      "قرآن، حدیث کے مجموعے، اور علمی فتاوی سمیت معتبر ڈیٹابیس میں تلاش۔",
     "how.step3.title": "تجزیہ",
-    "how.step3.desc": "ہر ماخذ سے متعلقہ مواد نکالتا ہے اور علمی آراء جمع کرتا ہے۔",
+    "how.step3.desc":
+      "ہر ماخذ سے متعلقہ مواد نکالتا ہے اور علمی آراء جمع کرتا ہے۔",
     "how.step4.title": "تالیف",
-    "how.step4.desc": "نتائج کو مناسب حوالہ جات کے ساتھ واضح جواب میں مرتب کرتا ہے۔",
+    "how.step4.desc":
+      "نتائج کو مناسب حوالہ جات کے ساتھ واضح جواب میں مرتب کرتا ہے۔",
 
     "research.newConversation": "نئی گفتگو",
     "research.followUp": "فالو اپ",
@@ -518,13 +567,17 @@ const translations: Record<Language, Record<string, string>> = {
   fr: {
     "app.tagline": "Recherchez hadiths, Coran et avis juridiques",
     "app.tooltip": "affirmation / confirmation",
-    "app.disclaimer": "Consultez un savant qualifié pour les décisions personnelles",
+    "app.disclaimer":
+      "Ithbat est un outil de recherche, pas un service de fatwa. Ne vous fiez pas a ces resultats pour des decisions religieuses personnelles. Consultez toujours un savant qualifie.",
+    "app.fatwaWarning":
+      "Ceci semble etre une question personnelle. Ithbat est uniquement pour la recherche — il ne remplace pas la consultation d'un savant qualifie (mufti) pour les decisions personnelles (fatawa).",
 
     "search.placeholder": "Posez une question...",
     "search.placeholderLoading": "Tapez pour lancer une nouvelle recherche...",
     "search.stopResearch": "Arrêter la recherche",
     "search.newSearchTitle": "Nouvelle recherche ?",
-    "search.newSearchDesc": "Cela arrêtera la recherche en cours et supprimera les résultats incomplets.",
+    "search.newSearchDesc":
+      "Cela arrêtera la recherche en cours et supprimera les résultats incomplets.",
     "search.stopAndSearch": "Arrêter et chercher",
     "search.cancel": "Annuler",
 
@@ -554,26 +607,35 @@ const translations: Record<Language, Record<string, string>> = {
     "intro.welcome": "Bienvenue sur Ithbat",
     "intro.subtitle": "Recherche en savoir islamique",
     "intro.feature1.title": "Recherchez le savoir islamique",
-    "intro.feature1.desc": "Recherchez dans le Coran, les Hadiths et les sources savantes des décisions et conseils authentiques.",
+    "intro.feature1.desc":
+      "Recherchez dans le Coran, les Hadiths et les sources savantes des décisions et conseils authentiques.",
     "intro.feature2.title": "Sources vérifiées",
-    "intro.feature2.desc": "Citations de sunnah.com, quran.com, islamqa.info et autres ressources islamiques fiables.",
+    "intro.feature2.desc":
+      "Citations de sunnah.com, quran.com, islamqa.info et autres ressources islamiques fiables.",
     "intro.feature3.title": "Usage éducatif",
-    "intro.feature3.desc": "Cet outil est à des fins d'apprentissage. Consultez toujours des savants qualifiés pour les décisions personnelles.",
-    "intro.privacy": "Les conversations sont enregistrées anonymement pour analyse et amélioration. Aucune donnée personnelle n'est collectée.",
+    "intro.feature3.desc":
+      "Cet outil est à des fins d'apprentissage. Consultez toujours des savants qualifiés pour les décisions personnelles.",
+    "intro.privacy":
+      "Les conversations sont enregistrées anonymement pour analyse et amélioration. Aucune donnée personnelle n'est collectée.",
     "intro.getStarted": "Commencer",
 
     "how.toggle": "Comment ça marche",
     "how.processTitle": "Processus de recherche",
     "how.sourcesTitle": "Sources fiables",
-    "how.note": "Toutes les réponses incluent des citations de sources. Vérifiez toujours auprès d'un savant qualifié. L'IA peut se tromper !",
+    "how.note":
+      "Toutes les réponses incluent des citations de sources. Vérifiez toujours auprès d'un savant qualifié. L'IA peut se tromper !",
     "how.step1.title": "Compréhension",
-    "how.step1.desc": "L'IA analyse votre question pour comprendre le contexte islamique, les préférences de madhab et les sujets clés.",
+    "how.step1.desc":
+      "L'IA analyse votre question pour comprendre le contexte islamique, les préférences de madhab et les sujets clés.",
     "how.step2.title": "Recherche de sources",
-    "how.step2.desc": "Recherche dans les bases de données islamiques fiables incluant le Coran, les collections de Hadiths et les fatwas savantes.",
+    "how.step2.desc":
+      "Recherche dans les bases de données islamiques fiables incluant le Coran, les collections de Hadiths et les fatwas savantes.",
     "how.step3.title": "Analyse",
-    "how.step3.desc": "Visite chaque source pour extraire le contenu pertinent et recueillir les opinions des savants.",
+    "how.step3.desc":
+      "Visite chaque source pour extraire le contenu pertinent et recueillir les opinions des savants.",
     "how.step4.title": "Compilation",
-    "how.step4.desc": "Synthétise les résultats en une réponse claire avec des citations appropriées.",
+    "how.step4.desc":
+      "Synthétise les résultats en une réponse claire avec des citations appropriées.",
 
     "research.newConversation": "Nouvelle conversation",
     "research.followUp": "Suivi",
@@ -637,7 +699,10 @@ const translations: Record<Language, Record<string, string>> = {
   zh: {
     "app.tagline": "搜索圣训、古兰经和学术裁决",
     "app.tooltip": "证实 / 确认",
-    "app.disclaimer": "个人裁决请咨询合格的学者",
+    "app.disclaimer":
+      "Ithbat是研究工具，不是教法裁决服务。请勿依赖这些结果作为个人宗教裁决。请务必咨询合格的学者。",
+    "app.fatwaWarning":
+      "这似乎是一个个人问题。Ithbat仅用于研究——它不能替代咨询合格学者（穆夫提）获取个人裁决（法特瓦）。",
 
     "search.placeholder": "提出问题...",
     "search.placeholderLoading": "输入以开始新搜索...",
@@ -675,7 +740,8 @@ const translations: Record<Language, Record<string, string>> = {
     "intro.feature1.title": "研究伊斯兰知识",
     "intro.feature1.desc": "搜索古兰经、圣训和学术来源，获取真实的裁决和指导。",
     "intro.feature2.title": "经过验证的来源",
-    "intro.feature2.desc": "引用来自 sunnah.com、quran.com、islamqa.info 等可信伊斯兰资源。",
+    "intro.feature2.desc":
+      "引用来自 sunnah.com、quran.com、islamqa.info 等可信伊斯兰资源。",
     "intro.feature3.title": "教育用途",
     "intro.feature3.desc": "此工具仅用于学习目的。个人裁决请务必咨询合格学者。",
     "intro.privacy": "对话以匿名方式记录用于分析和改进。不收集任何个人数据。",
@@ -761,6 +827,7 @@ export function t(key: string, lang: Language = "en"): string {
 export function useTranslation() {
   const { settings } = useSettings();
   const lang = (settings.language ?? "en") as Language;
+
   return {
     t: (key: string) => t(key, lang),
     lang,

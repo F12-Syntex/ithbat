@@ -1,5 +1,7 @@
 "use client";
 
+import type { Language } from "@/lib/i18n";
+
 import {
   createContext,
   useContext,
@@ -7,8 +9,6 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
-
-import type { Language } from "@/lib/i18n";
 
 interface Settings {
   showTimestamps: boolean;

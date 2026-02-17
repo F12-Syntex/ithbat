@@ -45,6 +45,7 @@ export interface ResearchState {
   sources: Source[];
   response: string;
   error: string | null;
+  isPersonalQuestion: boolean;
   conversationHistory: ConversationTurn[];
   completedSessions: CompletedSession[];
 }
@@ -59,6 +60,7 @@ export interface ResearchStepEvent {
     | "response_start"
     | "response_content"
     | "response_replace"
+    | "personal_question"
     | "error"
     | "done";
   sessionId?: string;

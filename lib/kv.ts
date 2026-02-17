@@ -82,9 +82,7 @@ export async function blobList(prefix: string): Promise<string[]> {
 
       for (const blob of result.blobs) {
         // Extract key from pathname: "data/chat:my-slug.json" -> "chat:my-slug"
-        const key = blob.pathname
-          .replace(/^data\//, "")
-          .replace(/\.json$/, "");
+        const key = blob.pathname.replace(/^data\//, "").replace(/\.json$/, "");
 
         keys.push(key);
       }

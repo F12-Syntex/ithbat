@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
 import { createRequire } from "module";
+
+import { NextRequest, NextResponse } from "next/server";
 
 const require = createRequire(import.meta.url);
 const { Typst } = require("typst-raster") as { Typst: new () => TypstRenderer };
@@ -15,6 +16,7 @@ function markdownToTypst(content: string, sources: Source[]): string {
 
   // Skip original Sources section
   let contentEnd = lines.length;
+
   for (let j = lines.length - 1; j >= 0; j--) {
     if (/^#{1,3}\s*Sources/i.test(lines[j].trim())) {
       contentEnd = j;
@@ -23,6 +25,7 @@ function markdownToTypst(content: string, sources: Source[]): string {
   }
 
   let i = 0;
+
   while (i < contentEnd) {
     const raw = lines[i];
     const trimmed = raw.trim();
@@ -30,6 +33,7 @@ function markdownToTypst(content: string, sources: Source[]): string {
     // Blockquote → "quoted text" [N] with attribution
     if (trimmed.startsWith(">")) {
       const buf: string[] = [];
+
       while (i < contentEnd && lines[i].trim().startsWith(">")) {
         buf.push(lines[i].trim().replace(/^>\s?/, ""));
         i++;
@@ -37,21 +41,26 @@ function markdownToTypst(content: string, sources: Source[]): string {
 
       const quoteParts: string[] = [];
       let attrLine = "";
+
       for (const line of buf) {
         const t = line.trim();
+
         if (t.startsWith("\u2014") || t.startsWith("—")) attrLine = t;
         else if (t) quoteParts.push(t);
       }
 
       const quoteText = plainText(quoteParts.join(" ")).trim();
+
       if (!quoteText) continue;
 
       // Get ref number from attribution link
       const linkMatch = attrLine.match(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/);
       let refTag = "";
+
       if (linkMatch) {
         const url = linkMatch[2].replace(/[)\].,;]+$/, "");
         const n = getRefNum(sources, url);
+
         if (n > 0) refTag = ` [${n}]`;
       }
 
@@ -60,12 +69,15 @@ function markdownToTypst(content: string, sources: Source[]): string {
         .replace(/^[—\u2014–-]\s*/, "")
         .replace(/\s*\|\s*$/, "")
         .trim();
+
       if (linkMatch) attrText = attrText.split("|")[0].trim();
 
       out.push("");
       out.push(`_"${escTypst(quoteText)}"${refTag}_`);
       if (attrText) {
-        out.push(`#text(size: 9pt, fill: rgb("#888"))[--- ${escTypst(attrText)}]`);
+        out.push(
+          `#text(size: 9pt, fill: rgb("#888"))[--- ${escTypst(attrText)}]`,
+        );
       }
       out.push("");
       continue;
@@ -73,10 +85,12 @@ function markdownToTypst(content: string, sources: Source[]): string {
 
     // Heading (any level)
     const hMatch = trimmed.match(/^(#{1,6})\s*(.+)$/);
+
     if (hMatch) {
       const lvl = hMatch[1].length;
       const txt = processInline(hMatch[2], sources);
       const eq = "=".repeat(lvl);
+
       out.push("");
       out.push(`${eq} ${txt}`);
       out.push("");
@@ -93,12 +107,14 @@ function markdownToTypst(content: string, sources: Source[]): string {
 
     // List item
     const liMatch = trimmed.match(/^([-*])\s+(.+)$/);
+
     if (liMatch) {
       out.push(`- ${processInline(liMatch[2], sources)}`);
       i++;
       continue;
     }
     const olMatch = trimmed.match(/^\d+\.\s+(.+)$/);
+
     if (olMatch) {
       out.push(`+ ${processInline(olMatch[1], sources)}`);
       i++;
@@ -116,7 +132,7 @@ function markdownToTypst(content: string, sources: Source[]): string {
 
     // HR
     if (/^[-*_]{3,}$/.test(trimmed)) {
-      out.push("#line(length: 100%, stroke: 0.5pt + rgb(\"#ddd\"))");
+      out.push('#line(length: 100%, stroke: 0.5pt + rgb("#ddd"))');
       i++;
       continue;
     }
@@ -139,14 +155,12 @@ function processInline(raw: string, sources: Source[]): string {
     .replace(/<[^>]+>/g, "");
 
   // Convert [text](url) → text [N] or #link("url")[text]
-  out = out.replace(
-    /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
-    (_, label, url) => {
-      const cleanUrl = url.replace(/[)\].,;]+$/, "");
-      const n = getRefNum(sources, cleanUrl);
-      return n > 0 ? `${label} [${n}]` : label;
-    },
-  );
+  out = out.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, (_, label, url) => {
+    const cleanUrl = url.replace(/[)\].,;]+$/, "");
+    const n = getRefNum(sources, cleanUrl);
+
+    return n > 0 ? `${label} [${n}]` : label;
+  });
 
   // **bold** → *bold* in Typst
   out = out.replace(/\*\*(.+?)\*\*/g, "*$1*");
@@ -164,13 +178,16 @@ function processLineToPlain(raw: string, sources: Source[]): string {
   // Add ref numbers for any URLs that were in the original
   const linkRe = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
   let m: RegExpExecArray | null;
+
   while ((m = linkRe.exec(raw)) !== null) {
     const url = m[2].replace(/[)\].,;]+$/, "");
     const n = getRefNum(sources, url);
+
     if (n > 0) {
       out = out.replace(m[1], `${m[1]} [${n}]`);
     }
   }
+
   return out;
 }
 
@@ -198,14 +215,18 @@ function extractSources(content: string): Source[] {
   let m: RegExpExecArray | null;
 
   const attrRe = /^>\s*[—\u2014].+?\[([^\]]+)\]\(([^)]+)\)/gm;
+
   while ((m = attrRe.exec(content)) !== null) {
     const url = m[2].replace(/[)\].,;]+$/, "");
+
     if (!seen.has(url)) seen.set(url, { url, label: m[1] });
   }
 
   const linkRe = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
+
   while ((m = linkRe.exec(content)) !== null) {
     const url = m[2].replace(/[)\].,;]+$/, "");
+
     if (!seen.has(url)) seen.set(url, { url, label: m[1] });
   }
 
@@ -214,18 +235,17 @@ function extractSources(content: string): Source[] {
 
 function getRefNum(sources: Source[], url: string): number {
   const idx = sources.findIndex((s) => s.url === url);
+
   return idx >= 0 ? idx + 1 : 0;
 }
 
 // ─── Build full Typst document ───────────────────
-function buildTypstDocument(
-  content: string,
-  sources: Source[],
-): string {
+function buildTypstDocument(content: string, sources: Source[]): string {
   const body = markdownToTypst(content, sources);
 
   // Sources section
   let sourcesSection = "";
+
   if (sources.length > 0) {
     const items = sources
       .map((s, i) => {
@@ -236,6 +256,7 @@ function buildTypstDocument(
             return s.url;
           }
         })();
+
         return `[${i + 1}] #link("${s.url}")[${escTypst(s.label)}] --- ${escTypst(dom)}`;
       })
       .join("\\\n");
@@ -315,6 +336,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("PDF export error:", error);
+
     return NextResponse.json(
       { error: "Failed to generate PDF" },
       { status: 500 },

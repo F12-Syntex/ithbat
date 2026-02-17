@@ -1,5 +1,7 @@
 "use client";
 
+import type { Language } from "@/lib/i18n";
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -22,6 +24,7 @@ import { ResearchResponse } from "./ResearchResponse";
 import { FollowUpInput } from "./FollowUpInput";
 import { ResearchPipeline } from "./pipeline";
 import { SourceCitationCard } from "./response/SourceCitationCard";
+import { FatwaWarningBanner } from "./FatwaWarningBanner";
 
 import { ContextMenu } from "@/components/ContextMenu";
 import { Dock } from "@/components/Dock";
@@ -31,7 +34,7 @@ import { useResearch } from "@/hooks/useResearch";
 import { useTheme } from "@/context/ThemeContext";
 import { useChatHistory } from "@/hooks/useChatHistory";
 import { useTranslation, EXAMPLE_QUESTIONS } from "@/lib/i18n";
-import type { Language } from "@/lib/i18n";
+import { isPersonalQuestion } from "@/lib/personal-question-detector";
 
 function getRandomQuestions(count: number, lang: Language): string[] {
   const questions = EXAMPLE_QUESTIONS[lang] || EXAMPLE_QUESTIONS.en;
@@ -61,6 +64,7 @@ export function ResearchContainer() {
   const handleExportPdf = useCallback(async () => {
     if (!state.response || !state.query) return;
     const { exportResponseAsPdf } = await import("@/lib/export-pdf");
+
     await exportResponseAsPdf(state.response, state.query);
   }, [state.response, state.query]);
 
@@ -87,7 +91,8 @@ export function ResearchContainer() {
     (query: string, images?: string[]) => baseStartResearch(query, images),
     [baseStartResearch],
   );
-  const askFollowUp = (question: string, images?: string[]) => baseAskFollowUp(question, images);
+  const askFollowUp = (question: string, images?: string[]) =>
+    baseAskFollowUp(question, images);
 
   // Handler to clear suggested query after it's been applied to the input
   const handleSuggestedQueryApplied = useCallback(
@@ -111,9 +116,16 @@ export function ResearchContainer() {
   useEffect(() => {
     if (state.status === "completed" && slug && state.query) {
       const messageCount = (state.completedSessions?.length || 0) + 1;
+
       addEntry(slug, state.query, messageCount);
     }
-  }, [state.status, slug, state.query, state.completedSessions?.length, addEntry]);
+  }, [
+    state.status,
+    slug,
+    state.query,
+    state.completedSessions?.length,
+    addEntry,
+  ]);
 
   const isResearching = state.status === "researching";
   const hasResults =
@@ -253,13 +265,16 @@ export function ResearchContainer() {
         {/* Floating Bottom Dock */}
         <Dock
           linkCopied={linkCopied}
+          shareDisabled={!slug || state.status !== "completed"}
           onNewSearch={reset}
           onShare={handleShareLink}
-          shareDisabled={!slug || state.status !== "completed"}
         />
 
         {/* Main Content Area */}
-        <div ref={scrollRef} className="flex-1 min-h-0 flex flex-col overflow-y-auto pb-24">
+        <div
+          ref={scrollRef}
+          className="flex-1 min-h-0 flex flex-col overflow-y-auto pb-24"
+        >
           {/* Search Section - Centers when no results, scrolls with content when results exist */}
           <div
             className={`flex flex-col items-center justify-center px-3 sm:px-4 transition-all duration-500 ease-out ${
@@ -453,6 +468,11 @@ export function ResearchContainer() {
                         </div>
                       )}
 
+                      {/* Fatwa Warning Banner — client-side or server-side detection */}
+                      {(state.isPersonalQuestion || isPersonalQuestion(state.query, lang)) && (
+                        <FatwaWarningBanner message={t("app.fatwaWarning")} />
+                      )}
+
                       {/* Research Pipeline */}
                       <div className="mb-3">
                         <ResearchPipeline
@@ -488,128 +508,143 @@ export function ResearchContainer() {
                       )}
 
                       {/* AI Translation Notice */}
-                      {lang !== "en" && state.status === "completed" && state.response && (
-                        <motion.div
-                          animate={{ opacity: 1 }}
-                          className="flex items-center justify-center gap-1.5 mt-3"
-                          initial={{ opacity: 0 }}
-                          transition={{ delay: 0.2 }}
-                        >
-                          <Globe className="w-3 h-3 text-neutral-400 dark:text-neutral-500" strokeWidth={2} />
-                          <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
-                            {t("research.aiTranslated")}
-                          </span>
-                        </motion.div>
-                      )}
+                      {lang !== "en" &&
+                        state.status === "completed" &&
+                        state.response && (
+                          <motion.div
+                            animate={{ opacity: 1 }}
+                            className="flex items-center justify-center gap-1.5 mt-3"
+                            initial={{ opacity: 0 }}
+                            transition={{ delay: 0.2 }}
+                          >
+                            <Globe
+                              className="w-3 h-3 text-neutral-400 dark:text-neutral-500"
+                              strokeWidth={2}
+                            />
+                            <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
+                              {t("research.aiTranslated")}
+                            </span>
+                          </motion.div>
+                        )}
 
                       {/* Dive Deeper Button */}
-                      {(state.status === "completed" || isAnalyzing) && state.response && (
-                        <motion.div
-                          animate={{ opacity: 1, y: 0 }}
-                          className="mt-5 flex flex-col items-center gap-3"
-                          initial={{ opacity: 0, y: 10 }}
-                          transition={{ delay: 0.3 }}
-                        >
-                          <button
-                            className="group relative flex items-center gap-2.5 px-5 py-2.5 text-xs rounded-full overflow-hidden transition-all duration-300 disabled:cursor-not-allowed bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 hover:border-accent-400 dark:hover:border-accent-600 hover:shadow-[0_0_20px_color-mix(in_srgb,var(--accent-500)_15%,transparent)] active:scale-[0.97]"
-                            disabled={isAnalyzing}
-                            onClick={diveDeeper}
+                      {(state.status === "completed" || isAnalyzing) &&
+                        state.response && (
+                          <motion.div
+                            animate={{ opacity: 1, y: 0 }}
+                            className="mt-5 flex flex-col items-center gap-3"
+                            initial={{ opacity: 0, y: 10 }}
+                            transition={{ delay: 0.3 }}
                           >
-                            {/* Shimmer overlay when loading */}
-                            {isAnalyzing && (
-                              <motion.div
-                                animate={{ x: ["calc(-100%)", "calc(200%)"] }}
-                                className="absolute inset-0 w-1/2 bg-gradient-to-r from-transparent via-accent-400/10 dark:via-accent-400/5 to-transparent"
-                                transition={{
-                                  duration: 1.5,
-                                  repeat: Infinity,
-                                  ease: "easeInOut",
-                                }}
-                              />
-                            )}
-
-                            {isAnalyzing ? (
-                              <>
-                                <motion.div className="relative w-4 h-4">
-                                  <motion.div
-                                    animate={{ rotate: 360 }}
-                                    className="absolute inset-0 rounded-full border-2 border-accent-200 dark:border-accent-800 border-t-accent-500 dark:border-t-accent-400"
-                                    transition={{
-                                      duration: 0.8,
-                                      repeat: Infinity,
-                                      ease: "linear",
-                                    }}
-                                  />
-                                </motion.div>
-                                <span className="text-accent-600 dark:text-accent-400 font-medium">
-                                  {t("research.divingDeeper")}
-                                </span>
-                              </>
-                            ) : (
-                              <>
+                            <button
+                              className="group relative flex items-center gap-2.5 px-5 py-2.5 text-xs rounded-full overflow-hidden transition-all duration-300 disabled:cursor-not-allowed bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 hover:border-accent-400 dark:hover:border-accent-600 hover:shadow-[0_0_20px_color-mix(in_srgb,var(--accent-500)_15%,transparent)] active:scale-[0.97]"
+                              disabled={isAnalyzing}
+                              onClick={diveDeeper}
+                            >
+                              {/* Shimmer overlay when loading */}
+                              {isAnalyzing && (
                                 <motion.div
-                                  className="relative"
-                                  whileHover={{ scale: 1.1, rotate: 12 }}
-                                  transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                                >
-                                  <Layers
-                                    className="w-4 h-4 text-accent-500 dark:text-accent-400"
+                                  animate={{ x: ["calc(-100%)", "calc(200%)"] }}
+                                  className="absolute inset-0 w-1/2 bg-gradient-to-r from-transparent via-accent-400/10 dark:via-accent-400/5 to-transparent"
+                                  transition={{
+                                    duration: 1.5,
+                                    repeat: Infinity,
+                                    ease: "easeInOut",
+                                  }}
+                                />
+                              )}
+
+                              {isAnalyzing ? (
+                                <>
+                                  <motion.div className="relative w-4 h-4">
+                                    <motion.div
+                                      animate={{ rotate: 360 }}
+                                      className="absolute inset-0 rounded-full border-2 border-accent-200 dark:border-accent-800 border-t-accent-500 dark:border-t-accent-400"
+                                      transition={{
+                                        duration: 0.8,
+                                        repeat: Infinity,
+                                        ease: "linear",
+                                      }}
+                                    />
+                                  </motion.div>
+                                  <span className="text-accent-600 dark:text-accent-400 font-medium">
+                                    {t("research.divingDeeper")}
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <motion.div
+                                    className="relative"
+                                    transition={{
+                                      type: "spring",
+                                      stiffness: 400,
+                                      damping: 15,
+                                    }}
+                                    whileHover={{ scale: 1.1, rotate: 12 }}
+                                  >
+                                    <Layers
+                                      className="w-4 h-4 text-accent-500 dark:text-accent-400"
+                                      strokeWidth={2}
+                                    />
+                                  </motion.div>
+                                  <span className="text-neutral-600 dark:text-neutral-300 group-hover:text-accent-600 dark:group-hover:text-accent-400 font-medium transition-colors">
+                                    {t("research.diveDeeper")}
+                                  </span>
+                                  <Sparkles
+                                    className="w-3 h-3 text-neutral-300 dark:text-neutral-600 group-hover:text-accent-400 dark:group-hover:text-accent-500 transition-colors"
                                     strokeWidth={2}
                                   />
-                                </motion.div>
-                                <span className="text-neutral-600 dark:text-neutral-300 group-hover:text-accent-600 dark:group-hover:text-accent-400 font-medium transition-colors">
-                                  {t("research.diveDeeper")}
-                                </span>
-                                <Sparkles
-                                  className="w-3 h-3 text-neutral-300 dark:text-neutral-600 group-hover:text-accent-400 dark:group-hover:text-accent-500 transition-colors"
-                                  strokeWidth={2}
-                                />
-                              </>
-                            )}
-                          </button>
+                                </>
+                              )}
+                            </button>
 
-                          {/* Loading indicator below button */}
-                          <AnimatePresence>
-                            {isAnalyzing && (
-                              <motion.div
-                                animate={{ opacity: 1, y: 0 }}
-                                className="flex items-center gap-1.5"
-                                exit={{ opacity: 0, y: -4 }}
-                                initial={{ opacity: 0, y: 6 }}
-                                transition={{ duration: 0.3 }}
-                              >
-                                {[0, 1, 2].map((i) => (
-                                  <motion.div
-                                    key={i}
-                                    animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1, 0.8] }}
-                                    className="w-1 h-1 rounded-full bg-accent-400 dark:bg-accent-500"
-                                    transition={{
-                                      duration: 1.2,
-                                      repeat: Infinity,
-                                      delay: i * 0.2,
-                                      ease: "easeInOut",
-                                    }}
-                                  />
-                                ))}
-                                <span className="text-[10px] text-neutral-400 dark:text-neutral-500 ml-1">
-                                  {t("research.findingMore")}
-                                </span>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </motion.div>
-                      )}
+                            {/* Loading indicator below button */}
+                            <AnimatePresence>
+                              {isAnalyzing && (
+                                <motion.div
+                                  animate={{ opacity: 1, y: 0 }}
+                                  className="flex items-center gap-1.5"
+                                  exit={{ opacity: 0, y: -4 }}
+                                  initial={{ opacity: 0, y: 6 }}
+                                  transition={{ duration: 0.3 }}
+                                >
+                                  {[0, 1, 2].map((i) => (
+                                    <motion.div
+                                      key={i}
+                                      animate={{
+                                        opacity: [0.3, 1, 0.3],
+                                        scale: [0.8, 1, 0.8],
+                                      }}
+                                      className="w-1 h-1 rounded-full bg-accent-400 dark:bg-accent-500"
+                                      transition={{
+                                        duration: 1.2,
+                                        repeat: Infinity,
+                                        delay: i * 0.2,
+                                        ease: "easeInOut",
+                                      }}
+                                    />
+                                  ))}
+                                  <span className="text-[10px] text-neutral-400 dark:text-neutral-500 ml-1">
+                                    {t("research.findingMore")}
+                                  </span>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </motion.div>
+                        )}
                     </>
                   )}
 
                   {/* Follow-up Input */}
-                  {state.status === "completed" && state.response && !isAnalyzing && (
-                    <FollowUpInput
-                      isLoading={isResearching}
-                      previousQuery={state.query}
-                      onSubmit={askFollowUp}
-                    />
-                  )}
+                  {state.status === "completed" &&
+                    state.response &&
+                    !isAnalyzing && (
+                      <FollowUpInput
+                        isLoading={isResearching}
+                        previousQuery={state.query}
+                        onSubmit={askFollowUp}
+                      />
+                    )}
 
                   {/* Error */}
                   {state.error && (
@@ -640,7 +675,6 @@ export function ResearchContainer() {
             )}
           </AnimatePresence>
         </div>
-
       </div>
     </ContextMenu>
   );

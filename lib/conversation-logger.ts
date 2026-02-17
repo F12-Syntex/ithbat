@@ -135,9 +135,7 @@ export async function appendToChat(
 }
 
 /** Get chat data by slug */
-export async function getChatBySlug(
-  slug: string,
-): Promise<ChatData | null> {
+export async function getChatBySlug(slug: string): Promise<ChatData | null> {
   return blobGet<ChatData>(`chat:${slug}`);
 }
 

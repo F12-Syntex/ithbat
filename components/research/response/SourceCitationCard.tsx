@@ -20,9 +20,7 @@ function getFaviconUrl(domain: string): string {
   return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 }
 
-export function SourceCitationCard({
-  sources,
-}: SourceCitationCardProps) {
+export function SourceCitationCard({ sources }: SourceCitationCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   if (sources.length === 0) return null;
@@ -53,6 +51,7 @@ export function SourceCitationCard({
                 src={getFaviconUrl(source.domain)}
                 onError={(e) => {
                   const el = e.target as HTMLImageElement;
+
                   el.style.display = "none";
                   el.parentElement!.innerHTML = `<span class="text-[8px] font-bold text-neutral-400">${source.domain.charAt(0).toUpperCase()}</span>`;
                 }}
@@ -116,6 +115,7 @@ export function SourceCitationCard({
                       src={getFaviconUrl(source.domain)}
                       onError={(e) => {
                         const el = e.target as HTMLImageElement;
+
                         el.style.display = "none";
                         el.parentElement!.innerHTML = `<span class="text-[7px] font-bold text-neutral-400">${source.domain.charAt(0).toUpperCase()}</span>`;
                       }}

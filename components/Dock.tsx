@@ -20,20 +20,20 @@ import {
 
 import { useTheme, type ThemeAccent } from "@/context/ThemeContext";
 import { useSettings } from "@/context/SettingsContext";
-import {
-  useChatHistory,
-  type ChatHistoryEntry,
-} from "@/hooks/useChatHistory";
-import { useTranslation, LANGUAGES, type Language } from "@/lib/i18n";
+import { useChatHistory, type ChatHistoryEntry } from "@/hooks/useChatHistory";
+import { useTranslation, LANGUAGES } from "@/lib/i18n";
 
 function useIsMobile(breakpoint = 640) {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
+
     setIsMobile(mql.matches);
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+
     mql.addEventListener("change", handler);
+
     return () => mql.removeEventListener("change", handler);
   }, [breakpoint]);
 
@@ -99,23 +99,27 @@ export function Dock({
         closePanel();
       }
     };
+
     document.addEventListener("pointerdown", handlePointerDown);
+
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [openPanel, isMobile, closePanel]);
 
-  const panelTitle = openPanel === "history"
-    ? t("dock.history")
-    : openPanel === "language"
-      ? t("settings.language")
-      : t("dock.settings");
+  const panelTitle =
+    openPanel === "history"
+      ? t("dock.history")
+      : openPanel === "language"
+        ? t("settings.language")
+        : t("dock.settings");
 
-  const panelContent = openPanel === "history" ? (
-    <HistoryTab onClose={closePanel} />
-  ) : openPanel === "language" ? (
-    <LanguageTab />
-  ) : openPanel === "settings" ? (
-    <SettingsTab />
-  ) : null;
+  const panelContent =
+    openPanel === "history" ? (
+      <HistoryTab onClose={closePanel} />
+    ) : openPanel === "language" ? (
+      <LanguageTab />
+    ) : openPanel === "settings" ? (
+      <SettingsTab />
+    ) : null;
 
   return (
     <>
@@ -128,7 +132,10 @@ export function Dock({
         )}
       </AnimatePresence>
 
-      <div ref={dockRef} className="fixed left-1/2 -translate-x-1/2 bottom-5 z-40 flex flex-col items-center">
+      <div
+        ref={dockRef}
+        className="fixed left-1/2 -translate-x-1/2 bottom-5 z-40 flex flex-col items-center"
+      >
         {/* Desktop popover panel — floats above the dock */}
         <AnimatePresence>
           {openPanel && !isMobile && (
@@ -347,7 +354,9 @@ function HistoryTab({ onClose }: { onClose: () => void }) {
             router.push("/history");
           }}
         >
-          {hasMore ? `${t("history.showAll")} (${entries.length})` : t("history.showAll")}
+          {hasMore
+            ? `${t("history.showAll")} (${entries.length})`
+            : t("history.showAll")}
           <ArrowRight className="w-3 h-3" strokeWidth={2} />
         </button>
       </div>
@@ -419,6 +428,7 @@ function SettingsTab() {
     if (tapCount.current >= 5) {
       tapCount.current = 0;
       router.push("/logs");
+
       return;
     }
 
@@ -431,34 +441,39 @@ function SettingsTab() {
     <div className="px-4 py-3 space-y-4">
       {/* Accent color */}
       <div className="flex items-center justify-between">
-        <span className="text-xs text-neutral-500 dark:text-neutral-400">{t("settings.color")}</span>
+        <span className="text-xs text-neutral-500 dark:text-neutral-400">
+          {t("settings.color")}
+        </span>
         <div className="flex items-center gap-2">
-          {(["emerald", "blue", "purple", "rose", "amber", "cyan"] as const).map(
-            (accent) => (
-              <button
-                key={accent}
-                className={`w-6 h-6 rounded-full transition-all ${
-                  ACCENT_COLORS[accent].bg
-                } ${
-                  theme.accent === accent
-                    ? `ring-2 ring-offset-2 ring-offset-white dark:ring-offset-neutral-900 ${ACCENT_COLORS[accent].ring} scale-110`
-                    : "hover:scale-110"
-                }`}
-                onClick={() => {
-                  const newTheme = themes.find(
-                    (th) => th.accent === accent && th.mode === theme.mode,
-                  );
-                  if (newTheme) setTheme(newTheme);
-                }}
-              />
-            ),
-          )}
+          {(
+            ["emerald", "blue", "purple", "rose", "amber", "cyan"] as const
+          ).map((accent) => (
+            <button
+              key={accent}
+              className={`w-6 h-6 rounded-full transition-all ${
+                ACCENT_COLORS[accent].bg
+              } ${
+                theme.accent === accent
+                  ? `ring-2 ring-offset-2 ring-offset-white dark:ring-offset-neutral-900 ${ACCENT_COLORS[accent].ring} scale-110`
+                  : "hover:scale-110"
+              }`}
+              onClick={() => {
+                const newTheme = themes.find(
+                  (th) => th.accent === accent && th.mode === theme.mode,
+                );
+
+                if (newTheme) setTheme(newTheme);
+              }}
+            />
+          ))}
         </div>
       </div>
 
       {/* Light / Dark toggle */}
       <div className="flex items-center justify-between">
-        <span className="text-xs text-neutral-500 dark:text-neutral-400">{t("settings.mode")}</span>
+        <span className="text-xs text-neutral-500 dark:text-neutral-400">
+          {t("settings.mode")}
+        </span>
         <div className="flex bg-neutral-100 dark:bg-neutral-800 rounded-full p-0.5">
           <button
             className={`px-3 py-1 text-[11px] font-medium rounded-full transition-all ${
@@ -467,11 +482,17 @@ function SettingsTab() {
                 : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
             }`}
             onClick={() => {
-              const newTheme = lightThemes.find((th) => th.accent === theme.accent);
+              const newTheme = lightThemes.find(
+                (th) => th.accent === theme.accent,
+              );
+
               if (newTheme) setTheme(newTheme);
             }}
           >
-            <Sun className="w-3.5 h-3.5 inline-block mr-1 -mt-px" strokeWidth={2} />
+            <Sun
+              className="w-3.5 h-3.5 inline-block mr-1 -mt-px"
+              strokeWidth={2}
+            />
             {t("settings.light")}
           </button>
           <button
@@ -481,11 +502,17 @@ function SettingsTab() {
                 : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
             }`}
             onClick={() => {
-              const newTheme = darkThemes.find((th) => th.accent === theme.accent);
+              const newTheme = darkThemes.find(
+                (th) => th.accent === theme.accent,
+              );
+
               if (newTheme) setTheme(newTheme);
             }}
           >
-            <Moon className="w-3.5 h-3.5 inline-block mr-1 -mt-px" strokeWidth={2} />
+            <Moon
+              className="w-3.5 h-3.5 inline-block mr-1 -mt-px"
+              strokeWidth={2}
+            />
             {t("settings.dark")}
           </button>
         </div>
@@ -522,8 +549,12 @@ function SettingsTab() {
         className="pt-2 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between cursor-default select-none"
         onClick={handleVersionTap}
       >
-        <span className="text-[10px] text-neutral-300 dark:text-neutral-600">ithbat</span>
-        <span className="text-[10px] text-neutral-300 dark:text-neutral-600">v0.5</span>
+        <span className="text-[10px] text-neutral-300 dark:text-neutral-600">
+          ithbat
+        </span>
+        <span className="text-[10px] text-neutral-300 dark:text-neutral-600">
+          v0.5
+        </span>
       </div>
     </div>
   );
@@ -550,14 +581,19 @@ function LanguageTab() {
             type="button"
             onClick={() => updateSetting("language", lang.code)}
           >
-            <span className={`text-sm ${isActive ? "text-accent-600 dark:text-accent-400 font-medium" : "text-neutral-700 dark:text-neutral-300"}`}>
+            <span
+              className={`text-sm ${isActive ? "text-accent-600 dark:text-accent-400 font-medium" : "text-neutral-700 dark:text-neutral-300"}`}
+            >
               {lang.nativeName}
             </span>
             <span className="text-[11px] text-neutral-400 dark:text-neutral-500">
               {lang.name}
             </span>
             {isActive && (
-              <Check className="w-3.5 h-3.5 text-accent-500 ml-auto" strokeWidth={2.5} />
+              <Check
+                className="w-3.5 h-3.5 text-accent-500 ml-auto"
+                strokeWidth={2.5}
+              />
             )}
           </button>
         );

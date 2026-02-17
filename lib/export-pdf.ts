@@ -28,6 +28,7 @@ export async function exportResponseAsPdf(
     .join("-");
 
   const a = document.createElement("a");
+
   a.href = url;
   a.download = `ithbat-${slug || "response"}.pdf`;
   document.body.appendChild(a);

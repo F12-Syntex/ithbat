@@ -223,12 +223,16 @@ JSON:`;
  * - https://sunnah.com/bukhari:1234 → { collection: "Sahih Bukhari", number: "1234" }
  * - https://sunnah.com/muslim/5/123 → { collection: "Sahih Muslim", number: "123" }
  */
-function parseHadithUrl(url: string): { collection: string; number: string } | null {
+function parseHadithUrl(
+  url: string,
+): { collection: string; number: string } | null {
   if (!url.includes("sunnah.com")) return null;
 
   // Pattern 1: sunnah.com/collection:number
-  const colonPattern = /sunnah\.com\/(bukhari|muslim|tirmidhi|abudawud|nasai|ibnmajah|malik|ahmad|darimi|nawawi40|riyadussalihin|mishkat):(\d+)/i;
+  const colonPattern =
+    /sunnah\.com\/(bukhari|muslim|tirmidhi|abudawud|nasai|ibnmajah|malik|ahmad|darimi|nawawi40|riyadussalihin|mishkat):(\d+)/i;
   const colonMatch = url.match(colonPattern);
+
   if (colonMatch) {
     return {
       collection: normalizeCollectionName(colonMatch[1]),
@@ -237,8 +241,10 @@ function parseHadithUrl(url: string): { collection: string; number: string } | n
   }
 
   // Pattern 2: sunnah.com/collection/book/number
-  const slashPattern = /sunnah\.com\/(bukhari|muslim|tirmidhi|abudawud|nasai|ibnmajah|malik|ahmad)\/\d+\/(\d+)/i;
+  const slashPattern =
+    /sunnah\.com\/(bukhari|muslim|tirmidhi|abudawud|nasai|ibnmajah|malik|ahmad)\/\d+\/(\d+)/i;
   const slashMatch = url.match(slashPattern);
+
   if (slashMatch) {
     return {
       collection: normalizeCollectionName(slashMatch[1]),
@@ -264,6 +270,7 @@ function normalizeCollectionName(slug: string): string {
     riyadussalihin: "Riyad as-Salihin",
     mishkat: "Mishkat al-Masabih",
   };
+
   return names[slug.toLowerCase()] || slug;
 }
 
@@ -274,10 +281,12 @@ function normalizeCollectionName(slug: string): string {
 function parseFatwaUrl(url: string): string | null {
   // IslamQA pattern
   const islamqaMatch = url.match(/islamqa\.info\/\w+\/answers\/(\d+)/);
+
   if (islamqaMatch) return islamqaMatch[1];
 
   // IslamWeb pattern
   const islamwebMatch = url.match(/islamweb\.net\/\w+\/fatwa\/(\d+)/);
+
   if (islamwebMatch) return islamwebMatch[1];
 
   return null;
@@ -304,6 +313,7 @@ export async function extractEvidenceFromPage(
 
   // Add URL hint to help AI extract the right reference numbers
   let urlHint = "";
+
   if (urlHadithInfo) {
     urlHint = `\n\n**IMPORTANT: This page URL indicates this is ${urlHadithInfo.collection} hadith #${urlHadithInfo.number}. Use this exact number!**\n`;
   }
@@ -490,6 +500,7 @@ export class EvidenceAccumulator {
       this.evidence.quranVerses.length +
       this.evidence.scholarlyOpinions.length +
       this.evidence.fatwas.length;
+
     return totalEvidence >= 1;
   }
 

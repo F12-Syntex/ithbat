@@ -70,7 +70,9 @@ export const TRUSTED_DOMAINS: TrustedDomain[] = [
 ];
 
 /** Domain strings for AI config */
-export const TRUSTED_DOMAIN_LIST: string[] = TRUSTED_DOMAINS.map((d) => d.domain);
+export const TRUSTED_DOMAIN_LIST: string[] = TRUSTED_DOMAINS.map(
+  (d) => d.domain,
+);
 
 /** Check if a URL belongs to a trusted domain */
 export function isTrustedUrl(url: string): boolean {

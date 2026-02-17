@@ -34,9 +34,7 @@ const stepIcons: Record<string, LucideIcon> = {
   formatting: Sparkles,
 };
 
-export function ResearchPipeline({
-  steps,
-}: ResearchPipelineProps) {
+export function ResearchPipeline({ steps }: ResearchPipelineProps) {
   if (steps.length === 0) {
     return null;
   }
@@ -60,7 +58,10 @@ function StepRow({ step, index }: { step: ResearchStep; index: number }) {
   const isError = step.status === "error";
   // Only show expandable content if there's meaningful text (not just "Searching the web...")
   const trimmedContent = step.content?.trim() || "";
-  const hasContent = trimmedContent.length > 0 && !trimmedContent.startsWith("Searching the web") && !trimmedContent.match(/^Found \d+ source links?\s*$/);
+  const hasContent =
+    trimmedContent.length > 0 &&
+    !trimmedContent.startsWith("Searching the web") &&
+    !trimmedContent.match(/^Found \d+ source links?\s*$/);
 
   const Icon = stepIcons[step.type] || Lightbulb;
 
@@ -122,7 +123,10 @@ function StepRow({ step, index }: { step: ResearchStep; index: number }) {
           ) : isCompleted ? (
             <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2.5} />
           ) : isActive ? (
-            <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-neutral-500 dark:text-neutral-400" strokeWidth={2} />
+            <Loader2
+              className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-neutral-500 dark:text-neutral-400"
+              strokeWidth={2}
+            />
           ) : (
             <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={1.5} />
           )}
@@ -152,7 +156,10 @@ function StepRow({ step, index }: { step: ResearchStep; index: number }) {
             animate={{ rotate: expanded ? 180 : 0 }}
             transition={{ duration: 0.15 }}
           >
-            <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-neutral-400 dark:text-neutral-500 flex-shrink-0" strokeWidth={2} />
+            <ChevronDown
+              className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-neutral-400 dark:text-neutral-500 flex-shrink-0"
+              strokeWidth={2}
+            />
           </motion.div>
         )}
 

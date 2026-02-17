@@ -83,10 +83,12 @@ export const UNDERSTANDING_PROMPT = `Analyze this Islamic question briefly. Iden
 1. The main topic (Fiqh, Aqeedah, Hadith, Tafsir, Seerah, etc.)
 2. Key concepts to research
 3. Relevant source types needed
+4. Whether this is a PERSONAL question (someone asking about their own specific situation, seeking a personal ruling/fatwa, using words like "should I", "can I", "my husband/wife", "in my case", "I did X", "advise me", etc.) — answer YES or NO
 
 Question: {query}
 
-Respond in 2-3 sentences.`;
+On the FIRST line, write exactly: PERSONAL: YES or PERSONAL: NO
+Then respond in 2-3 sentences with the analysis.`;
 
 export const WEB_RESEARCH_PROMPT = `Research this Islamic question thoroughly using web search. Find authoritative Islamic sources and present the EXACT text you find.
 
@@ -312,7 +314,9 @@ export function buildPrompt(
 }
 
 // Helper to extract markdown URLs from a response
-export function extractUrlsFromMarkdown(text: string): Array<{ title: string; url: string }> {
+export function extractUrlsFromMarkdown(
+  text: string,
+): Array<{ title: string; url: string }> {
   const urlRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
   const urls: Array<{ title: string; url: string }> = [];
   const seen = new Set<string>();

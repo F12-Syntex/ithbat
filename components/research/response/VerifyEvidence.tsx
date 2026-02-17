@@ -3,7 +3,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Search,
   ExternalLink,
   CheckCircle2,
   AlertCircle,
@@ -56,6 +55,7 @@ function extractSearchQuery(text: string): string {
       .slice(idx, idx + 80)
       .replace(/[^\w\s]/g, " ")
       .trim();
+
     return context;
   }
 
@@ -83,6 +83,7 @@ function InlineVerifyPanel({
     setError(null);
 
     const query = extractSearchQuery(evidenceText);
+
     setSearchQuery(query);
 
     try {
@@ -101,6 +102,7 @@ function InlineVerifyPanel({
       }
 
       const data = await response.json();
+
       setSummary(data.summary || "");
 
       const mappedResults: VerifyResult[] = (data.results || []).map(
@@ -138,11 +140,11 @@ function InlineVerifyPanel({
 
   return (
     <motion.div
-      initial={{ height: 0, opacity: 0 }}
       animate={{ height: "auto", opacity: 1 }}
-      exit={{ height: 0, opacity: 0 }}
-      transition={{ duration: 0.15, ease: "easeOut" }}
       className="overflow-hidden"
+      exit={{ height: 0, opacity: 0 }}
+      initial={{ height: 0, opacity: 0 }}
+      transition={{ duration: 0.15, ease: "easeOut" }}
     >
       <div className="mt-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 overflow-hidden">
         {/* Content */}
@@ -157,10 +159,12 @@ function InlineVerifyPanel({
           ) : error ? (
             <div className="flex items-center gap-2 py-1">
               <AlertCircle className="w-3.5 h-3.5 text-red-500" />
-              <span className="text-[11px] text-red-600 dark:text-red-400">{error}</span>
+              <span className="text-[11px] text-red-600 dark:text-red-400">
+                {error}
+              </span>
               <button
-                onClick={doSearch}
                 className="ml-auto text-[10px] font-medium text-accent-600 hover:text-accent-700"
+                onClick={doSearch}
               >
                 Retry
               </button>
@@ -178,12 +182,12 @@ function InlineVerifyPanel({
                   {results.slice(0, 3).map((result, idx) => (
                     <a
                       key={idx}
-                      href={result.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
                       className="flex items-center gap-2 p-1.5 -mx-1 rounded-md
                         hover:bg-neutral-100 dark:hover:bg-neutral-800
                         transition-colors group"
+                      href={result.url}
+                      rel="noopener noreferrer"
+                      target="_blank"
                     >
                       {result.verified ? (
                         <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
@@ -219,7 +223,6 @@ export function VerifyButton({
     <>
       {/* Verify Button */}
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
         className={`inline-flex items-center gap-1 ml-2 px-2 py-0.5 text-[10px] font-medium
           rounded-full transition-all duration-200
           ${
@@ -228,6 +231,7 @@ export function VerifyButton({
               : "text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 hover:bg-accent-100 dark:hover:bg-accent-900/30 hover:text-accent-600 dark:hover:text-accent-400 sm:opacity-0 sm:group-hover:opacity-100"
           }`}
         title={isExpanded ? "Hide verification" : "Verify this reference"}
+        onClick={() => setIsExpanded(!isExpanded)}
       >
         <Shield className="w-3 h-3" />
         {isExpanded ? "Hide" : "Verify"}
@@ -243,8 +247,8 @@ export function VerifyButton({
         {isExpanded && (
           <InlineVerifyPanel
             evidenceText={evidenceText}
-            referenceType={referenceType}
             isExpanded={isExpanded}
+            referenceType={referenceType}
             onClose={() => setIsExpanded(false)}
           />
         )}

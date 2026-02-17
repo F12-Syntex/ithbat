@@ -111,8 +111,10 @@ export function QuoteBlock({
       if (node && typeof node === "object" && "props" in node) {
         return extractText((node as React.ReactElement).props.children);
       }
+
       return "";
     };
+
     return extractText(children);
   }, [children]);
 
@@ -135,7 +137,9 @@ export function QuoteBlock({
         {/* Type label */}
         <div className="flex items-center gap-1.5 mb-2">
           <span className={config.iconColor}>{config.icon}</span>
-          <span className={`text-[10px] uppercase tracking-widest font-semibold ${config.accent}`}>
+          <span
+            className={`text-[10px] uppercase tracking-widest font-semibold ${config.accent}`}
+          >
             {config.label}
           </span>
         </div>

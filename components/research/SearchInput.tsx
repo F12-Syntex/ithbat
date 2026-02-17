@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, type FormEvent } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  type FormEvent,
+} from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Square, ImagePlus, X } from "lucide-react";
 
@@ -12,6 +18,7 @@ const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
+
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = reject;
     reader.readAsDataURL(file);
@@ -36,7 +43,9 @@ export function SearchInput({
   onSettings,
 }: SearchInputProps) {
   const [query, setQuery] = useState("");
-  const [images, setImages] = useState<{ file: File; preview: string; base64: string }[]>([]);
+  const [images, setImages] = useState<
+    { file: File; preview: string; base64: string }[]
+  >([]);
   const [imageError, setImageError] = useState<string | null>(null);
   const lastSubmittedQuery = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -64,13 +73,18 @@ export function SearchInput({
 
   const hasContent = query.trim() || images.length > 0;
 
-  const submitSearch = useCallback((q: string, imgs: typeof images) => {
-    const base64Images = imgs.length > 0 ? imgs.map((i) => i.base64) : undefined;
-    onSearch(q, base64Images);
-    setQuery("");
-    setImages([]);
-    setImageError(null);
-  }, [onSearch]);
+  const submitSearch = useCallback(
+    (q: string, imgs: typeof images) => {
+      const base64Images =
+        imgs.length > 0 ? imgs.map((i) => i.base64) : undefined;
+
+      onSearch(q, base64Images);
+      setQuery("");
+      setImages([]);
+      setImageError(null);
+    },
+    [onSearch],
+  );
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -87,6 +101,7 @@ export function SearchInput({
   const handleConfirm = () => {
     onCancel?.();
     const currentImages = images;
+
     setTimeout(() => {
       submitSearch(pendingQuery, currentImages);
       setPendingQuery("");
@@ -103,51 +118,65 @@ export function SearchInput({
     onCancel?.();
   };
 
-  const addImageFiles = useCallback(async (files: File[]) => {
-    if (files.length === 0) return;
-    setImageError(null);
-    const remaining = MAX_IMAGES - images.length;
-    const toAdd = files.slice(0, remaining);
-    if (files.length > remaining) {
-      setImageError(`Max ${MAX_IMAGES} images`);
-    }
-    for (const file of toAdd) {
-      if (file.size > MAX_IMAGE_SIZE) {
-        setImageError(`${file.name} exceeds 4MB limit`);
-        continue;
-      }
-      try {
-        const base64 = await fileToBase64(file);
-        const preview = URL.createObjectURL(file);
-        setImages((prev) => [...prev, { file, preview, base64 }]);
-      } catch {
-        setImageError(`Failed to read ${file.name}`);
-      }
-    }
-  }, [images.length]);
+  const addImageFiles = useCallback(
+    async (files: File[]) => {
+      if (files.length === 0) return;
+      setImageError(null);
+      const remaining = MAX_IMAGES - images.length;
+      const toAdd = files.slice(0, remaining);
 
-  const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
-    const items = Array.from(e.clipboardData.items);
-    const imageFiles = items
-      .filter((item) => item.type.startsWith("image/"))
-      .map((item) => item.getAsFile())
-      .filter((f): f is File => f !== null);
-    if (imageFiles.length > 0) {
-      e.preventDefault();
-      await addImageFiles(imageFiles);
-    }
-  }, [addImageFiles]);
+      if (files.length > remaining) {
+        setImageError(`Max ${MAX_IMAGES} images`);
+      }
+      for (const file of toAdd) {
+        if (file.size > MAX_IMAGE_SIZE) {
+          setImageError(`${file.name} exceeds 4MB limit`);
+          continue;
+        }
+        try {
+          const base64 = await fileToBase64(file);
+          const preview = URL.createObjectURL(file);
 
-  const handleImageSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    await addImageFiles(files);
-    // Reset file input so same file can be selected again
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  }, [addImageFiles]);
+          setImages((prev) => [...prev, { file, preview, base64 }]);
+        } catch {
+          setImageError(`Failed to read ${file.name}`);
+        }
+      }
+    },
+    [images.length],
+  );
+
+  const handlePaste = useCallback(
+    async (e: React.ClipboardEvent) => {
+      const items = Array.from(e.clipboardData.items);
+      const imageFiles = items
+        .filter((item) => item.type.startsWith("image/"))
+        .map((item) => item.getAsFile())
+        .filter((f): f is File => f !== null);
+
+      if (imageFiles.length > 0) {
+        e.preventDefault();
+        await addImageFiles(imageFiles);
+      }
+    },
+    [addImageFiles],
+  );
+
+  const handleImageSelect = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files || []);
+
+      await addImageFiles(files);
+      // Reset file input so same file can be selected again
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    },
+    [addImageFiles],
+  );
 
   const removeImage = useCallback((index: number) => {
     setImages((prev) => {
       URL.revokeObjectURL(prev[index].preview);
+
       return prev.filter((_, i) => i !== index);
     });
     setImageError(null);
@@ -158,12 +187,15 @@ export function SearchInput({
     return () => {
       images.forEach((img) => URL.revokeObjectURL(img.preview));
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <>
       <form onSubmit={handleSubmit}>
-        <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200/80 dark:border-neutral-800 shadow-sm dark:shadow-none focus-within:border-neutral-300 dark:focus-within:border-neutral-700 focus-within:shadow-md dark:focus-within:shadow-none transition-all" onPaste={handlePaste}>
+        <div
+          className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200/80 dark:border-neutral-800 shadow-sm dark:shadow-none focus-within:border-neutral-300 dark:focus-within:border-neutral-700 focus-within:shadow-md dark:focus-within:shadow-none transition-all"
+          onPaste={handlePaste}
+        >
           {/* Image previews */}
           <AnimatePresence>
             {images.length > 0 && (
@@ -214,14 +246,17 @@ export function SearchInput({
               type="button"
               onClick={() => fileInputRef.current?.click()}
             >
-              <ImagePlus className="w-4 h-4 sm:w-[18px] sm:h-[18px]" strokeWidth={1.5} />
+              <ImagePlus
+                className="w-4 h-4 sm:w-[18px] sm:h-[18px]"
+                strokeWidth={1.5}
+              />
             </button>
 
             <input
               ref={fileInputRef}
+              multiple
               accept="image/*"
               className="hidden"
-              multiple
               type="file"
               onChange={handleImageSelect}
             />
@@ -229,7 +264,9 @@ export function SearchInput({
             <input
               className="flex-1 bg-transparent text-base sm:text-sm text-neutral-800 dark:text-neutral-100 placeholder:text-neutral-400 outline-none border-none focus:ring-0"
               placeholder={
-                isLoading ? t("search.placeholderLoading") : t("search.placeholder")
+                isLoading
+                  ? t("search.placeholderLoading")
+                  : t("search.placeholder")
               }
               type="text"
               value={query}
@@ -243,7 +280,10 @@ export function SearchInput({
                 type="button"
                 onClick={handleStopClick}
               >
-                <Square className="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="currentColor" />
+                <Square
+                  className="w-2.5 h-2.5 sm:w-3 sm:h-3"
+                  fill="currentColor"
+                />
               </button>
             ) : (
               <button
@@ -255,7 +295,10 @@ export function SearchInput({
                 disabled={!hasContent}
                 type="submit"
               >
-                <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" strokeWidth={2} />
+                <ArrowRight
+                  className="w-3 h-3 sm:w-3.5 sm:h-3.5"
+                  strokeWidth={2}
+                />
               </button>
             )}
           </div>

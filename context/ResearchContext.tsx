@@ -59,6 +59,7 @@ type ResearchAction =
       completedSessions: CompletedSession[];
       conversationHistory: ConversationTurn[];
     }
+  | { type: "SET_PERSONAL_QUESTION" }
   | { type: "START_ANALYZING" }
   | { type: "APPEND_ANALYSIS"; content: string }
   | { type: "FINISH_ANALYZING" };
@@ -89,6 +90,7 @@ const initialState: ExtendedResearchState = {
   sources: [],
   response: "",
   error: null,
+  isPersonalQuestion: false,
   conversationHistory: [],
   completedSessions: [],
   sessionId: null,
@@ -143,7 +145,9 @@ function researchReducer(
         query: action.previousQuery,
         response: action.previousResponse,
         steps: state.steps,
-        ...(action.previousImages?.length ? { images: action.previousImages } : {}),
+        ...(action.previousImages?.length
+          ? { images: action.previousImages }
+          : {}),
       };
 
       return {
@@ -163,6 +167,7 @@ function researchReducer(
 
     case "ADD_STEP": {
       const newStep = createStep(action.stepType, action.stepTitle);
+
       newStep.startTime = Date.now();
       newStep.status = "in_progress";
 
@@ -231,6 +236,12 @@ function researchReducer(
       return {
         ...state,
         status: "completed",
+      };
+
+    case "SET_PERSONAL_QUESTION":
+      return {
+        ...state,
+        isPersonalQuestion: true,
       };
 
     case "RESET":
@@ -327,6 +338,10 @@ function handleSSEEvent(
       }
       break;
 
+    case "personal_question":
+      dispatch({ type: "SET_PERSONAL_QUESTION" });
+      break;
+
     case "error":
       dispatch({
         type: "SET_ERROR",
@@ -347,31 +362,35 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
   const abortControllerRef = useRef<AbortController | null>(null);
   const { settings } = useSettings();
   const languageRef = useRef(settings.language);
+
   languageRef.current = settings.language;
 
-  const startResearch = useCallback(async (query: string, images?: string[]) => {
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = new AbortController();
+  const startResearch = useCallback(
+    async (query: string, images?: string[]) => {
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = new AbortController();
 
-    dispatch({ type: "START_RESEARCH", query, images });
+      dispatch({ type: "START_RESEARCH", query, images });
 
-    try {
-      for await (const event of streamResearch(
-        query,
-        abortControllerRef.current.signal,
-        undefined,
-        undefined,
-        languageRef.current,
-        images,
-      )) {
-        handleSSEEvent(event, dispatch);
+      try {
+        for await (const event of streamResearch(
+          query,
+          abortControllerRef.current.signal,
+          undefined,
+          undefined,
+          languageRef.current,
+          images,
+        )) {
+          handleSSEEvent(event, dispatch);
+        }
+      } catch (error) {
+        if (error instanceof Error && error.name !== "AbortError") {
+          dispatch({ type: "SET_ERROR", error: error.message });
+        }
       }
-    } catch (error) {
-      if (error instanceof Error && error.name !== "AbortError") {
-        dispatch({ type: "SET_ERROR", error: error.message });
-      }
-    }
-  }, []);
+    },
+    [],
+  );
 
   const cancelResearch = useCallback(() => {
     abortControllerRef.current?.abort();
@@ -434,105 +453,117 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
         });
       }
     }
-  }, [state.query, state.response, state.status, state.conversationHistory, state.sessionId]);
+  }, [
+    state.query,
+    state.response,
+    state.status,
+    state.conversationHistory,
+    state.sessionId,
+  ]);
 
-  const askFollowUp = useCallback(async (question: string, images?: string[]) => {
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = new AbortController();
+  const askFollowUp = useCallback(
+    async (question: string, images?: string[]) => {
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = new AbortController();
 
-    const previousQuery = state.query;
-    const previousResponse = state.response;
+      const previousQuery = state.query;
+      const previousResponse = state.response;
 
-    const conversationHistory = [
-      ...(state.conversationHistory || []),
-      { query: previousQuery, response: previousResponse },
-    ];
-
-    dispatch({
-      type: "START_FOLLOWUP",
-      query: question,
-      images,
-      previousQuery,
-      previousResponse,
-      previousImages: state.images.length > 0 ? state.images : undefined,
-    });
-
-    const currentSessionId = (state as ExtendedResearchState).sessionId;
-
-    try {
-      for await (const event of streamResearch(
-        question,
-        abortControllerRef.current.signal,
-        conversationHistory,
-        currentSessionId || undefined,
-        languageRef.current,
-        images,
-      )) {
-        handleSSEEvent(event, dispatch);
-      }
-    } catch (error) {
-      if (error instanceof Error && error.name !== "AbortError") {
-        dispatch({ type: "SET_ERROR", error: error.message });
-      }
-    }
-  }, [state.query, state.response, state.conversationHistory, state.sessionId]);
-
-  const hydrateChat = useCallback(async (chatSlug: string): Promise<boolean> => {
-    try {
-      const res = await fetch(`/api/chat/${chatSlug}`);
-
-      if (!res.ok) return false;
-
-      const data = await res.json();
-      const conversations = data.conversations as Array<{
-        query: string;
-        response: string;
-        steps: ResearchStep[];
-        sources: Source[];
-        images?: string[];
-        isFollowUp: boolean;
-      }>;
-
-      if (!conversations || conversations.length === 0) return false;
-
-      // Last conversation becomes the current state
-      const last = conversations[conversations.length - 1];
-
-      // All previous conversations become completedSessions + conversationHistory
-      const completedSessions: CompletedSession[] = conversations
-        .slice(0, -1)
-        .map((c) => ({
-          query: c.query,
-          response: c.response,
-          steps: c.steps || [],
-          ...(c.images?.length ? { images: c.images } : {}),
-        }));
-
-      const conversationHistory: ConversationTurn[] = conversations
-        .slice(0, -1)
-        .map((c) => ({
-          query: c.query,
-          response: c.response,
-        }));
+      const conversationHistory = [
+        ...(state.conversationHistory || []),
+        { query: previousQuery, response: previousResponse },
+      ];
 
       dispatch({
-        type: "HYDRATE_CHAT",
-        sessionId: data.sessionId || "",
-        slug: chatSlug,
-        query: last.query,
-        response: last.response,
-        steps: last.steps || [],
-        sources: last.sources || [],
-        images: last.images || [],
-        completedSessions,
-        conversationHistory,
+        type: "START_FOLLOWUP",
+        query: question,
+        images,
+        previousQuery,
+        previousResponse,
+        previousImages: state.images.length > 0 ? state.images : undefined,
       });
 
-      return true;
-    } catch {
-      return false;
-    }
-  }, []);
+      const currentSessionId = (state as ExtendedResearchState).sessionId;
+
+      try {
+        for await (const event of streamResearch(
+          question,
+          abortControllerRef.current.signal,
+          conversationHistory,
+          currentSessionId || undefined,
+          languageRef.current,
+          images,
+        )) {
+          handleSSEEvent(event, dispatch);
+        }
+      } catch (error) {
+        if (error instanceof Error && error.name !== "AbortError") {
+          dispatch({ type: "SET_ERROR", error: error.message });
+        }
+      }
+    },
+    [state.query, state.response, state.conversationHistory, state.sessionId],
+  );
+
+  const hydrateChat = useCallback(
+    async (chatSlug: string): Promise<boolean> => {
+      try {
+        const res = await fetch(`/api/chat/${chatSlug}`);
+
+        if (!res.ok) return false;
+
+        const data = await res.json();
+        const conversations = data.conversations as Array<{
+          query: string;
+          response: string;
+          steps: ResearchStep[];
+          sources: Source[];
+          images?: string[];
+          isFollowUp: boolean;
+        }>;
+
+        if (!conversations || conversations.length === 0) return false;
+
+        // Last conversation becomes the current state
+        const last = conversations[conversations.length - 1];
+
+        // All previous conversations become completedSessions + conversationHistory
+        const completedSessions: CompletedSession[] = conversations
+          .slice(0, -1)
+          .map((c) => ({
+            query: c.query,
+            response: c.response,
+            steps: c.steps || [],
+            ...(c.images?.length ? { images: c.images } : {}),
+          }));
+
+        const conversationHistory: ConversationTurn[] = conversations
+          .slice(0, -1)
+          .map((c) => ({
+            query: c.query,
+            response: c.response,
+          }));
+
+        dispatch({
+          type: "HYDRATE_CHAT",
+          sessionId: data.sessionId || "",
+          slug: chatSlug,
+          query: last.query,
+          response: last.response,
+          steps: last.steps || [],
+          sources: last.sources || [],
+          images: last.images || [],
+          completedSessions,
+          conversationHistory,
+        });
+
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [],
+  );
 
   return (
     <ResearchContext.Provider

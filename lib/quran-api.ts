@@ -91,7 +91,10 @@ async function fetchVerseFromApi(
     );
 
     if (!translationResponse.ok) {
-      console.error(`Failed to fetch verse ${surah}:${ayah}: ${translationResponse.status}`);
+      console.error(
+        `Failed to fetch verse ${surah}:${ayah}: ${translationResponse.status}`,
+      );
+
       return null;
     }
 
@@ -99,6 +102,7 @@ async function fetchVerseFromApi(
 
     // Fetch Arabic text
     let arabicText: string | undefined;
+
     try {
       const arabicResponse = await fetch(
         `https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/quran-uthmani`,
@@ -107,6 +111,7 @@ async function fetchVerseFromApi(
 
       if (arabicResponse.ok) {
         const arabicData: QuranApiResponse = await arabicResponse.json();
+
         arabicText = arabicData.data.text;
       }
     } catch {
@@ -129,6 +134,7 @@ async function fetchVerseFromApi(
     return verse;
   } catch (error) {
     console.error(`Error fetching verse ${surah}:${ayah}:`, error);
+
     return null;
   }
 }
@@ -216,7 +222,8 @@ export async function fetchAllQuranReferences(
   const results = new Map<string, QuranVerse[]>();
 
   // Find all Quran references in text
-  const refPattern = /(?:Quran|Qur'an|Surah)\s*(\d{1,3}):(\d{1,3})(?:-(\d{1,3}))?/gi;
+  const refPattern =
+    /(?:Quran|Qur'an|Surah)\s*(\d{1,3}):(\d{1,3})(?:-(\d{1,3}))?/gi;
   const matches = text.matchAll(refPattern);
 
   for (const match of matches) {
@@ -224,7 +231,9 @@ export async function fetchAllQuranReferences(
     const ayahStart = parseInt(match[2], 10);
     const ayahEnd = match[3] ? parseInt(match[3], 10) : undefined;
 
-    const key = ayahEnd ? `${surah}:${ayahStart}-${ayahEnd}` : `${surah}:${ayahStart}`;
+    const key = ayahEnd
+      ? `${surah}:${ayahStart}-${ayahEnd}`
+      : `${surah}:${ayahStart}`;
 
     // Skip if already fetched
     if (results.has(key)) continue;

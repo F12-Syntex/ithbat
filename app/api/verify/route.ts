@@ -27,13 +27,19 @@ function extractTitleFromUrl(url: string, source: string): string {
 
     // Sunnah.com: /bukhari:1 or /bukhari/1
     if (source === "sunnah.com") {
-      const hadithMatch = path.match(/\/(bukhari|muslim|tirmidhi|abudawud|nasai|ibnmajah|malik|ahmad|nawawi40|riyadussalihin)[:/](\d+)/i);
+      const hadithMatch = path.match(
+        /\/(bukhari|muslim|tirmidhi|abudawud|nasai|ibnmajah|malik|ahmad|nawawi40|riyadussalihin)[:/](\d+)/i,
+      );
+
       if (hadithMatch) {
-        const collection = hadithMatch[1].charAt(0).toUpperCase() + hadithMatch[1].slice(1);
+        const collection =
+          hadithMatch[1].charAt(0).toUpperCase() + hadithMatch[1].slice(1);
+
         return `${collection} Hadith ${hadithMatch[2]}`;
       }
       // Try alternate format /collection/book/hadith
       const altMatch = path.match(/\/([a-z]+)\/(\d+)\/(\d+)/i);
+
       if (altMatch) {
         return `${altMatch[1].charAt(0).toUpperCase() + altMatch[1].slice(1)} ${altMatch[2]}:${altMatch[3]}`;
       }
@@ -42,10 +48,12 @@ function extractTitleFromUrl(url: string, source: string): string {
     // Quran.com: /2/255 or /2:255
     if (source === "quran.com") {
       const quranMatch = path.match(/\/(\d+)[:/](\d+)/);
+
       if (quranMatch) {
         return `Quran ${quranMatch[1]}:${quranMatch[2]}`;
       }
       const surahMatch = path.match(/\/(\d+)/);
+
       if (surahMatch) {
         return `Surah ${surahMatch[1]}`;
       }
@@ -54,13 +62,18 @@ function extractTitleFromUrl(url: string, source: string): string {
     // IslamQA: /en/answers/12345
     if (source === "islamqa.info") {
       const answerMatch = path.match(/\/answers\/(\d+)/);
+
       if (answerMatch) {
         return `IslamQA Answer #${answerMatch[1]}`;
       }
     }
 
     // Fallback: clean up the path
-    const cleanPath = path.replace(/^\//, "").replace(/\//g, " > ").replace(/-/g, " ");
+    const cleanPath = path
+      .replace(/^\//, "")
+      .replace(/\//g, " > ")
+      .replace(/-/g, " ");
+
     if (cleanPath && cleanPath.length > 2) {
       return cleanPath.slice(0, 60);
     }
@@ -80,16 +93,19 @@ function buildSearchQuery(query: string, claimType: string): string {
       if (!/bukhari|muslim|tirmidhi|hadith|prophet|messenger/i.test(query)) {
         return `${query} hadith sunnah.com authentic`;
       }
+
       return `${query} sunnah.com authentic hadith`;
     case "quran":
       if (!/quran|surah|ayah|verse/i.test(query)) {
         return `${query} quran verse quran.com`;
       }
+
       return `${query} quran.com`;
     case "scholar":
       if (!/fatwa|ruling|scholar|sheikh/i.test(query)) {
         return `${query} islamic ruling islamqa`;
       }
+
       return `${query} islamqa fatwa`;
     default:
       return `${query} islamic source`;
@@ -120,8 +136,10 @@ function parsePerplexityResponse(
 
     // Extract domain for source
     let source = "web";
+
     try {
       const domain = new URL(url).hostname.replace("www.", "");
+
       if (domain.includes("sunnah")) source = "sunnah.com";
       else if (domain.includes("quran")) source = "quran.com";
       else if (domain.includes("islamqa")) source = "islamqa.info";
@@ -134,12 +152,21 @@ function parsePerplexityResponse(
     const linkIndex = response.indexOf(match[0]);
     const start = Math.max(0, linkIndex - 100);
     const end = Math.min(response.length, linkIndex + match[0].length + 200);
-    let snippet = response.slice(start, end).replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").trim();
+    let snippet = response
+      .slice(start, end)
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .trim();
+
     if (start > 0) snippet = "..." + snippet;
     if (end < response.length) snippet = snippet + "...";
 
     // Calculate relevance based on trusted domains
-    const isTrusted = ["sunnah.com", "quran.com", "islamqa.info", "islamweb.net"].some(d => url.includes(d));
+    const isTrusted = [
+      "sunnah.com",
+      "quran.com",
+      "islamqa.info",
+      "islamweb.net",
+    ].some((d) => url.includes(d));
     const relevance: "high" | "medium" | "low" = isTrusted ? "high" : "medium";
 
     results.push({
@@ -154,15 +181,19 @@ function parsePerplexityResponse(
 
   // Also look for plain URLs
   const plainUrlPattern = /(?<!\()https?:\/\/[^\s\)]+/g;
+
   while ((match = plainUrlPattern.exec(response)) !== null) {
     // Clean up URL: remove trailing punctuation and citation markers like [1], [2]
     const url = match[0].replace(/[.,;!?]+$/, "").replace(/\[\d+\]$/, "");
+
     if (seenUrls.has(url)) continue;
     seenUrls.add(url);
 
     let source = "web";
+
     try {
       const domain = new URL(url).hostname.replace("www.", "");
+
       if (domain.includes("sunnah")) source = "sunnah.com";
       else if (domain.includes("quran")) source = "quran.com";
       else if (domain.includes("islamqa")) source = "islamqa.info";
@@ -171,7 +202,12 @@ function parsePerplexityResponse(
       continue;
     }
 
-    const isTrusted = ["sunnah.com", "quran.com", "islamqa.info", "islamweb.net"].some(d => url.includes(d));
+    const isTrusted = [
+      "sunnah.com",
+      "quran.com",
+      "islamqa.info",
+      "islamweb.net",
+    ].some((d) => url.includes(d));
 
     results.push({
       url,
@@ -228,6 +264,7 @@ Format your response with:
 - Authenticity grade if applicable`;
 
     let response = "";
+
     for await (const chunk of client.streamChat(
       [{ role: "user", content: prompt }],
       "SEARCH",
@@ -235,13 +272,17 @@ Format your response with:
       response += chunk;
     }
 
-    const { results, summary } = parsePerplexityResponse(response, originalClaim);
+    const { results, summary } = parsePerplexityResponse(
+      response,
+      originalClaim,
+    );
 
     // Sort: trusted sources first
     results.sort((a, b) => {
       if (a.verified && !b.verified) return -1;
       if (!a.verified && b.verified) return 1;
       const order = { high: 0, medium: 1, low: 2 };
+
       return order[a.relevance] - order[b.relevance];
     });
 
@@ -255,6 +296,7 @@ Format your response with:
     });
   } catch (error) {
     console.error("[Verify] Error:", error);
+
     return NextResponse.json({ error: "Verification failed" }, { status: 500 });
   }
 }

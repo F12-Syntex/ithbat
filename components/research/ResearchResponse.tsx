@@ -14,7 +14,12 @@ import { extractReferences } from "@/lib/references";
 interface ResearchResponseProps {
   content: string;
   isStreaming?: boolean;
-  apiSources?: Array<{ id: number; title: string; url: string; domain: string }>;
+  apiSources?: Array<{
+    id: number;
+    title: string;
+    url: string;
+    domain: string;
+  }>;
 }
 
 // Helper to extract text from React children
@@ -119,7 +124,13 @@ function parseSourcesFromContent(
 }
 
 // Inline tooltip for Islamic terminology
-function TermTooltip({ meaning, children }: { meaning: string; children: ReactNode }) {
+function TermTooltip({
+  meaning,
+  children,
+}: {
+  meaning: string;
+  children: ReactNode;
+}) {
   const [show, setShow] = useState(false);
   const [position, setPosition] = useState<"top" | "bottom">("top");
   const ref = useRef<HTMLSpanElement>(null);
@@ -127,6 +138,7 @@ function TermTooltip({ meaning, children }: { meaning: string; children: ReactNo
   useEffect(() => {
     if (show && ref.current) {
       const rect = ref.current.getBoundingClientRect();
+
       // If too close to top of viewport, show tooltip below
       setPosition(rect.top < 60 ? "bottom" : "top");
     }
@@ -174,6 +186,7 @@ export function ResearchResponse({
 
     // Strip wrapping "" from blockquote lines
     let cleaned = content.replace(/^>\s*"(.+)"$/gm, "> $1");
+
     // Also strip leading/trailing smart quotes
     cleaned = cleaned.replace(/^>\s*\u201c(.+)\u201d$/gm, "> $1");
 
@@ -188,6 +201,7 @@ export function ResearchResponse({
         url: s.url,
         domain: s.domain,
       }));
+
       return { processedContent: result.processedText, sources: merged };
     }
 
@@ -218,6 +232,7 @@ export function ResearchResponse({
             // Render images with rounded styling
             img: ({ src, alt }) => {
               if (!src) return null;
+
               return (
                 <span className="block my-4">
                   <img
@@ -237,7 +252,9 @@ export function ResearchResponse({
             // Render links as SourceInfoBadge for source URLs
             a: ({ href, children }) => {
               const linkText =
-                typeof children === "string" ? children : extractTextContent(children);
+                typeof children === "string"
+                  ? children
+                  : extractTextContent(children);
               const finalHref = href || "#";
 
               // Use SourceInfoBadge for http links
@@ -269,12 +286,22 @@ export function ResearchResponse({
               </mark>
             ),
             // Render <term> tags as hoverable Islamic terminology tooltips
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            ...({ term: ({ node, children }: { node?: { properties?: Record<string, unknown> }; children?: ReactNode }) => {
-              const meaning = (node?.properties?.dataMeaning as string) || "";
-              if (!meaning) return <>{children}</>;
-              return <TermTooltip meaning={meaning}>{children}</TermTooltip>;
-            }} as any),
+
+            ...({
+              term: ({
+                node,
+                children,
+              }: {
+                node?: { properties?: Record<string, unknown> };
+                children?: ReactNode;
+              }) => {
+                const meaning = (node?.properties?.dataMeaning as string) || "";
+
+                if (!meaning) return <>{children}</>;
+
+                return <TermTooltip meaning={meaning}>{children}</TermTooltip>;
+              },
+            } as any),
             h2: ({ children }) => (
               <h2 className="flex items-center gap-2 text-[15px] sm:text-lg font-semibold text-neutral-800 dark:text-neutral-100 mt-8 mb-3 pb-2.5 border-b border-neutral-200 dark:border-neutral-800">
                 {String(children).toLowerCase().includes("answer") && (
@@ -365,14 +392,21 @@ export function ResearchResponse({
             ),
             blockquote: ({ children }) => {
               // Separate attribution line (starts with "—") from quote content
-              const childArray = Array.isArray(children) ? children : [children];
+              const childArray = Array.isArray(children)
+                ? children
+                : [children];
               const quoteChildren: ReactNode[] = [];
               let attributionText = "";
-              let attributionLink: { href: string; title: string } | null = null;
+              let attributionLink: { href: string; title: string } | null =
+                null;
 
               for (const child of childArray) {
                 const text = extractTextContent(child);
-                if (text.trim().startsWith("—") || text.trim().startsWith("—")) {
+
+                if (
+                  text.trim().startsWith("—") ||
+                  text.trim().startsWith("—")
+                ) {
                   // Extract the attribution text and link
                   attributionText = text
                     .replace(/^[—–-]\s*/, "") // Remove leading dash
@@ -380,21 +414,31 @@ export function ResearchResponse({
                     .trim();
 
                   // Find link in this child - look for SourceInfoBadge props or href
-                  const findLink = (node: ReactNode): { href: string; title: string } | null => {
+                  const findLink = (
+                    node: ReactNode,
+                  ): { href: string; title: string } | null => {
                     if (!node) return null;
                     if (typeof node === "object" && "props" in node) {
-                      const props = (node as { props?: Record<string, unknown> }).props;
+                      const props = (
+                        node as { props?: Record<string, unknown> }
+                      ).props;
+
                       if (props?.href && typeof props.href === "string") {
                         return {
                           href: props.href,
-                          title: typeof props.title === "string" ? props.title :
-                                 typeof props.children === "string" ? props.children : "Source"
+                          title:
+                            typeof props.title === "string"
+                              ? props.title
+                              : typeof props.children === "string"
+                                ? props.children
+                                : "Source",
                         };
                       }
                       if (props?.children) {
                         if (Array.isArray(props.children)) {
                           for (const c of props.children) {
                             const found = findLink(c);
+
                             if (found) return found;
                           }
                         } else {
@@ -405,11 +449,14 @@ export function ResearchResponse({
                     if (Array.isArray(node)) {
                       for (const c of node) {
                         const found = findLink(c);
+
                         if (found) return found;
                       }
                     }
+
                     return null;
                   };
+
                   attributionLink = findLink(child);
 
                   // Clean up attribution text - remove link title if it's duplicated
@@ -428,7 +475,9 @@ export function ResearchResponse({
               return (
                 <div className="relative my-8 pl-4 sm:pl-6">
                   {/* Decorative quote mark */}
-                  <span className="absolute -left-1 sm:left-0 -top-2 text-4xl sm:text-5xl font-serif text-accent-400/40 dark:text-accent-500/30 select-none leading-none">"</span>
+                  <span className="absolute -left-1 sm:left-0 -top-2 text-4xl sm:text-5xl font-serif text-accent-400/40 dark:text-accent-500/30 select-none leading-none">
+                    "
+                  </span>
 
                   <blockquote className="relative not-italic [&_.quran-arabic]:block [&_.quran-arabic]:text-right [&_.quran-arabic]:text-lg [&_.quran-arabic]:leading-loose [&_.quran-arabic]:text-neutral-800 [&_.quran-arabic]:dark:text-neutral-100 [&_.quran-arabic]:mb-2 [&_.quran-arabic]:font-normal [&_.hadith-arabic]:block [&_.hadith-arabic]:text-right [&_.hadith-arabic]:text-lg [&_.hadith-arabic]:leading-loose [&_.hadith-arabic]:text-neutral-800 [&_.hadith-arabic]:dark:text-neutral-100 [&_.hadith-arabic]:mb-2 [&_.hadith-arabic]:font-normal">
                     <div className="text-[15px] sm:text-base text-neutral-600 dark:text-neutral-300 leading-relaxed">
@@ -457,23 +506,35 @@ export function ResearchResponse({
               const textContent = extractTextContent(children);
 
               // Attribution lines (— Source | link) — render as clean source line
-              if (textContent.trim().startsWith("—") || textContent.trim().startsWith("—")) {
+              if (
+                textContent.trim().startsWith("—") ||
+                textContent.trim().startsWith("—")
+              ) {
                 // Find link in children
-                const findLink = (node: ReactNode): { href: string; title: string } | null => {
+                const findLink = (
+                  node: ReactNode,
+                ): { href: string; title: string } | null => {
                   if (!node) return null;
                   if (typeof node === "object" && "props" in node) {
-                    const props = (node as { props?: Record<string, unknown> }).props;
+                    const props = (node as { props?: Record<string, unknown> })
+                      .props;
+
                     if (props?.href && typeof props.href === "string") {
                       return {
                         href: props.href,
-                        title: typeof props.title === "string" ? props.title :
-                               typeof props.children === "string" ? props.children : "Source"
+                        title:
+                          typeof props.title === "string"
+                            ? props.title
+                            : typeof props.children === "string"
+                              ? props.children
+                              : "Source",
                       };
                     }
                     if (props?.children) {
                       if (Array.isArray(props.children)) {
                         for (const c of props.children) {
                           const found = findLink(c);
+
                           if (found) return found;
                         }
                       } else {
@@ -484,9 +545,11 @@ export function ResearchResponse({
                   if (Array.isArray(node)) {
                     for (const c of node) {
                       const found = findLink(c);
+
                       if (found) return found;
                     }
                   }
+
                   return null;
                 };
 
@@ -503,7 +566,9 @@ export function ResearchResponse({
                     </span>
                     {attributionLink && (
                       <>
-                        <span className="text-neutral-300 dark:text-neutral-600">|</span>
+                        <span className="text-neutral-300 dark:text-neutral-600">
+                          |
+                        </span>
                         <SourceInfoBadge
                           href={attributionLink.href}
                           title={attributionLink.title}
@@ -521,8 +586,8 @@ export function ResearchResponse({
               );
             },
           }}
-          remarkPlugins={[remarkGfm]}
           rehypePlugins={[rehypeRaw]}
+          remarkPlugins={[remarkGfm]}
         >
           {processedContent}
         </ReactMarkdown>
@@ -532,7 +597,6 @@ export function ResearchResponse({
       {!isStreaming && sources.length > 0 && (
         <SourceCitationCard sources={sources} />
       )}
-
     </div>
   );
 }

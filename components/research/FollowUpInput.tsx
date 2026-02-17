@@ -12,6 +12,7 @@ const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
+
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = reject;
     reader.readAsDataURL(file);
@@ -29,22 +30,58 @@ function getSuggestionKeys(query: string): string[] {
   const q = query.toLowerCase();
   const keys: string[] = [];
 
-  if (q.includes("halal") || q.includes("haram") || q.includes("permissible") || q.includes("allowed")) {
-    keys.push("suggest.conditions", "suggest.differences", "suggest.quranEvidence");
-  } else if (q.includes("prayer") || q.includes("salah") || q.includes("salat")) {
+  if (
+    q.includes("halal") ||
+    q.includes("haram") ||
+    q.includes("permissible") ||
+    q.includes("allowed")
+  ) {
+    keys.push(
+      "suggest.conditions",
+      "suggest.differences",
+      "suggest.quranEvidence",
+    );
+  } else if (
+    q.includes("prayer") ||
+    q.includes("salah") ||
+    q.includes("salat")
+  ) {
     keys.push("suggest.validity", "suggest.invalidates", "suggest.sunnah");
   } else if (q.includes("hadith")) {
-    keys.push("suggest.authentic", "suggest.scholarsHadith", "suggest.relatedHadith");
-  } else if (q.includes("quran") || q.includes("surah") || q.includes("ayah") || q.includes("verse")) {
+    keys.push(
+      "suggest.authentic",
+      "suggest.scholarsHadith",
+      "suggest.relatedHadith",
+    );
+  } else if (
+    q.includes("quran") ||
+    q.includes("surah") ||
+    q.includes("ayah") ||
+    q.includes("verse")
+  ) {
     keys.push("suggest.tafsir", "suggest.revelation", "suggest.relatedVerses");
   } else if (q.includes("zakat") || q.includes("charity")) {
     keys.push("suggest.calculated", "suggest.eligible", "suggest.whenPaid");
-  } else if (q.includes("fasting") || q.includes("ramadan") || q.includes("sawm")) {
+  } else if (
+    q.includes("fasting") ||
+    q.includes("ramadan") ||
+    q.includes("sawm")
+  ) {
     keys.push("suggest.breaksFast", "suggest.exemptions", "suggest.fidyah");
-  } else if (q.includes("marriage") || q.includes("nikah") || q.includes("spouse") || q.includes("husband") || q.includes("wife")) {
+  } else if (
+    q.includes("marriage") ||
+    q.includes("nikah") ||
+    q.includes("spouse") ||
+    q.includes("husband") ||
+    q.includes("wife")
+  ) {
     keys.push("suggest.rights", "suggest.scholarsSay", "suggest.quranSunnah");
   } else {
-    keys.push("suggest.hadithEvidence", "suggest.differentOpinions", "suggest.moreDetail");
+    keys.push(
+      "suggest.hadithEvidence",
+      "suggest.differentOpinions",
+      "suggest.moreDetail",
+    );
   }
 
   return keys.slice(0, 3);
@@ -56,7 +93,9 @@ export function FollowUpInput({
   previousQuery,
 }: FollowUpInputProps) {
   const [value, setValue] = useState("");
-  const [images, setImages] = useState<{ file: File; preview: string; base64: string }[]>([]);
+  const [images, setImages] = useState<
+    { file: File; preview: string; base64: string }[]
+  >([]);
   const [imageError, setImageError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -76,14 +115,16 @@ export function FollowUpInput({
     return () => {
       images.forEach((img) => URL.revokeObjectURL(img.preview));
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const hasContent = value.trim() || images.length > 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!hasContent || isLoading) return;
-    const base64Images = images.length > 0 ? images.map((i) => i.base64) : undefined;
+    const base64Images =
+      images.length > 0 ? images.map((i) => i.base64) : undefined;
+
     onSubmit(value.trim(), base64Images);
     setValue("");
     setImages([]);
@@ -96,50 +137,64 @@ export function FollowUpInput({
     }
   };
 
-  const addImageFiles = useCallback(async (files: File[]) => {
-    if (files.length === 0) return;
-    setImageError(null);
-    const remaining = MAX_IMAGES - images.length;
-    const toAdd = files.slice(0, remaining);
-    if (files.length > remaining) {
-      setImageError(`Max ${MAX_IMAGES} images`);
-    }
-    for (const file of toAdd) {
-      if (file.size > MAX_IMAGE_SIZE) {
-        setImageError(`${file.name} exceeds 4MB limit`);
-        continue;
-      }
-      try {
-        const base64 = await fileToBase64(file);
-        const preview = URL.createObjectURL(file);
-        setImages((prev) => [...prev, { file, preview, base64 }]);
-      } catch {
-        setImageError(`Failed to read ${file.name}`);
-      }
-    }
-  }, [images.length]);
+  const addImageFiles = useCallback(
+    async (files: File[]) => {
+      if (files.length === 0) return;
+      setImageError(null);
+      const remaining = MAX_IMAGES - images.length;
+      const toAdd = files.slice(0, remaining);
 
-  const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
-    const items = Array.from(e.clipboardData.items);
-    const imageFiles = items
-      .filter((item) => item.type.startsWith("image/"))
-      .map((item) => item.getAsFile())
-      .filter((f): f is File => f !== null);
-    if (imageFiles.length > 0) {
-      e.preventDefault();
-      await addImageFiles(imageFiles);
-    }
-  }, [addImageFiles]);
+      if (files.length > remaining) {
+        setImageError(`Max ${MAX_IMAGES} images`);
+      }
+      for (const file of toAdd) {
+        if (file.size > MAX_IMAGE_SIZE) {
+          setImageError(`${file.name} exceeds 4MB limit`);
+          continue;
+        }
+        try {
+          const base64 = await fileToBase64(file);
+          const preview = URL.createObjectURL(file);
 
-  const handleImageSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    await addImageFiles(files);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  }, [addImageFiles]);
+          setImages((prev) => [...prev, { file, preview, base64 }]);
+        } catch {
+          setImageError(`Failed to read ${file.name}`);
+        }
+      }
+    },
+    [images.length],
+  );
+
+  const handlePaste = useCallback(
+    async (e: React.ClipboardEvent) => {
+      const items = Array.from(e.clipboardData.items);
+      const imageFiles = items
+        .filter((item) => item.type.startsWith("image/"))
+        .map((item) => item.getAsFile())
+        .filter((f): f is File => f !== null);
+
+      if (imageFiles.length > 0) {
+        e.preventDefault();
+        await addImageFiles(imageFiles);
+      }
+    },
+    [addImageFiles],
+  );
+
+  const handleImageSelect = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files || []);
+
+      await addImageFiles(files);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    },
+    [addImageFiles],
+  );
 
   const removeImage = useCallback((index: number) => {
     setImages((prev) => {
       URL.revokeObjectURL(prev[index].preview);
+
       return prev.filter((_, i) => i !== index);
     });
     setImageError(null);
@@ -175,6 +230,7 @@ export function FollowUpInput({
       <div className="flex flex-wrap gap-1.5 mb-3">
         {suggestionKeys.map((key, i) => {
           const text = t(key);
+
           return (
             <motion.button
               key={key}
@@ -193,7 +249,10 @@ export function FollowUpInput({
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200/80 dark:border-neutral-800 shadow-sm dark:shadow-none focus-within:border-neutral-300 dark:focus-within:border-neutral-700 focus-within:shadow-md dark:focus-within:shadow-none transition-all" onPaste={handlePaste}>
+        <div
+          className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200/80 dark:border-neutral-800 shadow-sm dark:shadow-none focus-within:border-neutral-300 dark:focus-within:border-neutral-700 focus-within:shadow-md dark:focus-within:shadow-none transition-all"
+          onPaste={handlePaste}
+        >
           {/* Image previews */}
           <AnimatePresence>
             {images.length > 0 && (
@@ -244,14 +303,17 @@ export function FollowUpInput({
               type="button"
               onClick={() => fileInputRef.current?.click()}
             >
-              <ImagePlus className="w-4 h-4 sm:w-[18px] sm:h-[18px]" strokeWidth={1.5} />
+              <ImagePlus
+                className="w-4 h-4 sm:w-[18px] sm:h-[18px]"
+                strokeWidth={1.5}
+              />
             </button>
 
             <input
               ref={fileInputRef}
+              multiple
               accept="image/*"
               className="hidden"
-              multiple
               type="file"
               onChange={handleImageSelect}
             />
@@ -275,7 +337,10 @@ export function FollowUpInput({
               disabled={!hasContent || isLoading}
               type="submit"
             >
-              <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" strokeWidth={2} />
+              <ArrowRight
+                className="w-3 h-3 sm:w-3.5 sm:h-3.5"
+                strokeWidth={2}
+              />
             </button>
           </div>
         </div>
