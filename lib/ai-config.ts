@@ -21,8 +21,8 @@ export interface AIConfig {
 export const aiConfig: AIConfig = {
   models: {
     QUICK: {
-      id: "google/gemini-2.0-flash-lite-001",
-      name: "Gemini 2.0 Flash Lite",
+      id: "google/gemini-2.5-flash-lite",
+      name: "Gemini 2.5 Flash Lite",
       description:
         "Fast responses for question understanding and quick lookups",
       supportsStreaming: true,
