@@ -1,97 +1,82 @@
-import { put, del, list, head } from "@vercel/blob";
+import { promises as fs } from "fs";
+import path from "path";
 
-const token = process.env.ithbat_READ_WRITE_TOKEN;
+/**
+ * Local filesystem store.
+ *
+ * Replaces the previous external storage (Supabase / Vercel Blob). Chats are
+ * logged internally to disk only — no external DB or credentials required.
+ * Data lives under `.chat-logs/` in the project root (gitignored).
+ *
+ * The `blob*` names are kept for now so callers (conversation-logger) stay
+ * unchanged. This is intentionally a temporary, internal-only logging setup.
+ */
 
-export const isBlobConfigured = !!token;
+const DATA_DIR = path.join(process.cwd(), ".chat-logs");
 
-/** Store JSON data as a blob */
-export async function blobSet(key: string, data: unknown): Promise<void> {
-  if (!token) return;
-  const json = JSON.stringify(data);
+// Local logging needs no credentials, so the store is always available.
+export const isBlobConfigured = true;
 
-  await put(`data/${key}.json`, json, {
-    access: "public",
-    addRandomSuffix: false,
-    token,
-  });
+/** Map a logical key to a safe, cross-platform filename. Idempotent. */
+function keyToFile(key: string): string {
+  const safe = key.replace(/[^a-zA-Z0-9._-]/g, "_");
+
+  return path.join(DATA_DIR, `${safe}.json`);
 }
 
-/** Read JSON data from a blob */
+async function ensureDir(): Promise<void> {
+  await fs.mkdir(DATA_DIR, { recursive: true });
+}
+
+/** Store JSON data on disk */
+export async function blobSet(key: string, data: unknown): Promise<void> {
+  await ensureDir();
+  await fs.writeFile(keyToFile(key), JSON.stringify(data), "utf8");
+}
+
+/** Read JSON data from disk */
 export async function blobGet<T>(key: string): Promise<T | null> {
-  if (!token) return null;
-
   try {
-    // Check if blob exists first
-    const blobInfo = await head(`data/${key}.json`, { token });
+    const raw = await fs.readFile(keyToFile(key), "utf8");
 
-    if (!blobInfo) return null;
-
-    const res = await fetch(blobInfo.url, { cache: "no-store" });
-
-    if (!res.ok) return null;
-
-    return (await res.json()) as T;
+    return JSON.parse(raw) as T;
   } catch {
     return null;
   }
 }
 
-/** Delete a blob */
+/** Delete a stored file */
 export async function blobDel(key: string): Promise<void> {
-  if (!token) return;
-
   try {
-    // Find the blob URL first
-    const blobInfo = await head(`data/${key}.json`, { token });
-
-    if (blobInfo) {
-      await del(blobInfo.url, { token });
-    }
+    await fs.unlink(keyToFile(key));
   } catch {
     // Silently ignore if not found
   }
 }
 
-/** Check if a blob exists */
+/** Check if a stored file exists */
 export async function blobExists(key: string): Promise<boolean> {
-  if (!token) return false;
-
   try {
-    const blobInfo = await head(`data/${key}.json`, { token });
+    await fs.access(keyToFile(key));
 
-    return !!blobInfo;
+    return true;
   } catch {
     return false;
   }
 }
 
-/** List all blob keys matching a prefix */
+/** List all stored keys matching a prefix */
 export async function blobList(prefix: string): Promise<string[]> {
-  if (!token) return [];
+  const safePrefix = prefix.replace(/[^a-zA-Z0-9._-]/g, "_");
 
   try {
-    const keys: string[] = [];
-    let cursor: string | undefined;
+    const files = await fs.readdir(DATA_DIR);
 
-    do {
-      const result = await list({
-        prefix: `data/${prefix}`,
-        token,
-        cursor,
-      });
-
-      for (const blob of result.blobs) {
-        // Extract key from pathname: "data/chat:my-slug.json" -> "chat:my-slug"
-        const key = blob.pathname.replace(/^data\//, "").replace(/\.json$/, "");
-
-        keys.push(key);
-      }
-
-      cursor = result.hasMore ? result.cursor : undefined;
-    } while (cursor);
-
-    return keys;
+    return files
+      .filter((f) => f.endsWith(".json") && f.startsWith(safePrefix))
+      .map((f) => f.replace(/\.json$/, ""));
   } catch {
+    // Directory may not exist yet — no entries.
     return [];
   }
 }
